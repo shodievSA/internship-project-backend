@@ -1,0 +1,11 @@
+To run this project, do the following:
+
+1. clone the repo by running "git clone https://github.com/shodievSA/internship-project-backend.git". This will install the repo to the "internship-project-backend" folder on its own.
+
+2. Once inside the root folder, run npm i.
+
+3. Create .env file in the root folder and create the following environment variables: DB_NAME (you'll need to create new DB in pgAdmin), DB_USERNAME, DB_PASSWORD and DB_HOST (should be localhost).
+
+4. Run "npm run dev" from the root folder and it'll start the express app together with sequelize.
+
+After completing all these steps, make sure to create new branch with your name (e.g fanil) and switch to it. After this, feel free to make changes to the repository.
