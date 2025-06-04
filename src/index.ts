@@ -4,25 +4,19 @@ import sequelize from './clients/sequelize';
 
 const app = express();
 
-async function testConnection() {
+const PORT = process.env.PORT || 3000;
 
+async function startServer() {
     try {
-    
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
-    
-    } catch (error) {
-    
-        console.error('Unable to connect to the database:', error);
-    
-    }
 
+        app.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Unable to connect to the database:', error);
+    }
 }
 
-testConnection();
-
-app.listen(3000, () => {
-
-    console.log('Server is running on port 3000');
-
-});
+startServer();
