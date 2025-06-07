@@ -32,6 +32,7 @@ const User = sequelize.define('User', {
     field: 'google_id',
   },
 
+<<<<<<< HEAD
   accessToken: {
     type: DataTypes.STRING(512),
     allowNull: false,
@@ -44,6 +45,8 @@ const User = sequelize.define('User', {
     field: 'refresh_token',
   },
 
+=======
+>>>>>>> 313b2626cbf541be14459fc37db6d98aa7a51998
   phoneNumber: {
     type: DataTypes.STRING(30),
     allowNull: false,

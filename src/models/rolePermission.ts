@@ -1,6 +1,7 @@
 import sequelize from '../clients/sequelize';
 import { DataTypes } from 'sequelize';
 
+<<<<<<< HEAD
 import RoleModel from './role';
 import PermissionModel from './permission';
 
@@ -80,3 +81,40 @@ sequelize.sync({ force: true }).then(() => {
 });
 
 export default RolePermission;
+=======
+const RolePermission = sequelize.define(
+  'RolePermission',
+  {
+    roleId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'role_id',
+      references: {
+        model: 'roles',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+
+    permissionId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'permission_id',
+      references: {
+        model: 'permissions',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+  },
+  {
+    tableName: 'role_permissions',
+    timestamps: true,
+    underscored: true,
+  }
+);
+
+export default RolePermission;
+>>>>>>> 313b2626cbf541be14459fc37db6d98aa7a51998
