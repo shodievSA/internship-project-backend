@@ -32,6 +32,18 @@ const User = sequelize.define('User', {
     field: 'google_id',
   },
 
+  accessToken: {
+    type: DataTypes.STRING(512),
+    allowNull: false,
+    field: 'access_token',
+  },
+
+  refreshToken: {
+    type: DataTypes.STRING(512),
+    allowNull: false,
+    field: 'refresh_token',
+  },
+
   phoneNumber: {
     type: DataTypes.STRING(30),
     allowNull: false,

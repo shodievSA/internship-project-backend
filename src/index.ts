@@ -1,10 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import sequelize from './clients/sequelize';
+import passport from 'passport';
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+
+app.use(passport.initialize());
 
 async function startServer() {
     try {
