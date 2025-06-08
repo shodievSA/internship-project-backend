@@ -64,8 +64,6 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     callbackURL: `${url}/google/callback`,
     passReqToCallback: true,
-    accessType: 'offline',
-    prompt: 'consent'
 }, async (req: Request, accessToken: string, refreshToken: string, params: any, profile: Profile, done: any) => {
     try {
         if (!profile.id) throw new Error('Invalid profile: missing Google ID');
@@ -111,3 +109,10 @@ passport.use(new GoogleStrategy({
         return done(new Error('Authentication failed. Please try again.'));
     }
 }) as unknown as passport.Strategy);
+
+(GoogleStrategy.prototype as any).authorizationParams = function () {
+  return {
+    access_type: 'offline',
+    prompt: 'consent',
+  };
+};

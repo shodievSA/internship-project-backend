@@ -5,7 +5,7 @@ export const authSuccess = (req: Request, res: Response): void => {
     res.status(401).json({ message: 'Not authenticated' });
     return;
   }
-  res.status(200).json({
+  res.status(200).type('application/json').json({
     message: 'Login successful',
     user: req.user,
   });

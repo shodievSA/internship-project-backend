@@ -1,45 +1,42 @@
 import 'dotenv/config';
 import express from 'express';
-<<<<<<< HEAD
-import sequelize from './clients/sequelize';
 import passport from 'passport';
-=======
-import sessionMiddleware from './middlewares/session-middleware';
-import router from './router/app-router';
+import cors from 'cors';
+
+import session from './config/session';
+
 import testAndInitializeDatabase from './models';
->>>>>>> 313b2626cbf541be14459fc37db6d98aa7a51998
+import router from './router/app-router';
+import authRouter from './auth/authRoutes/authRoutes';
+import './config/passport';
+
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
-<<<<<<< HEAD
 
+app.use(express.json());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
+
+app.use(session);
 app.use(passport.initialize());
+app.use(passport.session());
 
-async function startServer() {
-    try {
-        await sequelize.authenticate();
-        console.log('Connection has been established successfully.');
-
-        app.listen(PORT, () => {
-            console.log(`Server is running on http://localhost:${PORT}`);
-        });
-    } catch (error) {
-        console.error('Unable to connect to the database:', error);
-    }
-=======
-app.use(sessionMiddleware);
+app.use('/auth', authRouter);
 app.use('/api/v1', router);
 
 async function startServer() {
   try {
     await testAndInitializeDatabase();
-    app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+
+    app.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
->>>>>>> 313b2626cbf541be14459fc37db6d98aa7a51998
 }
 
 startServer();

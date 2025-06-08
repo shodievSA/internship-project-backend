@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Router } from 'express';
 
+import { isAuth } from '../../middlewares/isAuth';
 import {
   authSuccess,
   authFailure,
@@ -21,8 +22,8 @@ router.get('/google/callback', passport.authenticate('google', {
   failureRedirect: '/auth/failure'
 }));
 
-router.get('/success', authSuccess);
+router.get('/success', isAuth, authSuccess);
+router.get('/logout', isAuth, logout);
 router.get('/failure', authFailure);
-router.get('/logout', logout);
 
 export default router;
