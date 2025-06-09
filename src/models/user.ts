@@ -46,7 +46,7 @@ const User = sequelize.define('User', {
 
   phoneNumber: {
     type: DataTypes.STRING(30),
-    allowNull: false,
+    allowNull: true,
     field: 'phone_number',
   },
 
