@@ -49,6 +49,18 @@ const User = sequelize.define('User', {
     allowNull: false,
     field: 'phone_number',
   },
+
+  tokenExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'token_expires_at',
+  },
+
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_login_at',
+  },
 }, {
   tableName: 'users',
   timestamps: true,

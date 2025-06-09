@@ -80,8 +80,8 @@ passport.use(new GoogleStrategy({
             defaults: {
                 googleId: profile.id,
                 email: profile.emails?.[0]?.value,
-                name: profile.displayName || 'Unknown User',
-                profilePicture: profile.photos?.[0]?.value,
+                fullname: profile.displayName || 'Unknown User',
+                avatarUrl: profile.photos?.[0]?.value,
                 accessToken: encryptedAccessToken,
                 refreshToken: encryptedRefreshToken,
                 tokenExpiresAt,
