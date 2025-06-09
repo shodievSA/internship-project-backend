@@ -9,6 +9,8 @@ import {
 } from '../authControllers/authControllers';
 
 
+const frontend_url = process.env.FRONTEND_URL;
+
 const router = Router();
 
 router.get('/google', passport.authenticate('google', {
@@ -17,8 +19,8 @@ router.get('/google', passport.authenticate('google', {
 }));
 
 router.get('/google/callback', passport.authenticate('google', {
-  successRedirect: '/auth/success',
-  failureRedirect: '/auth/failure'
+  successRedirect: `${frontend_url}/projects`,
+  failureRedirect: `${frontend_url}/sign-in`,
 }));
 
 router.get('/success', isAuth, authSuccess);
