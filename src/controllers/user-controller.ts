@@ -9,6 +9,7 @@ class UserController {
         if (!userData) {
           return { error: 'User not found' };
         }
+        
         return userData;
       })
       .catch((error) => {

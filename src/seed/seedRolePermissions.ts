@@ -1,6 +1,8 @@
 import RolePermission from "../models/rolePermission";
 import RoleModel from "../models/role";
 import PermissionModel from "../models/permission";
+
+
 const rolePermissionPairs = [
   {
     roleName: 'admin',
@@ -31,6 +33,7 @@ const rolePermissionPairs = [
       'leaveProject',
     ],
   },
+
   { roleName: 'member', permissionName: ['makeComments', 'leaveProject'] },
 ];
 
@@ -38,21 +41,24 @@ export default async function seedRolePermissions() {
 	try {
 	  const rolesCount = await RoleModel.count();
     const permissionsCount = await PermissionModel.count();
+
     if (rolesCount === 0 || permissionsCount === 0) {
       throw new Error('Table roles or permissions empty');
     }
 
-  for (const { roleName, permissionName } of rolePermissionPairs) {
-    const role = await RoleModel.findOne({ where: { name: roleName } });
-    if (!role) {
-      console.warn(`Role not found: ${roleName}`);
-      continue;
-    }
+    for (const { roleName, permissionName } of rolePermissionPairs) {
+      const role = await RoleModel.findOne({ where: { name: roleName } });
+
+      if (!role) {
+        console.warn(`Role not found: ${roleName}`);
+        continue;
+      }
 		
-    for (const permName of permissionName) {
-      const permission = await PermissionModel.findOne({
-        where: { name: permName },
+      for (const permName of permissionName) {
+        const permission = await PermissionModel.findOne({
+          where: { name: permName },
       });
+
       if (!permission) {
         console.warn(`Permission not found: ${permName}`);
         continue;
@@ -62,9 +68,9 @@ export default async function seedRolePermissions() {
       let permissionId = permission.getDataValue('id');
 
 			if (!roleId || !permissionId) {
-          console.warn(`Bad ID: roleId=${roleId}, permissionId=${permissionId}`);
-          continue;
-        }
+        console.warn(`Bad ID: roleId=${roleId}, permissionId=${permissionId}`);
+        continue;
+      }
 
       await RolePermission.findOrCreate({
         where: {
@@ -78,8 +84,10 @@ export default async function seedRolePermissions() {
       });
     }
   }
+
   console.log('RolePermissions seeded');
 } catch (error) {
-	console.error('Error seeding RolePermissions:', error);
- throw error;}
+    console.error('Error seeding RolePermissions:', error);
+    throw error;
+  }
 }

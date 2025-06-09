@@ -17,6 +17,7 @@ const permissionEnum = [
   'makeComments',
   'leaveProject',
 ];
+
  const Permission = sequelize.define(
   'Permission',
   {
@@ -38,7 +39,5 @@ const permissionEnum = [
     underscored: true,
   }
 );
-
-
 
 export default Permission;

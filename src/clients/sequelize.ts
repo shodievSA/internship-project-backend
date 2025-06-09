@@ -8,4 +8,4 @@ const sequelize = new Sequelize(DB_NAME!, DB_USERNAME!, DB_PASSWORD!, {
 		logging: false, // Disable logging; default: console.log
 });
 
-export default sequelize; 
+export default sequelize;
