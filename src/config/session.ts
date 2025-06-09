@@ -17,14 +17,14 @@ const sessionMiddleware = session({
     pool: pgPool,
     tableName: 'sessions',
     createTableIfMissing: true,
-    pruneSessionInterval: 1 * 60 * 60 * 1000, // 1 hour cleanup interval
+    pruneSessionInterval: 1 * 60 * 60 , // 1 hour cleanup interval
   }),
 
   secret: process.env.SESSION_SECRET || 'some-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    maxAge: 1000 * 60 * 60 * 24 * 20, // 20 days
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',

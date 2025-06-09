@@ -4,6 +4,7 @@ import { Profile } from "passport";
 import { Request } from "express";
 import crypto from 'crypto';
 
+import {models} from "../models";
 import User from "../models/user";
 
 
@@ -47,7 +48,7 @@ passport.serializeUser((user: any, done) => {
 
 passport.deserializeUser(async (id: number, done) => {
     try {
-        const user = await User.findByPk(id);
+        const user = await models.User.findByPk(id);
 
         if (!user) {
             return done(null, false);
@@ -75,7 +76,7 @@ passport.use(new GoogleStrategy({
         const encryptedAccessToken = encryptToken(accessToken);
         const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
 
-        const [ user, created ] = await User.findOrCreate(
+        const [ user, created ] = await models.User.findOrCreate(
             {where: { googleId: profile.id },
             defaults: {
                 googleId: profile.id,
@@ -84,7 +85,7 @@ passport.use(new GoogleStrategy({
                 avatarUrl: profile.photos?.[0]?.value,
                 accessToken: encryptedAccessToken,
                 refreshToken: encryptedRefreshToken,
-                tokenExpiresAt,
+								tokenExpiresAt,
                 lastLoginAt: new Date()
             }
         });
