@@ -62,7 +62,7 @@ passport.deserializeUser(async (id: number, done) => {
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: `${url}/google/callback`,
+    callbackURL: `${url}/auth/google/callback`,
     passReqToCallback: true,
 }, async (req: Request, accessToken: string, refreshToken: string, params: any, profile: Profile, done: any) => {
     try {
@@ -80,7 +80,7 @@ passport.use(new GoogleStrategy({
             defaults: {
                 googleId: profile.id,
                 email: profile.emails?.[0]?.value,
-                fullname: profile.displayName || 'Unknown User',
+                fullName: profile.displayName || 'Unknown User',
                 avatarUrl: profile.photos?.[0]?.value,
                 accessToken: encryptedAccessToken,
                 refreshToken: encryptedRefreshToken,
