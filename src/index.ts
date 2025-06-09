@@ -7,7 +7,7 @@ import session from './config/session';
 
 import testAndInitializeDatabase from './models';
 import router from './router/app-router';
-import authRouter from './auth/authRoutes/authRoutes';
+import authRouter from './router/authRoutes';
 import './config/passport';
 
 

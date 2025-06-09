@@ -1,12 +1,12 @@
 import passport from 'passport';
 import { Router } from 'express';
 
-import { isAuth } from '../../middlewares/isAuth';
+import { isAuth } from '../middlewares/isAuth';
 import {
   authSuccess,
   authFailure,
   logout,
-} from '../../controllers/authControllers';
+} from '../controllers/authControllers';
 
 
 const frontend_url = process.env.FRONTEND_URL;
@@ -24,7 +24,7 @@ router.get('/google/callback', passport.authenticate('google', {
 }));
 
 router.get('/success', isAuth, authSuccess);
-router.get('/logout', isAuth, logout);
+router.delete('/logout', isAuth, logout);
 router.get('/failure', authFailure);
 
 export default router;
