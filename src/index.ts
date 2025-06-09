@@ -4,11 +4,11 @@ import passport from 'passport';
 import cors from 'cors';
 
 import session from './config/session';
+import './config/passport';
 
 import testAndInitializeDatabase from './models';
 import router from './router/app-router';
 import authRouter from './auth/authRoutes/authRoutes';
-import './config/passport';
 
 
 const app = express();

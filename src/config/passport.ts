@@ -4,10 +4,10 @@ import { Profile } from "passport";
 import { Request } from "express";
 import crypto from 'crypto';
 
-import User from "../models/user";
+import { models } from "../models";
 
 
-const url = process.env.BASE_URL || 'http://localhost:3000';
+const url = process.env.BASE_URL;
 
 const encryptToken = (token: string): string => {
     const ENCRYPTION_KEY = crypto
@@ -47,7 +47,7 @@ passport.serializeUser((user: any, done) => {
 
 passport.deserializeUser(async (id: number, done) => {
     try {
-        const user = await User.findByPk(id);
+        const user = await models.User.findByPk(id);
 
         if (!user) {
             return done(null, false);
@@ -75,7 +75,7 @@ passport.use(new GoogleStrategy({
         const encryptedAccessToken = encryptToken(accessToken);
         const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
 
-        const [ user, created ] = await User.findOrCreate(
+        const [ user, created ] = await models.User.findOrCreate(
             {where: { googleId: profile.id },
             defaults: {
                 googleId: profile.id,

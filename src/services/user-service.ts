@@ -2,7 +2,7 @@ import { models } from '../models';
 
 
 class UserService {
-  async getUserData(userId: string): Promise<any> {
+  async getUserData(userId: number): Promise<any> {
     try {
 			const user = await models.User.findByPk(userId, {
         attributes: ['id', 'fullName', 'email', 'avatarUrl', 'phoneNumber', 'createdAt', 'updatedAt'],

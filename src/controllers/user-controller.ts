@@ -4,13 +4,9 @@ import userService from '../services/user-service';
 class UserController {
   public getMe(req: any, res: any, next: any): any | undefined {
     return userService
-      .getUserData(req.session.userId)
+      .getUserData(req.user.id)
       .then((userData) => {
-        if (!userData) {
-          return { error: 'User not found' };
-        }
-        
-        return userData;
+        return res.json({ user: userData });
       })
       .catch((error) => {
         console.error('Error fetching user data:', error);
