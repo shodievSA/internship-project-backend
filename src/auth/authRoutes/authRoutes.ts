@@ -6,7 +6,7 @@ import {
   authSuccess,
   authFailure,
   logout,
-} from '../authControllers/authControllers';
+} from '../../controllers/authControllers';
 
 
 const frontend_url = process.env.FRONTEND_URL;

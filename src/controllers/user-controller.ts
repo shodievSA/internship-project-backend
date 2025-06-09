@@ -7,10 +7,10 @@ class UserController {
       .getUserData(req.session.userId)
       .then((userData) => {
         if (!userData) {
-          return { error: 'User not found' };
+          return req.json({user:null})
         }
-        
-        return userData;
+        return req.status(200).json({user:userData});
+
       })
       .catch((error) => {
         console.error('Error fetching user data:', error);
