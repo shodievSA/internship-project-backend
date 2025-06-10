@@ -17,7 +17,7 @@ const sessionMiddleware = session({
     pool: pgPool,
     tableName: 'sessions',
     createTableIfMissing: true,
-    pruneSessionInterval: 1 * 60 * 60, // 1 hour cleanup interval
+    pruneSessionInterval: 1 * 60 * 60 , // 1 hour cleanup interval
   }),
 
   secret: process.env.SESSION_SECRET || 'some-secret-key',

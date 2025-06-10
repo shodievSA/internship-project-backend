@@ -4,7 +4,7 @@ import { Profile } from "passport";
 import { Request } from "express";
 import crypto from 'crypto';
 
-import { models } from "../models";
+import {models} from "../models";
 
 
 const url = process.env.BASE_URL;
@@ -84,7 +84,7 @@ passport.use(new GoogleStrategy({
                 avatarUrl: profile.photos?.[0]?.value,
                 accessToken: encryptedAccessToken,
                 refreshToken: encryptedRefreshToken,
-                tokenExpiresAt,
+								tokenExpiresAt,
                 lastLoginAt: new Date()
             }
         });

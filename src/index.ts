@@ -8,7 +8,7 @@ import './config/passport';
 
 import testAndInitializeDatabase from './models';
 import router from './router/app-router';
-import authRouter from './auth/authRoutes/authRoutes';
+import authRouter from './router/authRoutes';
 
 
 const app = express();
