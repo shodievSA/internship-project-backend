@@ -17,6 +17,7 @@ export const authFailure = (req: Request, res: Response): void => {
 
 export const logout = (req: Request, res: Response, next: NextFunction): void => {
   req.logout((err: any) => {
+
     if (err) return next(err);
 
 		req.session.destroy(err=> { 
@@ -30,7 +31,7 @@ export const logout = (req: Request, res: Response, next: NextFunction): void =>
 				secure: process.env.NODE_ENV === 'production',
 				path: '/',
 			})
-			return res.status(204);
+			return res.sendStatus(204);
 		  })
   });
 };
