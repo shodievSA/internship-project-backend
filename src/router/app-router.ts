@@ -4,6 +4,6 @@ import { isAuth } from '../middlewares/isAuth';
 
 let router = express.Router();
 
-router.get('/me', isAuth , userController.getMe);
+router.get('/me', isAuth, userController.getMe);
 
 export default router;

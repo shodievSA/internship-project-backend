@@ -7,7 +7,6 @@ class UserController {
       .getUserData(req.user.id)
       .then((userData) => {
         return res.status(200).json({user:userData});
-
       })
       .catch((error) => {
         console.error('Error fetching user data:', error);
