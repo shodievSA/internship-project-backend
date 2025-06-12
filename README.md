@@ -14,3 +14,5 @@ After completing all these steps, make sure to create new branch with your name 
 *** TO RUN THE PROJECT FROM DOCKER CONTAINER IN DEVELOPMENT MODE EXECUTE THE FOLLOWING COMMAND: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build ***
 
 *** TO RUN THE PROJECT FROM DOCKER CONTAINER IN PRODUCTION MODE EXECUTE THE FOLLOWING COMMAND: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build ***
+
+# However note, first you must have a docker desktop app running on your machine to execute the commands above.
