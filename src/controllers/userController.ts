@@ -1,5 +1,6 @@
 import userService from '../services/userService';
 
+
 class UserController {
   public getMe(req: any, res: any, next: any) {
     if (!req.user) {
@@ -14,6 +15,7 @@ class UserController {
         return next(new Error(error));
       });
   }
+
   public createNewProject(req: any, res: any, next: any) {
     const userId = req.user!.id;
     const { title, userPosition } = req.body;
@@ -26,6 +28,7 @@ class UserController {
         return next(new Error(error));
       });
   }
+
   public getProjects(req: any, res: any, next: any) {
     return userService
       .getUserProjects(req.user.id)
@@ -36,6 +39,7 @@ class UserController {
         return next(new Error(error));
       });
   }
+
   public ProjectDetails(req: any, res: any, next: any) {
     const projectId: number = req.body.projectId;
     return userService
@@ -48,4 +52,5 @@ class UserController {
       });
   }
 }
+
 export default new UserController();
