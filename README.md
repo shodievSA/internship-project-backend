@@ -15,4 +15,6 @@ After completing all these steps, make sure to create new branch with your name 
 
 *** TO RUN THE PROJECT FROM DOCKER CONTAINER IN PRODUCTION MODE EXECUTE THE FOLLOWING COMMAND: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build ***
 
+* docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build --scale node_app=2 -d // For second node server instance.
+
 # However note, first you must have a docker desktop app running on your machine to execute the commands above.
