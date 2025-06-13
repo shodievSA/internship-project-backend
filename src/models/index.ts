@@ -13,7 +13,7 @@ import Notification from './notification';
 import sequelize from '../clients/sequelize';
 import { Sequelize } from 'sequelize';
 import seedRoles from '../seed/seedRoles';
-import seedRolePermissions from '../seed/seedRolePermissions';		
+import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
 
 export interface Models {
@@ -60,16 +60,23 @@ export const initAssociations = (sequelize: Sequelize) => {
 
   ProjectMember.hasMany(Task, {
     foreignKey: 'assigned_by',
-    as: 'assigned_tasks',
+  });
+  Task.belongsTo(ProjectMember, {
+    foreignKey: 'assigned_by',
+    as: 'assignedByMember',
   });
   ProjectMember.hasMany(Task, {
     foreignKey: 'assigned_to',
   });
   Task.belongsTo(ProjectMember, {
-    foreignKey: 'assigned_by',
-  });
-  Task.belongsTo(ProjectMember, {
     foreignKey: 'assigned_to',
+    as: 'assignedToMember',
+  });
+  ///
+  ProjectInvitation.belongsTo(User, {
+    foreignKey: 'receiver_email',
+    targetKey: 'email',
+    as: 'receiver',
   });
 
   Task.hasMany(Subtask, { foreignKey: 'task_id' });
@@ -114,17 +121,17 @@ async function testSequelizeConnection() {
 }
 
 export default async function testAndInitializeDatabase() {
-	try {
-		await testSequelizeConnection();
+  try {
+    await testSequelizeConnection();
 
-		await sequelize.sync();
-		models = initAssociations(sequelize)
-		await seedRoles();
-		await seedPermissions();
-		await seedRolePermissions();
+    await sequelize.sync({ force: false });
+    models = initAssociations(sequelize);
+    await seedRoles();
+    await seedPermissions();
+    await seedRolePermissions();
 
-		console.log('Database synchronized successfully.');
-	} catch (error) {
-		console.error('Error synchronizing the database:', error);
-	}
+    console.log('Database synchronized successfully.');
+  } catch (error) {
+    console.error('Error synchronizing the database:', error);
+  }
 }

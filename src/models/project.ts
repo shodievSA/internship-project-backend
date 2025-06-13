@@ -12,6 +12,10 @@ const Project = sequelize.define('Project', {
     type: DataTypes.STRING(50),
     allowNull: false,
   },
+	status : { 
+		type : DataTypes.ENUM('active', 'completed', 'paused'),
+		defaultValue : 'active',
+	},
 }, {
   tableName: 'projects',
   timestamps: true,

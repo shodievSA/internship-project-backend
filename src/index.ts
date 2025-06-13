@@ -9,12 +9,15 @@ import './config/passport';
 import testAndInitializeDatabase from './models';
 import router from './router/app-router';
 import authRouter from './router/authRoutes';
+import './config/passport';
+import errorHandler from './middlewares/errorHandler';
+import bodyParser from 'body-parser';
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(bodyParser.json());
 
 app.enable("trust proxy");
 
@@ -29,6 +32,7 @@ app.use(passport.session());
 
 app.use('/auth', authRouter);
 app.use('/api/v1', router);
+
 
 async function startServer() {
   try {
