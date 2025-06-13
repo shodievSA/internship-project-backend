@@ -32,67 +32,136 @@ export interface Models {
 }
 export let models: Models;
 export const initAssociations = (sequelize: Sequelize) => {
-  User.hasMany(ProjectMember, { foreignKey: 'user_id' });
-  ProjectMember.belongsTo(User, { foreignKey: 'user_id' });
+  User.hasMany(ProjectMember, {
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  ProjectMember.belongsTo(User, {
+    foreignKey: 'user_id',
+  });
 
-  Project.hasMany(ProjectMember, { foreignKey: 'project_id' });
-  ProjectMember.belongsTo(Project, { foreignKey: 'project_id' });
+  User.hasMany(DailyAiReport, {
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  DailyAiReport.belongsTo(User, {
+    foreignKey: 'user_id',
+  });
 
-  Role.hasMany(ProjectMember, { foreignKey: 'role_id' });
-  ProjectMember.belongsTo(Role, { foreignKey: 'role_id' });
+  User.hasMany(Notification, {
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  Notification.belongsTo(User, {
+    foreignKey: 'user_id',
+  });
+
+  Project.hasMany(ProjectMember, {
+    foreignKey: 'project_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  ProjectMember.belongsTo(Project, {
+    foreignKey: 'project_id',
+  });
+
+  Project.hasMany(ProjectInvitation, {
+    foreignKey: 'project_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  ProjectInvitation.belongsTo(Project, {
+    foreignKey: 'project_id',
+  });
+
+  Project.hasMany(Task, {
+    foreignKey: 'project_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  Task.belongsTo(Project, {
+    foreignKey: 'project_id',
+  });
+
+  ProjectMember.hasMany(Comment, {
+    foreignKey: 'user_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  Comment.belongsTo(ProjectMember, {
+    foreignKey: 'user_id',
+  });
+
+  ProjectMember.hasMany(Task, {
+    as: 'assignedByMember',
+    foreignKey: 'assigned_by',
+    onDelete: 'SET NULL',
+  });
+  Task.belongsTo(ProjectMember, {
+    as: 'assignedByMember',
+    foreignKey: 'assigned_by',
+  });
+
+  ProjectMember.hasMany(Task, {
+    as: 'assignedToMember',
+    foreignKey: 'assigned_to',
+    onDelete: 'SET NULL',
+  });
+  Task.belongsTo(ProjectMember, {
+    as: 'assignedToMember',
+    foreignKey: 'assigned_to',
+  });
+
+  Role.hasMany(ProjectMember, {
+    foreignKey: 'role_id',
+    onDelete: 'SET NULL',
+  });
+  ProjectMember.belongsTo(Role, {
+    foreignKey: 'role_id',
+  });
 
   Role.belongsToMany(Permission, {
     through: RolePermission,
     foreignKey: 'role_id',
     otherKey: 'permission_id',
+    onDelete: 'CASCADE',
+    hooks: true,
   });
+
   Permission.belongsToMany(Role, {
     through: RolePermission,
     foreignKey: 'permission_id',
     otherKey: 'role_id',
+    onDelete: 'CASCADE',
+    hooks: true,
   });
 
-  Project.hasMany(ProjectInvitation, { foreignKey: 'project_id' });
-  ProjectInvitation.belongsTo(Project, { foreignKey: 'project_id' });
+  Task.hasMany(Subtask, {
+    foreignKey: 'task_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+  });
+  Subtask.belongsTo(Task, {
+    foreignKey: 'task_id',
+  });
 
-  Project.hasMany(Task, { foreignKey: 'project_id' });
-  Task.belongsTo(Project, { foreignKey: 'project_id' });
-
-  ProjectMember.hasMany(Task, {
-    foreignKey: 'assigned_by',
+  Task.hasMany(Comment, {
+    foreignKey: 'task_id',
+    onDelete: 'CASCADE',
+    hooks: true,
   });
-  Task.belongsTo(ProjectMember, {
-    foreignKey: 'assigned_by',
-    as: 'assignedByMember',
+  Comment.belongsTo(Task, {
+    foreignKey: 'task_id',
   });
-  ProjectMember.hasMany(Task, {
-    foreignKey: 'assigned_to',
-  });
-  Task.belongsTo(ProjectMember, {
-    foreignKey: 'assigned_to',
-    as: 'assignedToMember',
-  });
-  ///
+  //
   ProjectInvitation.belongsTo(User, {
+    as: 'receiver',
     foreignKey: 'receiver_email',
     targetKey: 'email',
-    as: 'receiver',
   });
-
-  Task.hasMany(Subtask, { foreignKey: 'task_id' });
-  Subtask.belongsTo(Task, { foreignKey: 'task_id' });
-
-  Task.hasMany(Comment, { foreignKey: 'task_id' });
-  Comment.belongsTo(Task, { foreignKey: 'task_id' });
-
-  ProjectMember.hasMany(Comment, { foreignKey: 'user_id' });
-  Comment.belongsTo(ProjectMember, { foreignKey: 'user_id' });
-
-  User.hasMany(DailyAiReport, { foreignKey: 'user_id' });
-  DailyAiReport.belongsTo(User, { foreignKey: 'user_id' });
-
-  User.hasMany(Notification, { foreignKey: 'user_id' });
-  Notification.belongsTo(User, { foreignKey: 'user_id' });
 
   return {
     User,
