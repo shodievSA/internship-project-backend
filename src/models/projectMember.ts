@@ -55,8 +55,9 @@ const ProjectMember = sequelize.define('ProjectMember', {
 
   busyLevel: {
     type: DataTypes.ENUM('free', 'low', 'medium', 'high'),
-    allowNull: false,
+    allowNull: true,
     field: 'busy_level',
+		defaultValue : 'free',
   },
 
   joinedAt: {
