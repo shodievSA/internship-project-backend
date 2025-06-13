@@ -33,6 +33,7 @@ app.use(passport.session());
 app.use('/auth', authRouter);
 app.use('/api/v1', router);
 
+app.use(errorHandler);
 
 async function startServer() {
   try {

@@ -1,3 +1,4 @@
+import { Request, Response, NextFunction } from 'express';
 import userService from '../services/userService';
 
 
@@ -50,6 +51,32 @@ class UserController {
       .catch((error) => {
         return next(new Error(error));
       });
+  }
+
+  public async deleteProject(req: Request, res: Response, next: NextFunction) {
+    const projectId: string = req.params.projectId;
+
+    try {
+      await userService.deleteProject(projectId);
+
+      res.status(204).json({ message: 'Project deleted successfully' });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  public async updateProject(req: Request, res: Response, next: NextFunction) {
+    const projectId: string = req.body.projectId;
+    const updatedTitle: string = req.body.title;
+    const updatedStatus: any = req.body.status;
+
+    try {
+      const updatedProject = await userService.updateProject(projectId, updatedTitle, updatedStatus);
+
+      res.status(200).json({ message: 'Project updated successfully', updatedProject });
+    } catch (error) {
+      return next(error);
+    }
   }
 }
 

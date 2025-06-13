@@ -10,6 +10,8 @@ router.get('/me', isAuth, userController.getMe);
 router.post('/new-project', isAuth, userController.createNewProject);
 router.get('/projects', isAuth, userController.getProjects);
 router.post('/project-details', isAuth, userController.ProjectDetails);
+router.delete('/delete-project/:projectId', isAuth, userController.deleteProject);
+router.put('/update-project', isAuth, userController.updateProject);
 router.post('/enhance', isAuth, aiController.EnhanceText);
 
 export default router;
