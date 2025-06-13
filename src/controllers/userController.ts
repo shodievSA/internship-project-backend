@@ -66,14 +66,24 @@ class UserController {
   }
 
   public async updateProject(req: Request, res: Response, next: NextFunction) {
-    const projectId: string = req.body.projectId;
-    const updatedTitle: string = req.body.title;
-    const updatedStatus: any = req.body.status;
-
     try {
-      const updatedProject = await userService.updateProject(projectId, updatedTitle, updatedStatus);
+      const projectId: string = req.params.projectId;
 
-      res.status(200).json({ message: 'Project updated successfully', updatedProject });
+      const updatedTitle: string = req.body.title?.trim();
+      const updatedStatus: 'active' | 'paused' | 'completed' = req.body.status.trim();
+
+      const updatedFields: Partial<{ title: string, status: 'active' | 'paused' | 'completed' }> = {};
+
+      if (updatedTitle) updatedFields.title = updatedTitle;
+      if (updatedStatus && ['active', 'paused', 'completed'].includes(updatedStatus)) updatedFields.status = updatedStatus;
+
+      if (Object.keys(updatedFields).length === 0) {
+        throw new Error("No fields to update");
+      } else {
+        const updatedProject = await userService.updateProject(projectId, updatedFields);
+
+        res.status(200).json({ message: 'Project updated successfully', updatedProject });
+      }
     } catch (error) {
       return next(error);
     }

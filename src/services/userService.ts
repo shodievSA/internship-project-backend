@@ -215,12 +215,13 @@ class UserService {
 
   async updateProject(
     projectId: string,
-    updatedTitle: string,
-    updatedStatus: 'active' | 'paused' | 'completed'
+    updatedFields: Partial<{ title: string, status: 'active' | 'paused' | 'completed' }>
   ): Promise<RawProject> {
     try {
+      if (!projectId) { throw new Error('Project ID is required') };
+
       const [ count, rows ] = await models.Project.update(
-        { title: updatedTitle, status: updatedStatus },
+        updatedFields,
         { where: {id: projectId}, returning: true }
       );
 
