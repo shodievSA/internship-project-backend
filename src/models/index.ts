@@ -124,7 +124,7 @@ export default async function testAndInitializeDatabase() {
   try {
     await testSequelizeConnection();
 
-    await sequelize.sync({ force: false });
+    await sequelize.sync();
     models = initAssociations(sequelize);
     await seedRoles();
     await seedPermissions();
