@@ -5,10 +5,9 @@ import { Request } from "express";
 import crypto from 'crypto';
 
 import {models} from "../models";
-import User from "../models/user";
 
 
-const url = process.env.BASE_URL || 'http://localhost:3000';
+const url = process.env.BASE_URL;
 
 const encryptToken = (token: string): string => {
     const ENCRYPTION_KEY = crypto

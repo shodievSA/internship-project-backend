@@ -4,6 +4,7 @@ import passport from 'passport';
 import cors from 'cors';
 
 import session from './config/session';
+import './config/passport';
 
 import testAndInitializeDatabase from './models';
 import router from './router/app-router';
@@ -18,6 +19,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
+app.enable("trust proxy");
+
 app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true
@@ -30,6 +33,7 @@ app.use(passport.session());
 app.use('/auth', authRouter);
 app.use('/api/v1', router);
 
+app.use(errorHandler);
 
 async function startServer() {
   try {
