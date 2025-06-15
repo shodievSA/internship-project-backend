@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
-import { Models, models } from '../models';
-import { Transaction } from 'sequelize';
+import { models } from '../models';
+import { Transaction, where } from 'sequelize';
 
 interface RawProject {
   id: number;
@@ -194,6 +194,44 @@ class UserService {
       return projectsWithStats;
     } catch (error) {
       console.error('Error fetching user projects:', error);
+      throw new Error('Internal server error');
+    }
+  }
+
+  async deleteProject(projectId: string): Promise<void> {
+    try {
+      const deletedProjectCount = await models.Project.destroy({
+        where: {id: projectId}
+      });
+
+      if (deletedProjectCount === 0) {
+        throw new Error('Project not found');
+      }
+    } catch (error) {
+      console.error('Error deleting the project:', error);
+      throw new Error('Internal server error');
+    }
+  }
+
+  async updateProject(
+    projectId: string,
+    updatedFields: Partial<{ title: string, status: 'active' | 'paused' | 'completed' }>
+  ): Promise<RawProject> {
+    try {
+      if (!projectId) { throw new Error('Project ID is required') };
+
+      const [ count, rows ] = await models.Project.update(
+        updatedFields,
+        { where: {id: projectId}, returning: true }
+      );
+
+      if (count === 0 || rows.length === 0) {
+        throw new Error('Project not found');
+      }
+
+      return rows[0].toJSON() as RawProject;
+    } catch (error) {
+      console.error('Error updating the project:', error);
       throw new Error('Internal server error');
     }
   }
