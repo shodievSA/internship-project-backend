@@ -115,12 +115,19 @@ class UserController {
   public async deleteProject(req: Request, res: Response, next: NextFunction) {
     const projectId: string = req.params.projectId;
 
-    try {
-      await userService.deleteProject(projectId);
+    console.log(req.memberPermissions);
 
-      res.status(204).json({ message: 'Project deleted successfully' });
-    } catch (error) {
-      return next(error);
+    if (!req.memberPermissions?.includes('deleteProject')) {
+      res.sendStatus(401);
+    } else {
+      try {
+        await userService.deleteProject(projectId);
+
+        res.status(204).json({ message: 'Project deleted successfully' });
+      } catch (error) {
+        console.error(error);
+        return next(error);
+      }
     }
   }
 
@@ -148,18 +155,22 @@ class UserController {
     }
   }
 
-  public async removeTeamMember(req: Request, res:Response, next: NextFunction) {
-    try {
-      const projectId: string = req.params.projectId;
-      const memberId: string = req.params.memberId;
+	public async removeTeamMember(req: Request, res:Response, next: NextFunction) {
+		const projectId: string = req.params.projectId;
+		const memberId: string = req.params.memberId;
 
-      await userService.removeTeamMember(projectId, memberId);
+		if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
+			res.sendStatus(401);
+		} else {
+			try {
+				await userService.removeTeamMember(projectId, memberId);
 
-      res.status(200).json({ message: 'User removed from the project successfully' });
-    } catch (error) {
-      return next(error);
-    }
-  }
+				res.status(200).json({ message: 'User removed from the project successfully' });
+			} catch (error) {
+				return next(error);
+			}
+		}
+	}
 }
 
 export default new UserController();
