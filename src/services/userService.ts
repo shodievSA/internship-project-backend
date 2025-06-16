@@ -1,6 +1,7 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import { Transaction, where } from 'sequelize';
+import { Transaction } from 'sequelize';
+
 
 interface RawProject {
   id: number;
@@ -88,6 +89,17 @@ interface ProjectDetails {
     role_offered: string; //(ENUM - "admin","manager", "member")
   }[]; // project_id = projectId that comes from client
 }
+
+interface ProjectMember {
+  id: number;
+  user_id: number;
+  project_id: number;
+  role_id:number;
+  position: string;
+  busy_level: 'free' | 'low' | 'medium' | 'high';
+  joined_at: Date;
+}
+
 
 class UserService {
   async getUserData(userId: number): Promise<object | null> {
@@ -198,21 +210,6 @@ class UserService {
     }
   }
 
-  async deleteProject(projectId: string): Promise<void> {
-    try {
-      const deletedProjectCount = await models.Project.destroy({
-        where: {id: projectId}
-      });
-
-      if (deletedProjectCount === 0) {
-        throw new Error('Project not found');
-      }
-    } catch (error) {
-      console.error('Error deleting the project:', error);
-      throw new Error('Internal server error');
-    }
-  }
-
   async updateProject(
     projectId: string,
     updatedFields: Partial<{ title: string, status: 'active' | 'paused' | 'completed' }>
@@ -232,6 +229,21 @@ class UserService {
       return rows[0].toJSON() as RawProject;
     } catch (error) {
       console.error('Error updating the project:', error);
+      throw new Error('Internal server error');
+    }
+  }
+
+  async deleteProject(projectId: string): Promise<void> {
+    try {
+      const deletedProjectCount = await models.Project.destroy({
+        where: {id: projectId}
+      });
+
+      if (deletedProjectCount === 0) {
+        throw new Error('Project not found');
+      }
+    } catch (error) {
+      console.error('Error deleting the project:', error);
       throw new Error('Internal server error');
     }
   }
@@ -364,6 +376,61 @@ class UserService {
       reviews,
       invites: formattedInvites,
     };
+  }
+
+  async updateTeamMemberRole(
+    projectId: string,
+    memberId: string,
+    newRole: string,
+  ): Promise<ProjectMember> {
+    try {
+      if (!projectId) { throw new Error('Project ID is required') };
+      if (!memberId) { throw new Error('Member ID is required') };
+
+      const project = await models.Project.findByPk(projectId);
+      if (!project) throw new Error('Project not found');
+      const member = await models.ProjectMember.findByPk(memberId);
+      if (!member) throw new Error('Team member not found');
+
+      const role = await models.Role.findOne(
+      {where: { name: newRole }}
+      )
+
+      const roleId = (role as any).id;
+
+      const [count, rows] = await models.ProjectMember.update(
+        { roleId:  roleId},
+        { where: { id: memberId, projectId: projectId}, returning: true}
+      );
+
+      if (count === 0 || rows.length === 0) {
+        throw new Error('Failed to update team member role');
+      }
+      
+      return rows[0].toJSON() as ProjectMember;
+    } catch (error) {
+      console.error('Error updating the team members role in the Project:', error);
+      throw new Error('Internal server error');
+    }
+  }
+
+  async removeTeamMember(
+    projectId: string,
+    memberId: string,
+  ): Promise<void> {
+    try {
+      if (!projectId) { throw new Error('Project ID is required') };
+      if (!memberId) { throw new Error('Member ID is required') };
+
+      const removedTeamMemberCount = await models.ProjectMember.destroy({ where: { id: memberId, projectId: projectId } });
+
+      if (removedTeamMemberCount === 0) {
+        throw new Error("Team member or project not found"); 
+      }
+    } catch (error) {
+      console.error('Error removing the team member from the project:', error);
+      throw new Error('Internal server error');
+    }
   }
 }
 
