@@ -53,18 +53,6 @@ class UserController {
       });
   }
 
-  public async deleteProject(req: Request, res: Response, next: NextFunction) {
-    const projectId: string = req.params.projectId;
-
-    try {
-      await userService.deleteProject(projectId);
-
-      res.status(204).json({ message: 'Project deleted successfully' });
-    } catch (error) {
-      return next(error);
-    }
-  }
-
   public async updateProject(req: Request, res: Response, next: NextFunction) {
     try {
       const projectId: string = req.params.projectId;
@@ -124,6 +112,18 @@ class UserController {
     }
   }
 
+  public async deleteProject(req: Request, res: Response, next: NextFunction) {
+    const projectId: string = req.params.projectId;
+
+    try {
+      await userService.deleteProject(projectId);
+
+      res.status(204).json({ message: 'Project deleted successfully' });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   public async changeTeamMemberRole(req: Request, res:Response, next: NextFunction) {
     try {
       const projectId: string = req.params.projectId;
@@ -143,6 +143,19 @@ class UserController {
       const updatedTeamMemberRole = await userService.updateTeamMemberRole(projectId, memberId, newRole);
 
       res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  public async removeTeamMember(req: Request, res:Response, next: NextFunction) {
+    try {
+      const projectId: string = req.params.projectId;
+      const memberId: string = req.params.memberId;
+
+      await userService.removeTeamMember(projectId, memberId);
+
+      res.status(200).json({ message: 'User removed from the project successfully' });
     } catch (error) {
       return next(error);
     }

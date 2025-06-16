@@ -413,6 +413,25 @@ class UserService {
       throw new Error('Internal server error');
     }
   }
+
+  async removeTeamMember(
+    projectId: string,
+    memberId: string,
+  ): Promise<void> {
+    try {
+      if (!projectId) { throw new Error('Project ID is required') };
+      if (!memberId) { throw new Error('Member ID is required') };
+
+      const removedTeamMemberCount = await models.ProjectMember.destroy({ where: { id: memberId, projectId: projectId } });
+
+      if (removedTeamMemberCount === 0) {
+        throw new Error("Team member or project not found"); 
+      }
+    } catch (error) {
+      console.error('Error removing the team member from the project:', error);
+      throw new Error('Internal server error');
+    }
+  }
 }
 
 export default new UserService();
