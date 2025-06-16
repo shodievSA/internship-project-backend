@@ -12,6 +12,7 @@ router.get('/projects', isAuth, userController.getProjects);
 router.post('/project-details', isAuth, userController.ProjectDetails);
 router.delete('/delete-project/:projectId', isAuth, userController.deleteProject);
 router.put('/update-project/:projectId', isAuth, userController.updateProject);
+router.patch('/projects/:projectId/members/:memberId', isAuth, userController.changeTeamMemberRole);
 router.post('/enhance', isAuth, aiController.EnhanceText);
 
 export default router;

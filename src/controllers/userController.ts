@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import userService from '../services/userService';
-import { PassThrough } from 'stream';
-import { error } from 'console';
 
 
 class UserController {
@@ -121,6 +119,30 @@ class UserController {
       const updatedProject = await userService.updateProject(projectId, updatedFields);
 
       res.status(200).json({ message: 'Project updated successfully', updatedProject });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  public async changeTeamMemberRole(req: Request, res:Response, next: NextFunction) {
+    try {
+      const projectId: string = req.params.projectId;
+      const memberId: string = req.params.memberId;
+      const newRole = req.body.newRole;
+
+      if (!projectId || !memberId) {
+        res.status(400).json({ error: 'Project ID and Member ID are required' });
+        return;
+      }
+
+      if (!newRole) {
+          res.status(400).json({ error: 'New role does not exist' });
+          return;
+      }
+
+      const updatedTeamMemberRole = await userService.updateTeamMemberRole(projectId, memberId, newRole);
+
+      res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
     } catch (error) {
       return next(error);
     }
