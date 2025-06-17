@@ -118,7 +118,7 @@ class UserController {
     console.log(req.memberPermissions);
 
     if (!req.memberPermissions?.includes('deleteProject')) {
-      res.sendStatus(401);
+      res.sendStatus(403);
     } else {
       try {
         await userService.deleteProject(projectId);
@@ -160,7 +160,7 @@ class UserController {
 		const memberId: string = req.params.memberId;
 
 		if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
-			res.sendStatus(401);
+			res.sendStatus(403);
 		} else {
 			try {
 				await userService.removeTeamMember(projectId, memberId);
@@ -169,6 +169,23 @@ class UserController {
 			} catch (error) {
 				return next(error);
 			}
+		}
+	}
+
+	public async leaveProject(req: Request, res:Response, next: NextFunction) {
+		const projectId: string = req.params.projectId;
+		const userId: number = ( req.user as { id: number } )?.id;
+
+		if (req.memberPermissions?.includes('leaveProject')) {
+			try {
+				await userService.leaveProject(projectId, userId);
+
+				res.status(200).json({ message: 'User left project' });
+			} catch (error) {
+				return next(error);
+			}
+		} else {
+			res.sendStatus(403);
 		}
 	}
 }

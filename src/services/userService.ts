@@ -432,6 +432,25 @@ class UserService {
       throw new Error('Internal server error');
     }
   }
+
+  async leaveProject(projectId: string, userId: number): Promise<void> {
+	try {
+		if (!projectId) { throw new Error('Project ID is required') };
+		if (!userId) { throw new Error('User ID is required') };
+
+		const leftProjectCount =  await models.ProjectMember.destroy({
+			where:
+				{ projectId: projectId, userId: userId }
+		});
+
+		if (leftProjectCount === 0) {
+			throw new Error("Could not leave the project"); 
+		}
+	} catch (error) {
+		console.error('Error leaving the project:', error);
+      	throw new Error('Internal server error');
+	}
+  }
 }
 
 export default new UserService();
