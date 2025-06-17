@@ -1,7 +1,5 @@
 import passport from 'passport';
 import { Router } from 'express';
-
-import { isAuth } from '../middlewares/isAuth';
 import { logout } from '../controllers/authControllers';
 
 
@@ -17,6 +15,6 @@ router.get('/google/callback', passport.authenticate('google', {
   failureRedirect: `${process.env.FRONTEND_URL}/sign-in`
 }));
 
-router.delete('/logout', isAuth, logout);
+router.delete('/logout', logout);
 
 export default router;
