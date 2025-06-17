@@ -11,13 +11,12 @@ import router from './router/app-router';
 import authRouter from './router/authRoutes';
 import './config/passport';
 import errorHandler from './middlewares/errorHandler';
-import bodyParser from 'body-parser';
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.enable("trust proxy");
 
