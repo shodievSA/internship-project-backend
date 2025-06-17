@@ -2,7 +2,6 @@ import passport from 'passport';
 import { Router } from 'express';
 import { logout } from '../controllers/authControllers';
 
-
 const router = Router();
 
 router.get('/google', passport.authenticate('google', {

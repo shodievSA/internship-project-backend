@@ -26,10 +26,8 @@ app.use(session);
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(isAuthenticated);
-
 app.use('/auth', authRouter);
-app.use('/api/v1', router);
+app.use('/api/v1', isAuthenticated, router);
 
 app.use(errorHandler);
 
