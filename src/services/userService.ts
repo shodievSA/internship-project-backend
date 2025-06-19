@@ -248,7 +248,7 @@ class UserService {
     }
   }
 
-  async getProjectTasks(projectId: number, userId: number): Promise<any> {
+  async getProjectTasks(userId: number, projectId: string): Promise<any> {
     const project = await models.Project.findByPk(projectId, {
       attributes: ['id', 'title'],
     });

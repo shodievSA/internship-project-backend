@@ -33,7 +33,7 @@ class ProjectController {
     
     public ProjectDetails(req: any, res: any, next: any) {
 
-        const projectId: number = req.body.projectId;
+        const projectId: string = req.params.projectId;
 
 		return userService
 		.getProjectTasks(req.user.id, projectId)

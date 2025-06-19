@@ -5,9 +5,7 @@ import passport from 'passport';
 import cors from 'cors';
 import session from './config/session';
 import testAndInitializeDatabase from './models';
-import isAuthenticated from './middlewares/isAuthenticated';
-import router from './router/app-router';
-import authRouter from './router/authRoutes';
+import v1Router from './routes/api/v1/index';
 import errorHandler from './middlewares/errorHandler';
 
 const app = express();
@@ -26,8 +24,7 @@ app.use(session);
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use('/auth', authRouter);
-app.use('/api/v1', isAuthenticated, router);
+app.use('/api/v1', v1Router);
 
 app.use(errorHandler);
 
