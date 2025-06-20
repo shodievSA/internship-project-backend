@@ -5,6 +5,7 @@ import { getMemberPermissions } from "../../../../middlewares/getMemberPermissio
 const router = Router({ mergeParams: true });
 
 router.patch('/:memberId', getMemberPermissions, projectController.changeTeamMemberRole);
+router.delete('/me', getMemberPermissions, projectController.leaveProject);
 router.delete('/:memberId', getMemberPermissions, projectController.removeTeamMember);
 
 export default router;

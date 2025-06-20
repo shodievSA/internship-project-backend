@@ -166,6 +166,7 @@ class UserService {
             required: true,
           },
         ],
+        order: [[ 'createdAt', 'DESC' ]],
         raw: true,
       })) as unknown as RawProject[];
 
