@@ -1,7 +1,7 @@
 import aiService from '../services/aiService';
 
 class aiController {
-  public async EnhanceText(req: any, res: any, next: any) {
+  public async enhanceText(req: any, res: any, next: any) {
     return aiService
       .Enhance(req.body.text)
       .then((result: string | undefined) => {

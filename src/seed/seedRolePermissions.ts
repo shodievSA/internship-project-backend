@@ -1,7 +1,6 @@
-import RolePermission from "../models/rolePermission";
-import RoleModel from "../models/role";
-import PermissionModel from "../models/permission";
-
+import RolePermission from '../models/rolePermission';
+import RoleModel from '../models/role';
+import PermissionModel from '../models/permission';
 
 const rolePermissionPairs = [
   {
@@ -38,8 +37,8 @@ const rolePermissionPairs = [
 ];
 
 export default async function seedRolePermissions() {
-	try {
-	  const rolesCount = await RoleModel.count();
+  try {
+    const rolesCount = await RoleModel.count();
     const permissionsCount = await PermissionModel.count();
 
     if (rolesCount === 0 || permissionsCount === 0) {
@@ -53,40 +52,42 @@ export default async function seedRolePermissions() {
         console.warn(`Role not found: ${roleName}`);
         continue;
       }
-		
+
       for (const permName of permissionName) {
         const permission = await PermissionModel.findOne({
           where: { name: permName },
-      });
+        });
 
-      if (!permission) {
-        console.warn(`Permission not found: ${permName}`);
-        continue;
+        if (!permission) {
+          console.warn(`Permission not found: ${permName}`);
+          continue;
+        }
+
+        let roleId = role.getDataValue('id');
+        let permissionId = permission.getDataValue('id');
+
+        if (!roleId || !permissionId) {
+          console.warn(
+            `Bad ID: roleId=${roleId}, permissionId=${permissionId}`
+          );
+          continue;
+        }
+
+        await RolePermission.findOrCreate({
+          where: {
+            roleId,
+            permissionId,
+          },
+          defaults: {
+            roleId,
+            permissionId,
+          },
+        });
       }
-
-			let roleId = role.getDataValue('id');
-      let permissionId = permission.getDataValue('id');
-
-			if (!roleId || !permissionId) {
-        console.warn(`Bad ID: roleId=${roleId}, permissionId=${permissionId}`);
-        continue;
-      }
-
-      await RolePermission.findOrCreate({
-        where: {
-          role_id : roleId,
-          permission_id : permissionId,
-        },
-				defaults: {
-					roleId,	
-					permissionId,
-				},
-      });
     }
-  }
 
-  console.log('RolePermissions seeded');
-} catch (error) {
+    console.log('RolePermissions seeded');
+  } catch (error) {
     console.error('Error seeding RolePermissions:', error);
     throw error;
   }

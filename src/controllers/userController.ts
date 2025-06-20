@@ -1,61 +1,85 @@
 import { Request, Response, NextFunction } from 'express';
 import userService from '../services/userService';
-import { PassThrough } from 'stream';
-import { error } from 'console';
-
+import { CreateTaskBody, UserData, UserProject, ProjectDetails } from '@/types';
 
 class UserController {
-  public getMe(req: any, res: any, next: any) {
-    if (!req.user) {
-      return next(new Error('User not authenticated'));
+  public async getMe(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (req.user) {
+        const userId: number = (req.user as any)?.id;
+        const userData: UserData | null = await userService.getUserData(userId);
+
+        res.status(200).json({ user: userData });
+      }
+    } catch (error) {
+      next(error);
     }
-    return userService
-      .getUserData(req.user!.id)
-      .then((userData) => {
-        return res.status(200).json({ user: userData });
-      })
-      .catch((error) => {
-        return next(new Error(error));
-      });
   }
 
-  public createNewProject(req: any, res: any, next: any) {
-    const userId = req.user!.id;
-    const { title, userPosition } = req.body;
-    return userService
-      .createNewProject(userId, title, userPosition)
-      .then((project) => {
-        return res.status(201).json({ project: project });
-      })
-      .catch((error) => {
-        return next(new Error(error));
-      });
+  public async createNewProject(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    const { title, userPosition } = req.body as {
+      title: string;
+      userPosition: string;
+    };
+    try {
+      const userId: number = (req.user as any)?.id;
+      const project = await userService.createNewProject(
+        userId,
+        title,
+        userPosition
+      );
+      res.status(201).json({ project });
+    } catch (error) {
+      next(error);
+    }
   }
 
-  public getProjects(req: any, res: any, next: any) {
-    return userService
-      .getUserProjects(req.user.id)
-      .then((projects: any) => {
-        return res.status(200).json({ projects: projects });
-      })
-      .catch((error) => {
-        return next(new Error(error));
-      });
+  public async getProjects(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId: number = (req.user as any)?.id;
+      const projects: UserProject[] = await userService.getUserProjects(userId);
+      res.status(200).json(projects);
+    } catch (error) {
+      next(error);
+    }
   }
 
-  public ProjectDetails(req: any, res: any, next: any) {
-    const projectId: number = req.body.projectId;
-    return userService
-      .getProjectTasks(req.user.id, projectId)
-      .then((detail: any) => {
-        return res.status(200).json(detail);
-      })
-      .catch((error) => {
-        return next(new Error(error));
-      });
+  public async projectDetails(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId: any = (req.user as any)?.id;
+      const projectId =
+        parseInt(req.params.projectId, 10) || req.body.projectId;
+      const detail: ProjectDetails = await userService.getProjectTasks(
+        userId,
+        projectId
+      );
+      res.status(200).json(detail);
+    } catch (error) {
+      next(error);
+    }
   }
 
-  public async deleteProject(req: Request, res: Response, next: NextFunction) {
+  public async deleteProject(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const projectId: string = req.params.projectId;
 
     try {
@@ -67,7 +91,11 @@ class UserController {
     }
   }
 
-  public async updateProject(req: Request, res: Response, next: NextFunction) {
+  public async updateProject(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const projectId: string = req.params.projectId;
       const updatedProjectProps = req.body;
@@ -77,13 +105,15 @@ class UserController {
       }
 
       const allowedStatuses = ['active', 'paused', 'completed'] as const;
-      type Status = typeof allowedStatuses[number];
+      type Status = (typeof allowedStatuses)[number];
 
       const allowedKeys = ['title', 'status'];
       const keys = Object.keys(updatedProjectProps);
       const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
       if (!isValidKeysOnly) {
-        res.status(400).json({ error: 'Only title and status fields are allowed for updates' });
+        res.status(400).json({
+          error: 'Only title and status fields are allowed for updates',
+        });
         return;
       }
 
@@ -118,9 +148,31 @@ class UserController {
         return;
       }
 
-      const updatedProject = await userService.updateProject(projectId, updatedFields);
+      const updatedProject = await userService.updateProject(
+        projectId,
+        updatedFields
+      );
 
-      res.status(200).json({ message: 'Project updated successfully', updatedProject });
+      res
+        .status(200)
+        .json({ message: 'Project updated successfully', updatedProject });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  public async createTask(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    const projectId: number = parseInt(req.params.projectId, 10);
+    try {
+      const body = req.body as CreateTaskBody;
+      const userId: number = (req.user as any)?.id;
+      const task = await userService.createTask(userId, projectId, body);
+      res.status(200).json({ task });
+      return;
     } catch (error) {
       return next(error);
     }

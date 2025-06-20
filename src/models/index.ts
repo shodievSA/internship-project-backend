@@ -30,7 +30,21 @@ export interface Models {
   Comment: typeof Comment;
   Notification: typeof Notification;
 }
-export let models: Models;
+export const models: Models = {
+  User,
+  Project,
+  ProjectMember,
+  Permission,
+  Role,
+  RolePermission,
+  ProjectInvitation,
+  Task,
+  Subtask,
+  DailyAiReport,
+  Comment,
+  Notification,
+};
+
 export const initAssociations = (sequelize: Sequelize) => {
   User.hasMany(ProjectMember, {
     foreignKey: 'user_id',
@@ -118,6 +132,7 @@ export const initAssociations = (sequelize: Sequelize) => {
   Role.hasMany(ProjectMember, {
     foreignKey: 'role_id',
     onDelete: 'SET NULL',
+    hooks: false,
   });
   ProjectMember.belongsTo(Role, {
     foreignKey: 'role_id',
@@ -159,46 +174,24 @@ export const initAssociations = (sequelize: Sequelize) => {
   //
   ProjectInvitation.belongsTo(User, {
     as: 'receiver',
-    foreignKey: 'receiver_email',
-    targetKey: 'email',
+    foreignKey: 'receiver_email', // receiver_id
+    targetKey: 'email', // id
   });
-
-  return {
-    User,
-    Project,
-    ProjectMember,
-    Permission,
-    Role,
-    RolePermission,
-    ProjectInvitation,
-    Task,
-    Subtask,
-    DailyAiReport,
-    Comment,
-    Notification,
-  };
+  //
+  User.hasMany(ProjectInvitation, {
+    foreignKey: 'receiver_email',
+    as: 'receivedInvitations',
+  });
 };
-
-async function testSequelizeConnection() {
-  try {
-    await sequelize.authenticate();
-
-    console.log('Connection has been established successfully.');
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-  }
-}
 
 export default async function testAndInitializeDatabase() {
   try {
-    await testSequelizeConnection();
-
-    await sequelize.sync();
-    models = initAssociations(sequelize);
+    await sequelize.authenticate();
+    await sequelize.sync({ force: false });
+    initAssociations(sequelize);
     await seedRoles();
     await seedPermissions();
     await seedRolePermissions();
-
     console.log('Database synchronized successfully.');
   } catch (error) {
     console.error('Error synchronizing the database:', error);
