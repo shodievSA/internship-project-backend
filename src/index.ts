@@ -1,23 +1,17 @@
 import 'dotenv/config';
+import './config/passport';
 import express from 'express';
 import passport from 'passport';
 import cors from 'cors';
-
 import session from './config/session';
-import './config/passport';
-
 import testAndInitializeDatabase from './models';
-import router from './router/app-router';
-import authRouter from './router/authRoutes';
-import './config/passport';
+import v1Router from './routes/api/v1/index';
 import errorHandler from './middlewares/errorHandler';
-import bodyParser from 'body-parser';
-
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.enable("trust proxy");
 
@@ -30,8 +24,7 @@ app.use(session);
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use('/auth', authRouter);
-app.use('/api/v1', router);
+app.use('/api/v1', v1Router);
 
 app.use(errorHandler);
 

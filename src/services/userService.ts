@@ -166,6 +166,7 @@ class UserService {
             required: true,
           },
         ],
+        order: [[ 'createdAt', 'DESC' ]],
         raw: true,
       })) as unknown as RawProject[];
 
@@ -248,7 +249,7 @@ class UserService {
     }
   }
 
-  async getProjectTasks(projectId: number, userId: number): Promise<any> {
+  async getProjectTasks(userId: number, projectId: string): Promise<any> {
     const project = await models.Project.findByPk(projectId, {
       attributes: ['id', 'title'],
     });
@@ -431,6 +432,25 @@ class UserService {
       console.error('Error removing the team member from the project:', error);
       throw new Error('Internal server error');
     }
+  }
+
+  async leaveProject(projectId: string, userId: number): Promise<void> {
+	try {
+		if (!projectId) { throw new Error('Project ID is required') };
+		if (!userId) { throw new Error('User ID is required') };
+
+		const leftProjectCount =  await models.ProjectMember.destroy({
+			where:
+				{ projectId: projectId, userId: userId }
+		});
+
+		if (leftProjectCount === 0) {
+			throw new Error("Could not leave the project"); 
+		}
+	} catch (error) {
+		console.error('Error leaving the project:', error);
+      	throw new Error('Internal server error');
+	}
   }
 }
 
