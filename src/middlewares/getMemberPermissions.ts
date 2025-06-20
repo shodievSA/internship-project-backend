@@ -46,8 +46,8 @@ export const getMemberPermissions = async (
         // Find the project member record
         const projectMember = await ProjectMember.findOne({
             where: {
-                project_id: projectId,
-                user_id: userId,
+                projectId: projectId,
+                userId: userId,
             },
             include: [
                 {

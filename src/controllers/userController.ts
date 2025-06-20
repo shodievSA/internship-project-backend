@@ -1,24 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import userService from '../services/userService';
+import { UserData } from '@/types';
+import projectController from './projectController';
 
 class UserController {
 
-	public getMe(req: Request, res: Response, next: NextFunction) {
+	public async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
 
-		if (!req.user) {
-			return next(new Error('User not authenticated'));
+		try {
+
+			if (req.user) {
+
+				const userId: number = (req.user as any)?.id;
+				const userData: UserData | null = await userService.getUserData(userId);
+
+				res.status(200).json({ user: userData });
+
+			}
+
+		} catch (error) {
+
+			next(error);
+
 		}
-
-		const userId: number = ( req.user as { id: number } )?.id;
-
-		userService
-			.getUserData(userId)
-			.then((userData) => {
-				return res.status(200).json({ user: userData });
-			})
-			.catch((error) => {
-				return next(new Error(error));
-			});
 
 	}
 

@@ -5,9 +5,9 @@ import { getMemberPermissions } from "../../../../middlewares/getMemberPermissio
 
 const router = Router();
 
-router.post('/', projectController.createNewProject);
+router.post('/', projectController.createProject);
 router.get('/', projectController.getProjects);
-router.get('/:projectId', projectController.ProjectDetails);
+router.get('/:projectId', projectController.getProjectDetails);
 router.patch('/:projectId', projectController.updateProject);
 router.delete('/:projectId', getMemberPermissions, projectController.deleteProject);
 router.use('/:projectId/members', memberRouter);

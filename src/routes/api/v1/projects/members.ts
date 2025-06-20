@@ -1,5 +1,5 @@
 import { Router } from "express";
-import projectController from '../../../../controllers/projectController';
+import projectController from "../../../../controllers/projectController";
 import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 
 const router = Router({ mergeParams: true });
