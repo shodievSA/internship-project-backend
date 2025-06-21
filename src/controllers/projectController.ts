@@ -51,7 +51,7 @@ class ProjectController {
 		try {
 
 			const projectId: string = req.params.projectId;
-			const updatedProjectProps = req.body;
+			const updatedProjectProps = req.body.updatedProjectProps;
 
 			if (!updatedProjectProps) {
 				res.status(400).json({ error: 'Updated object does not exist' });
