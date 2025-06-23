@@ -69,7 +69,8 @@ class ProjectService {
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
 		const user = await models.User.findByPk(userId, {
-			include: [{ model: models.Project }]
+			include: [{ model: models.Project }],
+			order: [[ 'createdAt', 'DESC' ]]
 		});
 
 		if (!user) {
