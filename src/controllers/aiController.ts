@@ -1,16 +1,26 @@
+import { Response, NextFunction } from 'express';
+import AuthenticatedRequest from '@/types/authenticatedRequest';
 import aiService from '../services/aiService';
 
-class aiController {
-  public async EnhanceText(req: any, res: any, next: any) {
-    return aiService
-      .Enhance(req.body.text)
-      .then((result: string | undefined) => {
-        return res.status(200).json({ enhancedVersion: result });
-      })
-      .catch((err) => {
-        return next(new Error(err));
-      });
-  }
+async function enhanceText(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+) {
+
+	return aiService
+		.Enhance(req.body.text)
+		.then((result: string | undefined) => {
+		return res.status(200).json({ enhancedVersion: result });
+		})
+		.catch((err) => {
+		return next(new Error(err));
+		});
+
 }
 
-export default new aiController();
+const aiController = {
+	enhanceText
+};
+
+export default aiController;

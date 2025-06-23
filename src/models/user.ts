@@ -1,70 +1,118 @@
+import {
+  DataTypes,
+  Model,
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
+import ProjectMember from './projectMember';
+import DailyAiReport from './dailyAiReport';
+import Notification from './notification';
+import ProjectInvitation from './projectInvitation';
 import sequelize from '../clients/sequelize';
-import { DataTypes } from 'sequelize';
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+export interface UserAttributes {
+	id: number;
+	googleId: string;
+	email: string;
+	fullName: string;
+	avatarUrl: string | null;
+	accessToken: string;
+	refreshToken: string | null;
+	phoneNumber: string | null;
+	tokenExpiresAt: Date | null;
+	lastLoginAt: Date | null;
+	createdAt: Date;
+	updatedAt: Date;
+}
 
-  fullName: {
-    type: DataTypes.STRING(30),
-    allowNull: false,
-    field: 'full_name',
-  },
+export interface UserAssociations {
+	ProjectMembers?: ProjectMember[];
+	DailyAiReport?: DailyAiReport[];
+	Notifications?: Notification[];
+	ProjectInvitation?: ProjectInvitation[];
+}
 
-  email: {
-    type: DataTypes.STRING(320),
-    allowNull: false,
-    unique: true,
-  },
+class User extends Model<
+	InferAttributes<User, { omit: keyof UserAssociations }>,
+	InferCreationAttributes<User>
+> {
+	declare id: CreationOptional<number>;
+	declare googleId: string;
+	declare email: string;
+	declare fullName: string;
+	declare avatarUrl: CreationOptional<string | null>;
+	declare accessToken: string;
+	declare refreshToken: CreationOptional<string | null>;
+	declare phoneNumber: CreationOptional<string | null>;
+	declare tokenExpiresAt: CreationOptional<Date | null>;
+	declare lastLoginAt: CreationOptional<Date | null>;
+	declare createdAt: CreationOptional<Date>;
+	declare updatedAt: CreationOptional<Date>;
+	declare ProjectMembers?: ProjectMember[];
+	declare DailyAiReport?: DailyAiReport[];
+	declare Notifications?: Notification[];
+	declare ProjectInvitation?: ProjectInvitation[];
+}
 
-  avatarUrl: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    field: 'avatar_url',
-  },
-
-  googleId: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-    field: 'google_id',
-  },
-
-  accessToken: {
-    type: DataTypes.STRING(512),
-    allowNull: false,
-    field: 'access_token',
-  },
-
-  refreshToken: {
-    type: DataTypes.STRING(512),
-    allowNull: true,
-    field: 'refresh_token',
-  },
-
-  phoneNumber: {
-    type: DataTypes.STRING(30),
-    allowNull: true,
-    field: 'phone_number',
-  },
-
-  tokenExpiresAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'token_expires_at',
-  },
-
-  lastLoginAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'last_login_at',
-  },
-}, {
-  tableName: 'users',
-  timestamps: true,
-  underscored: true
-});
+User.init(
+	{
+		id: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true
+		},
+		googleId: {
+			type: DataTypes.STRING(255),
+			allowNull: false
+		},
+		email: {
+			type: DataTypes.STRING(320),
+			allowNull: false,
+			unique: true,
+			validate: { isEmail: true }
+		},
+		fullName: {
+			type: DataTypes.STRING(30),
+			allowNull: false
+		},
+		avatarUrl: {
+			type: DataTypes.STRING(255),
+			allowNull: true
+		},
+		accessToken: {
+			type: DataTypes.STRING(512),
+			allowNull: false
+		},
+		refreshToken: {
+			type: DataTypes.STRING(512),
+			allowNull: true
+		},
+		phoneNumber: {
+			type: DataTypes.STRING(30),
+			allowNull: true
+		},
+		tokenExpiresAt: {
+			type: DataTypes.DATE,
+			allowNull: true
+		},
+		lastLoginAt: {
+			type: DataTypes.DATE,
+			allowNull: true
+		},
+		createdAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		}
+	},
+	{ 
+		sequelize, 
+		underscored: true 
+	}
+);
 
 export default User;

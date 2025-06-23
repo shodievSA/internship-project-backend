@@ -1,14 +1,16 @@
 import { Router } from 'express';
-import { 
-	passportAuthenticate,
-	passportAuthenticateRedirect,
-	logout,
-} from '../../../controllers/authControllers';
+import authController from '../../../controllers/authControllers';
+
+const {
+	passportAuth,
+	passportRedirect,
+	logout
+} = authController;
 
 const router = Router();
 
-router.get('/google', passportAuthenticate);
-router.get('/google/callback', passportAuthenticateRedirect);
+router.get('/google', passportAuth);
+router.get('/google/callback', passportRedirect);
 router.delete('/logout', logout);
 
 export default router;

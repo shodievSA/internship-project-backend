@@ -1,33 +1,61 @@
 import sequelize from '../clients/sequelize';
-import { DataTypes } from 'sequelize';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional,
+} from 'sequelize';
+import User from './user';
 
-const DailyAiReport = sequelize.define('DailyAiReport', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+export interface DailyAiReportAssociations {
+  	User?: User;
+}
 
-  report: {
-    type: DataTypes.TEXT,
-    allowNull: false,
-  },
+class DailyAiReport extends Model<
+	InferAttributes<DailyAiReport, { omit: keyof DailyAiReportAssociations }>,
+	InferCreationAttributes<DailyAiReport>
+> {
+	declare id: CreationOptional<number>;
+	declare report: string;
+	declare userId: number;
+	declare createdAt: CreationOptional<Date>;
+	declare updatedAt: CreationOptional<Date>;
+	declare User?: User;
+}
 
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'user_id',
-    references: {
-      model: 'users',
-      key: 'id',
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-  },
-}, {
-  tableName: 'daily_ai_reports',
-  underscored: true,
-  timestamps: true,
-});
+DailyAiReport.init(
+	{
+		id: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true
+		},
+		report: {
+			type: DataTypes.TEXT,
+			allowNull: false
+		},
+		userId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'users',
+				key: 'id',
+			}
+		},
+		createdAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		}
+	},
+	{
+		sequelize,
+		underscored: true,
+	}
+);
 
 export default DailyAiReport;

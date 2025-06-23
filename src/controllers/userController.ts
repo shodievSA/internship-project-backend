@@ -1,27 +1,31 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import AuthenticatedRequest from '@/types/authenticatedRequest';
 import userService from '../services/userService';
+import { UserData } from '@/types';
 
-class UserController {
+async function getMe(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
 
-	public getMe(req: Request, res: Response, next: NextFunction) {
+	try {
 
-		if (!req.user) {
-			return next(new Error('User not authenticated'));
-		}
+		const userId: number = req.user.id;
+		const userData: UserData | null = await userService.getUserData(userId);
 
-		const userId: number = ( req.user as { id: number } )?.id;
+		res.status(200).json({ user: userData });
 
-		userService
-			.getUserData(userId)
-			.then((userData) => {
-				return res.status(200).json({ user: userData });
-			})
-			.catch((error) => {
-				return next(new Error(error));
-			});
+	} catch (error) {
+
+		next(error);
 
 	}
 
 }
 
-export default new UserController();
+const userController = {
+	getMe
+}
+
+export default userController;

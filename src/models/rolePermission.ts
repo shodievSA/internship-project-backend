@@ -1,38 +1,59 @@
 import sequelize from '../clients/sequelize';
-import { DataTypes } from 'sequelize';
+import {
+	DataTypes,
+	Model,
+	InferAttributes,
+	InferCreationAttributes,
+	CreationOptional
+} from 'sequelize';
 
-const RolePermission = sequelize.define(
-  'RolePermission',
-  {
-    roleId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'role_id',
-      references: {
-        model: 'roles',
-        key: 'id',
-      },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE',
-    },
+class RolePermission extends Model<
+	InferAttributes<RolePermission>,
+	InferCreationAttributes<RolePermission>
+> {
+	declare id: CreationOptional<number>;
+	declare roleId: number;
+	declare permissionId: number;
+	declare createdAt: CreationOptional<Date>;
+	declare updatedAt: CreationOptional<Date>;
+}
 
-    permissionId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'permission_id',
-      references: {
-        model: 'permissions',
-        key: 'id',
-      },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE',
-    },
-  },
-  {
-    tableName: 'role_permissions',
-    timestamps: true,
-    underscored: true,
-  }
+RolePermission.init(
+	{
+		id: {
+			type: DataTypes.INTEGER,
+			primaryKey: true,
+			autoIncrement: true
+		},
+		roleId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'roles',
+				key: 'id'
+			}
+		},
+		permissionId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'permissions',
+				key: 'id'
+			}
+		},
+		createdAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			allowNull: false
+		},
+	},
+	{
+		sequelize,
+		underscored: true
+	}
 );
 
 export default RolePermission;
