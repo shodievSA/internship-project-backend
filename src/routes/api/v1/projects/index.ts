@@ -1,15 +1,23 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import memberRouter from './members';
 import projectController from '../../../../controllers/projectController';
 import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 
+const {
+	createProject,
+	getProjects,
+	getProjectDetails,
+	updateProject,
+	deleteProject
+} = projectController;
+
 const router = Router();
 
-router.post('/', projectController.createProject);
-router.get('/', projectController.getProjects);
-router.get('/:projectId', projectController.getProjectDetails);
-router.patch('/:projectId', projectController.updateProject);
-router.delete('/:projectId', getMemberPermissions, projectController.deleteProject);
+router.post('/', createProject as RequestHandler);
+router.get('/', getProjects as RequestHandler);
+router.get('/:projectId', getProjectDetails as RequestHandler);
+router.patch('/:projectId', updateProject as RequestHandler);
+router.delete('/:projectId', getMemberPermissions, deleteProject as RequestHandler);
 router.use('/:projectId/members', memberRouter);
 
 export default router;

@@ -1,9 +1,8 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { CreateTaskBody, UserProject, ProjectDetails } from '@/types';
+import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import { ProjectAttributes } from '@/models/project';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
 
@@ -33,7 +32,7 @@ class ProjectService {
 
 	}
 
-	async createNewProject(userId: number, title: string, position: string): Promise<object> {
+	async createProject(userId: number, title: string, position: string): Promise<object> {
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -43,9 +42,9 @@ class ProjectService {
 		
 			await models.ProjectMember.create(
 				{
-					userId,
+					userId: userId,
 					projectId: project.id,
-					position,
+					position: position,
 					roleId: 1,
 				},
 				{ transaction }
@@ -67,28 +66,26 @@ class ProjectService {
 
 	}
 
-	async getProjects(userId: number): Promise<UserProject[]> {
+	async getProjects(userId: number): Promise<FormattedProject[]> {
 
-		try {
+		const user = await models.User.findByPk(userId, {
+			include: [{ model: models.Project }]
+		});
 
-			const projects = await models.Project.findAll(
-				{
-					attributes: ['id', 'title', 'status', 'createdAt'],
-					include: [
-						{
-							model: models.ProjectMember,
-							where: { userId },
-							required: true,
-						},
-					],
-					order: [[ 'createdAt', 'DESC' ]],
-					raw: true,
-				}
-			) as ProjectAttributes[];
-	
+		if (!user) {
+			throw new Error(`User with id ${userId} not found.`);
+		}
+
+		const projects = user.get('Projects') as PlainProject[];
+
+		if (projects.length === 0) {
+
+			return [];
+
+		} else {
+
 			const projectsWithStats = await Promise.all(
-
-				projects.map(async (project: ProjectAttributes) => {
+				projects.map(async (project: PlainProject) => {
 
 					const projectId = project.id;
 		
@@ -114,21 +111,16 @@ class ProjectService {
 						title: project.title,
 						status: project.status,
 						createdAt: project.createdAt,
-						members,
+						members: members,
 						totalTasks: tasks,
 						totalTasksCompleted: completedTasks,
-						isAdmin,
-					} as UserProject;
+						isAdmin: isAdmin
+					} as FormattedProject;
+
 				})
+			);
 
-		  	);
-	
 			return projectsWithStats;
-
-		} catch (error) {
-
-			console.error('Error fetching user projects:', error);
-			throw new Error('Internal server error');
 
 		}
 
