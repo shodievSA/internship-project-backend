@@ -1,149 +1,23 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import { UserProject, ProjectDetails } from '@/types';
+import { FormattedProject, ProjectDetails } from '@/types';
+import AuthenticatedRequest from '@/types/authenticatedRequest';
 
-class ProjectController {
+async function leaveProject(
+	req: AuthenticatedRequest, 
+	res:Response, 
+	next: NextFunction
+) {
+	
+	const projectId: number = parseInt(req.params.projectId);
+	const userId: number = req.user.id;
 
-	public async leaveProject(req: Request, res:Response, next: NextFunction) {
-		
-			const projectId: number = parseInt(req.params.projectId);
-			const userId: number = ( req.user as { id: number } )?.id;
-	
-			if (req.memberPermissions?.includes('leaveProject')) {
-	
-				try {
-	
-					await projectService.leaveProject(projectId, userId);
-					res.status(200).json({ message: 'User left project' });
-	
-				} catch (error) {
-	
-					return next(error);
-	
-				}
-	
-			} else {
-	
-				res.sendStatus(403);
-				
-			}
-	
-	}
-
-    public async createProject(req: Request, res: Response, next: NextFunction): Promise<void> {
-
-		const { title, userPosition } = req.body as {
-			title: string;
-			userPosition: string;
-		};
+	if (req.memberPermissions?.includes('leaveProject')) {
 
 		try {
 
-			const userId: number = (req.user as any)?.id;
-			const project = await projectService.createNewProject(
-				userId,
-				title,
-				userPosition
-			);
-
-			res.status(201).json({ project });
-
-		} catch (error) {
-
-		  	next(error);
-
-		}
-
-	}
-
-    
-	public async updateProject(req: Request, res: Response, next: NextFunction) {
-
-		try {
-
-			const projectId: number = parseInt(req.params.projectId);
-			const updatedProjectProps = req.body;
-
-			if (!updatedProjectProps) {
-				res.status(400).json({ error: 'Updated object does not exist' });
-				return;
-			}
-
-			const allowedStatuses = ['active', 'paused', 'completed'] as const;
-			type Status = typeof allowedStatuses[number];
-		
-			const allowedKeys = ['title', 'status'];
-			const keys = Object.keys(updatedProjectProps);
-			const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
-
-			if (!isValidKeysOnly) {
-				res.status(400).json({ error: 'Only title and status fields are allowed for updates' });
-				return;
-			}
-
-			const updatedFields: Partial<{ title: string; status: Status }> = {};
-		
-			if ('title' in updatedProjectProps) {
-				const title = updatedProjectProps.title.trim();
-		
-				if (typeof title !== 'string') {
-				res.status(400).json({ error: 'Title is undefined' });
-				return;
-				}
-		
-				updatedFields.title = title;
-			}
-		
-			if ('status' in updatedProjectProps) {
-				const status = updatedProjectProps.status;
-		
-				if (!allowedStatuses.includes(status)) {
-				res.status(400).json({
-					error: `Status must be one of: ${allowedStatuses.join(', ')}`,
-				});
-				return;
-				}
-		
-				updatedFields.status = status;
-			}
-		
-			if (Object.keys(updatedFields).length === 0) {
-				res.status(400).json({ error: 'No valid fields provided for update' });
-				return;
-			}
-		
-			const updatedProject = await projectService.updateProject(projectId, updatedFields);
-		
-			res.status(200).json({ message: 'Project updated successfully', updatedProject });
-
-		} catch (error) {
-
-			return next(error);
-
-		}
-		
-	}
-    
-	public async changeTeamMemberRole(req: Request, res:Response, next: NextFunction) {
-
-		try {
-
-			const projectId: number = parseInt(req.params.projectId);
-			const memberId: number = parseInt(req.params.memberId);
-			const newRole = req.body.newRole;
-
-			if (!projectId || !memberId) {
-				res.status(400).json({ error: 'Project ID and Member ID are required' });
-				return;
-			}
-
-			if (!newRole) {
-				res.status(400).json({ error: 'New role does not exist' });
-				return;
-			}
-
-			const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
-			res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
+			await projectService.leaveProject(projectId, userId);
+			res.status(200).json({ message: 'User left project' });
 
 		} catch (error) {
 
@@ -151,90 +25,253 @@ class ProjectController {
 
 		}
 
+	} else {
+
+		res.sendStatus(403);
+		
 	}
-    
-	public async removeTeamMember(req: Request, res:Response, next: NextFunction) {
+
+}
+
+async function createProject(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	const { title, userPosition } = req.body as {
+		title: string;
+		userPosition: string;
+	};
+
+	try {
+
+		const userId: number = req.user.id;
+		const project = await projectService.createProject(userId, title, userPosition);
+
+		res.status(201).json({ project });
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function updateProject(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	try {
 
 		const projectId: number = parseInt(req.params.projectId);
-		const memberId: number = parseInt(req.params.memberId);
+		const updatedProjectProps = req.body.updatedProjectProps;
 
-		if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
+		if (!updatedProjectProps) {
+			res.status(400).json({ error: 'Updated object does not exist' });
+			return;
+		}
 
-			res.sendStatus(403);
+		const allowedStatuses = ['active', 'paused', 'completed'] as const;
+		type Status = typeof allowedStatuses[number];
+	
+		const allowedKeys = ['title', 'status'];
+		const keys = Object.keys(updatedProjectProps);
+		const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
 
-		} else {
+		if (!isValidKeysOnly) {
+			res.status(400).json({ error: 'Only title and status fields are allowed for updates' });
+			return;
+		}
 
-			try {
-
-				await projectService.removeTeamMember(projectId, memberId);
-				res.status(200).json({ message: 'User removed from the project successfully' });
-
-			} catch (error) {
-
-				return next(error);
-
+		const updatedFields: Partial<{ title: string; status: Status }> = {};
+	
+		if ('title' in updatedProjectProps) {
+			const title = updatedProjectProps.title.trim();
+	
+			if (typeof title !== 'string') {
+			res.status(400).json({ error: 'Title is undefined' });
+			return;
 			}
-
+	
+			updatedFields.title = title;
 		}
+	
+		if ('status' in updatedProjectProps) {
+			const status = updatedProjectProps.status;
+	
+			if (!allowedStatuses.includes(status)) {
+			res.status(400).json({
+				error: `Status must be one of: ${allowedStatuses.join(', ')}`,
+			});
+			return;
+			}
+	
+			updatedFields.status = status;
+		}
+	
+		if (Object.keys(updatedFields).length === 0) {
+			res.status(400).json({ error: 'No valid fields provided for update' });
+			return;
+		}
+	
+		const updatedProject = await projectService.updateProject(projectId, updatedFields);
+	
+		res.status(200).json({ message: 'Project updated successfully', updatedProject });
+
+	} catch (error) {
+
+		return next(error);
 
 	}
-
-	public async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
-
-		try {
-
-			const userId: number = (req.user as any)?.id;
-			const projects: UserProject[] = await projectService.getProjects(userId);
-			res.status(200).json(projects);
-
-		} catch (error) {
-
-			next(error);
-
-		}
-
-	}
-
-	public async getProjectDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
-
-		try {
-
-			const userId: any = (req.user as any)?.id;
-			const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-			const detail: ProjectDetails = await projectService.getProjectDetails(
-				userId,
-				projectId
-			);
-
-			res.status(200).json(detail);
-
-		} catch (error) {
-
-			next(error);
-
-		}
-
-	}
-
-  	async deleteProject(req: Request, res: Response, next: NextFunction): Promise<void> {
-
-		const projectId: number = parseInt(req.params.projectId);
-
-		try {
-
-			await projectService.deleteProject(projectId);
-
-			res.sendStatus(201);
-
-		} catch (error) {
-
-			console.error('Error deleting the project:', error);
-			throw new Error('Internal server error');
-
-		}
-
-  	}
 	
 }
 
-export default new ProjectController();
+async function changeTeamMemberRole(
+	req: AuthenticatedRequest, 
+	res:Response, 
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const projectId: number = parseInt(req.params.projectId);
+		const memberId: number = parseInt(req.params.memberId);
+		const newRole = req.body.newRole;
+
+		if (!projectId || !memberId) {
+			res.status(400).json({ error: 'Project ID and Member ID are required' });
+			return;
+		}
+
+		if (!newRole) {
+			res.status(400).json({ error: 'New role does not exist' });
+			return;
+		}
+
+		const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
+
+		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
+
+	} catch (error) {
+
+		return next(error);
+
+	}
+
+}
+
+async function removeTeamMember(
+	req: AuthenticatedRequest, 
+	res:Response, 
+	next: NextFunction
+): Promise<void> {
+
+	const projectId: number = parseInt(req.params.projectId);
+	const memberId: number = parseInt(req.params.memberId);
+
+	if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
+
+		res.sendStatus(403);
+
+	} else {
+
+		try {
+
+			await projectService.removeTeamMember(projectId, memberId);
+			res.status(200).json({ message: 'User removed from the project successfully' });
+
+		} catch (error) {
+
+			return next(error);
+
+		}
+
+	}
+
+}
+
+async function getProjects(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const userId: number = req.user.id;
+		const projects: FormattedProject[] = await projectService.getProjects(userId);
+
+		res.status(200).json({ projects: projects });
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function getProjectDetails(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const userId: any = req.user.id;
+		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
+		const detail: ProjectDetails = await projectService.getProjectDetails(
+			userId,
+			projectId
+		);
+
+		res.status(200).json(detail);
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function deleteProject(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	const projectId: number = parseInt(req.params.projectId);
+
+	try {
+
+		await projectService.deleteProject(projectId);
+
+		res.sendStatus(201);
+
+	} catch (error) {
+
+		console.error('Error deleting the project:', error);
+		throw new Error('Internal server error');
+
+	}
+
+}
+
+const projectController = {
+	leaveProject,
+	createProject,
+	updateProject,
+	changeTeamMemberRole,
+	removeTeamMember,
+	getProjects,
+	getProjectDetails,
+	deleteProject
+};
+
+export default projectController;

@@ -28,7 +28,8 @@ export interface Models {
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
-}
+};
+
 export const models: Models = {
 	User,
 	Project,
@@ -41,111 +42,111 @@ export const models: Models = {
 	Subtask,
 	DailyAiReport,
 	Comment,
-	Notification,
+	Notification
 };
 
 export function initAssociations() {
 
-	User.hasMany(ProjectMember, {
+	User.belongsToMany(Project, {
+		through: ProjectMember,
 		foreignKey: 'user_id',
-		onDelete: 'CASCADE',
-		hooks: true,
+		otherKey: 'project_id'
 	});
 
-	ProjectMember.belongsTo(User, {
-		foreignKey: 'user_id',
+	Project.belongsToMany(User, {
+		through: ProjectMember,
+		foreignKey: 'project_id',
+		otherKey: 'user_id'
 	});
 
 	User.hasMany(DailyAiReport, {
 		foreignKey: 'user_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	DailyAiReport.belongsTo(User, {
-		foreignKey: 'user_id',
+		foreignKey: 'user_id'
 	});
 
 	User.hasMany(Notification, {
 		foreignKey: 'user_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Notification.belongsTo(User, {
-		foreignKey: 'user_id',
-	});
-
-	Project.hasMany(ProjectMember, {
-		foreignKey: 'project_id',
-		onDelete: 'CASCADE',
-		hooks: true,
-	});
-
-	ProjectMember.belongsTo(Project, {
-		foreignKey: 'project_id',
+		foreignKey: 'user_id'
 	});
 
 	Project.hasMany(ProjectInvitation, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	ProjectInvitation.belongsTo(Project, {
-		foreignKey: 'project_id',
+		foreignKey: 'project_id'
 	});
 
 	Project.hasMany(Task, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Task.belongsTo(Project, {
+		foreignKey: 'project_id'
+	});
+
+	Project.hasMany(Notification, {
 		foreignKey: 'project_id',
+		onDelete: 'CASCADE',
+		hooks: true
+	});
+
+	Notification.belongsTo(Project, {
+		foreignKey: 'project_id'
 	});
 
 	ProjectMember.hasMany(Comment, {
-		foreignKey: 'user_id',
+		foreignKey: 'project_member_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Comment.belongsTo(ProjectMember, {
-		foreignKey: 'user_id',
+		foreignKey: 'project_member_id'
 	});
 
 	ProjectMember.hasMany(Task, {
 		as: 'assignedByMember',
-		foreignKey: 'assigned_by',
-		onDelete: 'SET NULL',
-	});
-
-	Task.belongsTo(ProjectMember, {
-		as: 'assignedByMember',
-		foreignKey: 'assigned_by',
+		foreignKey: 'assigned_by'
 	});
 
 	ProjectMember.hasMany(Task, {
 		as: 'assignedToMember',
-		foreignKey: 'assigned_to',
-		onDelete: 'SET NULL',
+		foreignKey: 'assigned_to'
+	});
+
+	Task.belongsTo(ProjectMember, {
+		as: 'assignedByMember',
+		foreignKey: 'assigned_by'
 	});
 
 	Task.belongsTo(ProjectMember, {
 		as: 'assignedToMember',
-		foreignKey: 'assigned_to',
+		foreignKey: 'assigned_to'
 	});
 
 	Role.hasMany(ProjectMember, {
 		foreignKey: 'role_id',
 		onDelete: 'SET NULL',
-		hooks: false,
+		hooks: false
 	});
 
 	ProjectMember.belongsTo(Role, {
-		foreignKey: 'role_id',
+		foreignKey: 'role_id'
 	});
 
 	Role.belongsToMany(Permission, {
@@ -153,7 +154,7 @@ export function initAssociations() {
 		foreignKey: 'role_id',
 		otherKey: 'permission_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Permission.belongsToMany(Role, {
@@ -161,38 +162,27 @@ export function initAssociations() {
 		foreignKey: 'permission_id',
 		otherKey: 'role_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Task.hasMany(Subtask, {
 		foreignKey: 'task_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Subtask.belongsTo(Task, {
-		foreignKey: 'task_id',
+		foreignKey: 'task_id'
 	});
 
 	Task.hasMany(Comment, {
 		foreignKey: 'task_id',
 		onDelete: 'CASCADE',
-		hooks: true,
+		hooks: true
 	});
 
 	Comment.belongsTo(Task, {
-		foreignKey: 'task_id',
-	});
-	//
-	ProjectInvitation.belongsTo(User, {
-		as: 'receiver',
-		foreignKey: 'receiver_email', // receiver_id
-		targetKey: 'email', // id
-	});
-	//
-	User.hasMany(ProjectInvitation, {
-		foreignKey: 'receiver_email',
-		as: 'receivedInvitations',
+		foreignKey: 'task_id'
 	});
 
 };
