@@ -9,19 +9,19 @@ import {
 import Task from './task';
 
 export interface SubtaskAssociations {
-  	Task?: Task;
+  	task: Task;
 }
 
 class Subtask extends Model<
 	InferAttributes<Subtask, { omit: keyof SubtaskAssociations }>,
-	InferCreationAttributes<Subtask>
+	InferCreationAttributes<Subtask, { omit: keyof SubtaskAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare title: string;
 	declare taskId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare Task?: Task;
+	declare task: Task;
 }
 
 Subtask.init(

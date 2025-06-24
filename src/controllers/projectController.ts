@@ -197,7 +197,8 @@ async function getProjectDetails(
 
 		const userId: any = req.user.id;
 		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-		const detail: ProjectDetails = await projectService.getProjectDetails(
+		
+		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
 			userId,
 			projectId
 		);
