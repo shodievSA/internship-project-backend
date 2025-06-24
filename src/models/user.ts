@@ -27,15 +27,15 @@ export interface UserAttributes {
 }
 
 export interface UserAssociations {
-	ProjectMembers?: ProjectMember[];
-	DailyAiReport?: DailyAiReport[];
-	Notifications?: Notification[];
-	ProjectInvitation?: ProjectInvitation[];
+	ProjectMembers: ProjectMember[];
+	DailyAiReport: DailyAiReport[];
+	Notifications: Notification[];
+	ProjectInvitation: ProjectInvitation[];
 }
 
 class User extends Model<
 	InferAttributes<User, { omit: keyof UserAssociations }>,
-	InferCreationAttributes<User>
+	InferCreationAttributes<User, { omit: keyof UserAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare googleId: string;
@@ -49,10 +49,10 @@ class User extends Model<
 	declare lastLoginAt: CreationOptional<Date | null>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare ProjectMembers?: ProjectMember[];
-	declare DailyAiReport?: DailyAiReport[];
-	declare Notifications?: Notification[];
-	declare ProjectInvitation?: ProjectInvitation[];
+	declare ProjectMembers: ProjectMember[];
+	declare DailyAiReport: DailyAiReport[];
+	declare Notifications: Notification[];
+	declare ProjectInvitation: ProjectInvitation[];
 }
 
 User.init(
