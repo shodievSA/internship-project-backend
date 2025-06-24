@@ -10,26 +10,32 @@ async function leaveProject(
 	next: NextFunction
 ) {
 	
-	const projectId: number = parseInt(req.params.projectId);
-	const userId: number = req.user.id;
+	try {
 
-	if (req.memberPermissions?.includes('leaveProject')) {
+		const projectId: number = parseInt(req.params.projectId);
+		const userId: number = req.user.id;
 
-		try {
+		if (req.memberPermissions?.includes('leaveProject')) {
 
-			await projectService.leaveProject(projectId, userId);
-			res.status(200).json({ message: 'User left project' });
+			try {
 
-		} catch (error) {
+				await projectService.leaveProject(projectId, userId);
+				res.status(200).json({ message: 'User left project' });
 
-			return next(error);
+			} catch (error) {
 
+				return next(error);
+
+			}
+
+		} else {
+
+			res.sendStatus(403);
+			
 		}
-
-	} else {
-
-		res.sendStatus(403);
 		
+	} catch (error) {
+		next(error);
 	}
 
 }
@@ -85,17 +91,12 @@ async function updateProject(
 		}
 	
 		const updatedProject = await projectService.updateProject(projectId, updatedFields);
-
-		if ('error' in updatedProject) {
-			res.status(400).json({ message: 'Error updating the project', updatedProject });
-			return;
-		}
 	
 		res.status(200).json({ message: 'Project updated successfully', updatedProject });
 
 	} catch (error) {
 
-		return next(error);
+		next(error);
 
 	}
 	
@@ -129,7 +130,7 @@ async function changeTeamMemberRole(
 
 	} catch (error) {
 
-		return next(error);
+		next(error);
 
 	}
 
@@ -157,7 +158,7 @@ async function removeTeamMember(
 
 		} catch (error) {
 
-			return next(error);
+			next(error);
 
 		}
 
@@ -223,12 +224,11 @@ async function deleteProject(
 
 		await projectService.deleteProject(projectId);
 
-		res.sendStatus(201);
+		res.sendStatus(204);
 
 	} catch (error) {
 
-		console.error('Error deleting the project:', error);
-		throw new Error('Internal server error');
+		next(error)
 
 	}
 

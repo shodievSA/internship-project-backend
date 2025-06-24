@@ -17,7 +17,7 @@ const router = Router();
 router.post('/', createProject as RequestHandler);
 router.get('/', getProjects as RequestHandler);
 router.get('/:projectId', getProjectDetails as RequestHandler);
-router.patch('/:projectId', projectUpdateValid, updateProject as RequestHandler);
+router.patch('/:projectId', getMemberPermissions, projectUpdateValid, updateProject as RequestHandler);
 router.delete('/:projectId', getMemberPermissions, deleteProject as RequestHandler);
 router.use('/:projectId/members', memberRouter);
 

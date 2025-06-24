@@ -134,9 +134,8 @@ class ProjectService {
 
 		try {
 
-			if (!projectId || isNaN(projectId)) {
-				console.error('Invalid Project Id');
-				return { error: 'Invalid Project Id' };
+			if (!projectId) {
+				throw new Error('Project ID is required');
 			}
 		
 			const [count, rows] = await models.Project.update(updatedFields, {
