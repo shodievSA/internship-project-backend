@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
+import { error } from 'console';
 
 async function leaveProject(
 	req: AuthenticatedRequest, 
@@ -84,6 +85,11 @@ async function updateProject(
 		}
 	
 		const updatedProject = await projectService.updateProject(projectId, updatedFields);
+
+		if ('error' in updatedProject) {
+			res.status(400).json({ message: 'Error updating the project', updatedProject });
+			return;
+		}
 	
 		res.status(200).json({ message: 'Project updated successfully', updatedProject });
 
