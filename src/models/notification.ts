@@ -19,12 +19,12 @@ const notificationTypeEnum = [
 ] as const;
 
 export interface NotificationAssociations {
-  	User?: User;
+  	user: User;
 }
 
 class Notification extends Model<
 	InferAttributes<Notification, { omit: keyof NotificationAssociations }>,
-	InferCreationAttributes<Notification>
+	InferCreationAttributes<Notification, { omit: keyof NotificationAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare message: string;
@@ -35,7 +35,7 @@ class Notification extends Model<
 	declare projectId: number | null;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare User?: User;
+	declare user: User;
 }
 
 Notification.init(

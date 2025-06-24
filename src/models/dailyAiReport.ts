@@ -9,19 +9,19 @@ import {
 import User from './user';
 
 export interface DailyAiReportAssociations {
-  	User?: User;
+  	user: User;
 }
 
 class DailyAiReport extends Model<
 	InferAttributes<DailyAiReport, { omit: keyof DailyAiReportAssociations }>,
-	InferCreationAttributes<DailyAiReport>
+	InferCreationAttributes<DailyAiReport, { omit: keyof DailyAiReportAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare report: string;
 	declare userId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare User?: User;
+	declare user: User;
 }
 
 DailyAiReport.init(

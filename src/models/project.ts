@@ -9,11 +9,13 @@ import {
 import ProjectInvitation from './projectInvitation';
 import ProjectMember from './projectMember';
 import Task from './task';
+import User from './user';
 
 export interface ProjectAssociations {
-	ProjectMembers?: ProjectMember[];
-	ProjectInvitations?: ProjectInvitation[];
-	Tasks?: Task[];
+	projectMembers: ProjectMember[];
+	projectInvitations: ProjectInvitation[];
+	tasks: Task[];
+	users: User[];
 }
 
 class Project extends Model<
@@ -25,9 +27,10 @@ class Project extends Model<
 	declare status: CreationOptional<'active' | 'completed' | 'paused'>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare ProjectMembers?: ProjectMember[];
-	declare ProjectInvitations?: ProjectInvitation[];
-	declare Tasks?: Task[];
+	declare projectMembers: ProjectMember[];
+	declare projectInvitations: ProjectInvitation[];
+	declare tasks: Task[];
+	declare users: User[];
 }
 
 Project.init(

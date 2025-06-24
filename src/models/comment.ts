@@ -10,13 +10,13 @@ import Task from './task';
 import ProjectMember from './projectMember';
 
 export interface CommentAssociations {
-	Task?: Task;
-	ProjectMember?: ProjectMember;
+	task: Task;
+	projectMember: ProjectMember;
 }
 
 class Comment extends Model<
 	InferAttributes<Comment, { omit: keyof CommentAssociations }>,
-	InferCreationAttributes<Comment>
+	InferCreationAttributes<Comment, { omit: keyof CommentAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare message: string;
@@ -24,8 +24,8 @@ class Comment extends Model<
 	declare projectMemberId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare Task?: Task;
-	declare ProjectMember?: ProjectMember;
+	declare task: Task;
+	declare projectMember: ProjectMember;
 }
 
 Comment.init(
