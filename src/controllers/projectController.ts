@@ -203,7 +203,7 @@ async function getProjectDetails(
 			projectId
 		);
 
-		res.status(200).json(detail);
+		res.status(200).json({ projectDetails: projectDetails});
 
 	} catch (error) {
 
