@@ -48,13 +48,15 @@ export const models: Models = {
 export function initAssociations() {
 
 	User.belongsToMany(Project, {
-		through: ProjectMember,
+		through: { model: ProjectMember },
+		as: 'projects',
 		foreignKey: 'user_id',
 		otherKey: 'project_id'
 	});
 
 	Project.belongsToMany(User, {
-		through: ProjectMember,
+		through: { model: ProjectMember },
+		as: 'users',
 		foreignKey: 'project_id',
 		otherKey: 'user_id'
 	});

@@ -10,13 +10,13 @@ import Project from './project';
 import User from './user';
 
 export interface ProjectInvitationAssociations {
-	Project?: Project;
-	receiver?: User;
+	project: Project;
+	receiver: User;
 }
 
 class ProjectInvitation extends Model<
 	InferAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>,
-	InferCreationAttributes<ProjectInvitation>
+	InferCreationAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare projectId: number;
@@ -28,8 +28,8 @@ class ProjectInvitation extends Model<
 	declare roleOffered: 'manager' | 'member';
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare Project?: Project;
-	declare receiver?: User;
+	declare project: Project;
+	declare receiver: User;
 }
 
 ProjectInvitation.init(

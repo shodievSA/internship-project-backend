@@ -5,6 +5,8 @@ import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails } from '
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
+import User from '@/models/user';
+import Project from '@/models/project';
 
 class ProjectService {
 
@@ -69,7 +71,10 @@ class ProjectService {
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
 		const user = await models.User.findByPk(userId, {
-			include: [{ model: models.Project }],
+			include: [{ 
+				model: models.Project,
+				as: 'projects'
+			}],
 			order: [[ 'createdAt', 'DESC' ]]
 		});
 
@@ -77,7 +82,7 @@ class ProjectService {
 			throw new Error(`User with id ${userId} not found.`);
 		}
 
-		const projects = user.get('Projects') as PlainProject[];
+		const projects = user.projects as Project[];
 
 		if (projects.length === 0) {
 
@@ -86,7 +91,7 @@ class ProjectService {
 		} else {
 
 			const projectsWithStats = await Promise.all(
-				projects.map(async (project: PlainProject) => {
+				projects.map(async (project: Project) => {
 
 					const projectId = project.id;
 		
@@ -95,15 +100,15 @@ class ProjectService {
 						models.Task.count({ where: { projectId } }),
 						models.Task.count({ where: { projectId, status: 'closed' } }),
 						models.ProjectMember.findOne({
-						where: {
-							projectId,
-							userId,
-							roleId: await models.Role.findOne({
-								where: { name: 'admin' },
-								attributes: ['id'],
-							}).then((role) => role?.id),
-						},
-						raw: true,
+							where: {
+								projectId,
+								userId,
+								roleId: await models.Role.findOne({
+									where: { name: 'admin' },
+									attributes: ['id'],
+								}).then((role) => role?.id),
+							},
+							raw: true,
 						}).then((member) => !!member),
 					]);
 	
@@ -163,7 +168,7 @@ class ProjectService {
 		try {
 
 			const deletedProjectCount = await models.Project.destroy({
-				where: {id: projectId}
+				where: { id: projectId }
 			});
 		
 			if (deletedProjectCount === 0) {
@@ -182,42 +187,58 @@ class ProjectService {
 	async getProjectDetails(userId: number, projectId: number): Promise<ProjectDetails> { 
 
 		try {
-	
-			const projectMembers = await models.ProjectMember.findAll({
-				where: { projectId: projectId },
-				attributes: ['id', 'position', 'roleId'],
-				include: [
-					{ 
-						model: models.User, 
-						attributes: ['fullName', 'email'] 
-					}
-				]
+
+			const project = await models.Project.findOne({
+				where: { id: projectId },
+				include: [{
+					model: models.User,
+					as: 'users',
+					attributes: ['fullName', 'email'],
+					through: {
+						as: 'projectMember',
+						attributes: ['id', 'position', 'roleId'] 
+					},
+				}]
 			});
+
+			if (!project) throw new Error("");
 	
-			const team = projectMembers.map((pm: ProjectMember) => {
+			const team = project.users.map((pm: User) => {
+
+				const projectMember = pm.projectMember;
+
 				return {
-					id: pm.id as number,
-					name: pm.User.fullName,
-					email: pm.User.email,
-					position: pm.position,
-					role: pm.roleId as number
+					id: projectMember.id as number,
+					name: pm.fullName,
+					email: pm.email,
+					position: projectMember.position,
+					role: projectMember.roleId as number
 				}
+
 			});
 		
 			const tasks = await models.Task.findAll({
-				where: { projectId },
+				where: { projectId: projectId },
 				include: [
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
-						include: [{ model: models.User, attributes: ['fullName'] }],
+						include: [{ 
+							model: models.User, 
+							attributes: ['fullName'] 
+						}],
 					},
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						include: [{ model: models.User, attributes: ['fullName'] }],
+						include: [{ 
+							model: models.User, 
+							attributes: ['fullName'] 
+						}],
 					},
-					{ model: models.Subtask },
+					{ 
+						model: models.Subtask 
+					},
 				],
 			});
 		
@@ -227,9 +248,9 @@ class ProjectService {
 				description: task.description as string,
 				priority: task.priority,
 				deadline: task.deadline,
-				subtask: task.Subtasks,
-				assignedBy: task.assignedByMember.User.fullName as string,
-				assignedTo: task.assignedToMember.User.fullName as string,
+				subtask: task.subtasks,
+				assignedBy: task.assignedByMember.user.fullName as string,
+				assignedTo: task.assignedToMember.user.fullName as string,
 				status: task.status,
 			}));
 		
@@ -241,9 +262,9 @@ class ProjectService {
 					description: task.description,
 					priority: task.priority,
 					deadline: task.deadline,
-					assignedBy: task.assignedByMember.User.fullName as string,
+					assignedBy: task.assignedByMember.user.fullName as string,
 					status: task.status,
-					subtask: task.Subtasks,
+					subtask: task.subtasks,
 					completion_note: task.completionNote as string | null,
 					rejection_reason: task.rejectionReason as string | null,
 					approval_note: task.approvalNote as string | null,
@@ -257,8 +278,8 @@ class ProjectService {
 					description: task.description,
 					priority: task.priority,
 					deadline: task.deadline,
-					assignedTo: task.assignedToMember.User.fullName as string,
-					subtask: task.Subtasks,
+					assignedTo: task.assignedToMember.user.fullName as string,
+					subtask: task.subtasks,
 					status: task.status,
 					completion_note: task.completionNote as string | null,
 					rejection_reason: task.rejectionReason as string | null,
@@ -276,8 +297,8 @@ class ProjectService {
 					description: task.description,
 					priority: task.priority,
 					deadline: task.deadline,
-					assignedTo: task.assignedToMember.User.fullName as string,
-					subtask: task.Subtasks,
+					assignedTo: task.assignedToMember.user.fullName as string,
+					subtask: task.subtasks,
 					status: task.status,
 					completion_note: task.completionNote as string | null,
 					rejection_reason: task.rejectionReason as string | null,
