@@ -70,49 +70,14 @@ async function updateProject(
 		const projectId: number = parseInt(req.params.projectId);
 		const updatedProjectProps = req.body.updatedProjectProps;
 
-		if (!updatedProjectProps) {
-			res.status(400).json({ error: 'Updated object does not exist' });
-			return;
-		}
-
 		const allowedStatuses = ['active', 'paused', 'completed'] as const;
 		type Status = typeof allowedStatuses[number];
-	
-		const allowedKeys = ['title', 'status'];
-		const keys = Object.keys(updatedProjectProps);
-		const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
 
-		if (!isValidKeysOnly) {
-			res.status(400).json({ error: 'Only title and status fields are allowed for updates' });
-			return;
-		}
+		const title = updatedProjectProps.title.trim();
+		const status = updatedProjectProps.status;
 
-		const updatedFields: Partial<{ title: string; status: Status }> = {};
-	
-		if ('title' in updatedProjectProps) {
-			const title = updatedProjectProps.title.trim();
-	
-			if (typeof title !== 'string') {
-			res.status(400).json({ error: 'Title is undefined' });
-			return;
-			}
-	
-			updatedFields.title = title;
-		}
-	
-		if ('status' in updatedProjectProps) {
-			const status = updatedProjectProps.status;
-	
-			if (!allowedStatuses.includes(status)) {
-			res.status(400).json({
-				error: `Status must be one of: ${allowedStatuses.join(', ')}`,
-			});
-			return;
-			}
-	
-			updatedFields.status = status;
-		}
-	
+		const updatedFields: Partial<{ title: string; status: Status }> = {title, status};
+
 		if (Object.keys(updatedFields).length === 0) {
 			res.status(400).json({ error: 'No valid fields provided for update' });
 			return;
@@ -225,12 +190,12 @@ async function getProjectDetails(
 
 		const userId: any = req.user.id;
 		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
+		const detail: ProjectDetails = await projectService.getProjectDetails(
 			userId,
 			projectId
 		);
 
-		res.status(200).json({ projectDetails: projectDetails });
+		res.status(200).json(detail);
 
 	} catch (error) {
 
