@@ -29,7 +29,7 @@ async function main() {
 	try {
 
 		await initDB();
-		startCronJobs();
+		await startCronJobs();
 		app.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
 
 	} catch (error) {
