@@ -188,8 +188,7 @@ class ProjectService {
 
 		try {
 
-			const project = await models.Project.findOne({
-				where: { id: projectId },
+			const project = await models.Project.findByPk(projectId, {
 				include: [{
 					model: models.User,
 					as: 'users',
@@ -201,7 +200,7 @@ class ProjectService {
 				}]
 			});
 
-			if (!project) throw new Error("");
+			if (!project) throw new Error(`Couldn't find project with id - ${projectId}`);
 	
 			const team = project.users.map((pm: User) => {
 
