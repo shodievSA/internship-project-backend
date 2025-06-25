@@ -4,11 +4,11 @@ import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
 async function leaveProject(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ) {
-	
+
 	const projectId: number = parseInt(req.params.projectId);
 	const userId: number = req.user.id;
 
@@ -28,14 +28,14 @@ async function leaveProject(
 	} else {
 
 		res.sendStatus(403);
-		
+
 	}
 
 }
 
 async function createProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -60,8 +60,8 @@ async function createProject(
 }
 
 async function updateProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -77,7 +77,7 @@ async function updateProject(
 
 		const allowedStatuses = ['active', 'paused', 'completed'] as const;
 		type Status = typeof allowedStatuses[number];
-	
+
 		const allowedKeys = ['title', 'status'];
 		const keys = Object.keys(updatedProjectProps);
 		const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
@@ -88,38 +88,38 @@ async function updateProject(
 		}
 
 		const updatedFields: Partial<{ title: string; status: Status }> = {};
-	
+
 		if ('title' in updatedProjectProps) {
 			const title = updatedProjectProps.title.trim();
-	
+
 			if (typeof title !== 'string') {
-			res.status(400).json({ error: 'Title is undefined' });
-			return;
+				res.status(400).json({ error: 'Title is undefined' });
+				return;
 			}
-	
+
 			updatedFields.title = title;
 		}
-	
+
 		if ('status' in updatedProjectProps) {
 			const status = updatedProjectProps.status;
-	
+
 			if (!allowedStatuses.includes(status)) {
-			res.status(400).json({
-				error: `Status must be one of: ${allowedStatuses.join(', ')}`,
-			});
-			return;
+				res.status(400).json({
+					error: `Status must be one of: ${allowedStatuses.join(', ')}`,
+				});
+				return;
 			}
-	
+
 			updatedFields.status = status;
 		}
-	
+
 		if (Object.keys(updatedFields).length === 0) {
 			res.status(400).json({ error: 'No valid fields provided for update' });
 			return;
 		}
-	
+
 		const updatedProject = await projectService.updateProject(projectId, updatedFields);
-	
+
 		res.status(200).json({ message: 'Project updated successfully', updatedProject });
 
 	} catch (error) {
@@ -127,12 +127,12 @@ async function updateProject(
 		return next(error);
 
 	}
-	
+
 }
 
 async function changeTeamMemberRole(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -154,7 +154,7 @@ async function changeTeamMemberRole(
 
 		const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
 
-		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
+		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole });
 
 	} catch (error) {
 
@@ -165,8 +165,8 @@ async function changeTeamMemberRole(
 }
 
 async function removeTeamMember(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -195,8 +195,8 @@ async function removeTeamMember(
 }
 
 async function getProjects(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -216,8 +216,8 @@ async function getProjects(
 }
 
 async function getProjectDetails(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -225,7 +225,7 @@ async function getProjectDetails(
 
 		const userId: any = req.user.id;
 		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-		
+
 		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
 			userId,
 			projectId
@@ -242,8 +242,8 @@ async function getProjectDetails(
 }
 
 async function deleteProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 

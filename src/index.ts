@@ -7,6 +7,7 @@ import session from './config/session';
 import initDB from './models';
 import v1Router from './routes/api/v1/index';
 import errorHandler from './middlewares/errorHandler';
+import { startCronJobs } from './services/cronService';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ async function main() {
 	try {
 
 		await initDB();
+		startCronJobs();
 		app.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
 
 	} catch (error) {
@@ -35,7 +37,7 @@ async function main() {
 		console.error('Failed to start server:', error);
 
 	}
-  
+
 }
 
 main();
