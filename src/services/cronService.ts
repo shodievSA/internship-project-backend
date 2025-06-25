@@ -25,6 +25,9 @@ async function markOverdueTasks() {
 export async function startCronJobs() {
     // Start the cron job: every day at 00:00:10
     cron.schedule('10 0 0 * * *', markOverdueTasks);
+
+
+
     // Run once immediately on server start
     await markOverdueTasks();
 }
