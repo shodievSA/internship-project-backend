@@ -5,5 +5,4 @@ export interface UserData {
   fullName: string;
   avatarUrl: string | null;
   createdAt: Date;
-  lastLoginAt: Date | null;
 }

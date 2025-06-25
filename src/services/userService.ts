@@ -9,12 +9,11 @@ class UserService {
 
 			const user = await models.User.findByPk(userId, {
 				attributes: [
-				'id',
-				'email',
-				'fullName',
-				'avatarUrl',
-				'createdAt',
-				'lastLoginAt',
+					'id',
+					'email',
+					'fullName',
+					'avatarUrl',
+					'createdAt',
 				],
 			});
 

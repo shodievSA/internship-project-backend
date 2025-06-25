@@ -1,16 +1,9 @@
-import {
-  DataTypes,
-  Model,
-  CreationOptional,
-  InferAttributes,
-  InferCreationAttributes,
-} from 'sequelize';
+import { DataTypes, Model, CreationOptional } from 'sequelize';
 import ProjectMember from './projectMember';
 import DailyAiReport from './dailyAiReport';
 import Notification from './notification';
 import ProjectInvitation from './projectInvitation';
 import sequelize from '../clients/sequelize';
-import { PlainProject } from '@/types';
 import Project from './project';
 
 export interface UserAttributes {
@@ -20,13 +13,28 @@ export interface UserAttributes {
 	fullName: string;
 	avatarUrl: string | null;
 	accessToken: string;
-	refreshToken: string | null;
-	phoneNumber: string | null;
-	tokenExpiresAt: Date | null;
-	lastLoginAt: Date | null;
+	refreshToken: string;
 	createdAt: Date;
 	updatedAt: Date;
+	isInvited: boolean;
 }
+
+export interface InvitedUserCreationAttributes {
+	email: string;
+	isInvited: true;
+}
+
+export interface RegisteredUserCreationAttributes {
+	googleId: string;
+	email: string;
+	fullName: string;
+	avatarUrl: CreationOptional<string | null>;
+	accessToken: string;
+	refreshToken: CreationOptional<string | null>;
+	isInvited: CreationOptional<boolean>;
+}
+
+type UserCreationAttributes = InvitedUserCreationAttributes | RegisteredUserCreationAttributes;
 
 export interface UserAssociations {
 	projectMembers: ProjectMember[];
@@ -38,19 +46,16 @@ export interface UserAssociations {
 }
 
 class User extends Model<
-	InferAttributes<User, { omit: keyof UserAssociations }>,
-	InferCreationAttributes<User, { omit: keyof UserAssociations }>
-> {
+	UserAttributes, UserCreationAttributes
+> implements UserAttributes {
 	declare id: CreationOptional<number>;
 	declare googleId: string;
 	declare email: string;
 	declare fullName: string;
 	declare avatarUrl: CreationOptional<string | null>;
 	declare accessToken: string;
-	declare refreshToken: CreationOptional<string | null>;
-	declare phoneNumber: CreationOptional<string | null>;
-	declare tokenExpiresAt: CreationOptional<Date | null>;
-	declare lastLoginAt: CreationOptional<Date | null>;
+	declare refreshToken: string;
+	declare isInvited: CreationOptional<boolean>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 	declare projectMember: ProjectMember;
@@ -58,7 +63,7 @@ class User extends Model<
 	declare dailyAiReport: DailyAiReport[];
 	declare notifications: Notification[];
 	declare projectInvitation: ProjectInvitation[];
-	declare projects: PlainProject[];
+	declare projects: Project[];
 }
 
 User.init(
@@ -94,17 +99,10 @@ User.init(
 			type: DataTypes.STRING(512),
 			allowNull: true
 		},
-		phoneNumber: {
-			type: DataTypes.STRING(30),
-			allowNull: true
-		},
-		tokenExpiresAt: {
-			type: DataTypes.DATE,
-			allowNull: true
-		},
-		lastLoginAt: {
-			type: DataTypes.DATE,
-			allowNull: true
+		isInvited: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false
 		},
 		createdAt: {
 			type: DataTypes.DATE,

@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { models } from '../models';
 import crypto from 'crypto';
 import { Profile } from 'passport';
-import { UserAttributes } from '@/models/user';
+import { RegisteredUserCreationAttributes, UserAttributes } from '@/models/user';
 
 const encryptToken = (token: string): string => {
 
@@ -64,7 +64,6 @@ passport.deserializeUser(
 					'fullName',
 					'avatarUrl',
 					'createdAt',
-					'lastLoginAt'
 				],
 			});
 
@@ -101,41 +100,31 @@ passport.use(new GoogleStrategy({
         if (!profile.id) throw new Error('Invalid profile: missing Google ID');
         if (!accessToken) throw new Error('No access token received from Google');
 
-        const expiresIn = params.expires_in || 3600;
-        const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
-
         const encryptedAccessToken = encryptToken(accessToken);
-        const encryptedRefreshToken = refreshToken ? encryptToken(refreshToken) : null;
+        const encryptedRefreshToken = encryptToken(refreshToken);
 
         const [user, created] = await models.User.findOrCreate({
 			where: { googleId: profile.id },
 			defaults: {
 				googleId: profile.id,
-				email: profile.emails?.[0]?.value!,
-				fullName: profile.displayName || 'Unknown User',
-				avatarUrl: profile.photos?.[0]?.value,
+				email: profile.emails![0].value,
+				fullName: profile.displayName,
+				avatarUrl: profile.photos?.[0]?.value ?? null,
 				accessToken: encryptedAccessToken,
-				refreshToken: encryptedRefreshToken || null,
-				tokenExpiresAt,
-				lastLoginAt: new Date(),
-			}
+				refreshToken: encryptedRefreshToken
+			} as RegisteredUserCreationAttributes
         });
 
         if (!created) {
 
 			await user.update({
 				accessToken: encryptedAccessToken,
-				refreshToken: encryptedRefreshToken ?? null,
-				tokenExpiresAt,
-				lastLoginAt: new Date(),
+				refreshToken: encryptedRefreshToken,
 			});
 
         }
 
-        const plainUser = user.get({ plain: true });
-        console.log(plainUser);
-
-        return done(null, plainUser);
+        return done(null, user);
 
     } catch (err) {
 
@@ -152,13 +141,13 @@ passport.use(new GoogleStrategy({
 
     }
 
-}) as unknown as passport.Strategy);
+}) as passport.Strategy);
 
 (GoogleStrategy.prototype as any).authorizationParams = function () {
 
 	return {
 		access_type: 'offline',
-		prompt: 'consent',
+		prompt: 'consent'
 	}
 
 };
