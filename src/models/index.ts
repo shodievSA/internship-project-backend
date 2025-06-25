@@ -95,6 +95,15 @@ export function initAssociations() {
 		foreignKey: 'project_id'
 	});
 
+	Notification.hasOne(ProjectInvitation, {
+		foreignKey: 'notification_id',
+		onDelete: 'CASCADE'
+	});
+
+	ProjectInvitation.belongsTo(Notification, {
+		foreignKey: 'notification_id'
+	});
+
 	Project.hasMany(Task, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
