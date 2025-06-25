@@ -10,21 +10,21 @@ import ProjectMember from './projectMember';
 import Permission from './permission';
 
 export interface RoleAssociations {
-	ProjectMembers?: ProjectMember[];
-	Permissions?: Permission[];
+	projectMembers: ProjectMember[];
+	permissions: Permission[];
 }
 
 class Role extends Model<
 	InferAttributes<Role, { omit: keyof RoleAssociations }>,
-	InferCreationAttributes<Role>
+	InferCreationAttributes<Role, { omit: keyof RoleAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare name: 'admin' | 'manager' | 'member';
 	declare description: CreationOptional<string | null>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare ProjectMembers?: ProjectMember[];
-	declare Permissions?: Permission[];
+	declare projectMembers: ProjectMember[];
+	declare permissions: Permission[];
 }
 
 Role.init(

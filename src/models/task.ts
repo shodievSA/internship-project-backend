@@ -12,11 +12,11 @@ import Subtask from './subTask';
 import Comment from './comment';
 
 export interface TaskAssociations {
-	Project?: Project;
-	assignedByMember?: ProjectMember;
-	assignedToMember?: ProjectMember;
-	Subtasks?: Subtask[];
-	Comments?: Comment[];
+	project: Project;
+	assignedByMember: ProjectMember;
+	assignedToMember: ProjectMember;
+	subtasks: Subtask[];
+	comments: Comment[];
 }
 
 class Task extends Model<
@@ -37,11 +37,11 @@ class Task extends Model<
 	declare projectId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare Project?: Project;
-	declare assignedByMember?: ProjectMember;
-	declare assignedToMember?: ProjectMember;
-	declare Subtasks?: Subtask[];
-	declare Comments?: Comment[];
+	declare project: Project;
+	declare assignedByMember: ProjectMember;
+	declare assignedToMember: ProjectMember;
+	declare subtasks: Subtask[];
+	declare comments: Comment[];
 }
 
 Task.init(

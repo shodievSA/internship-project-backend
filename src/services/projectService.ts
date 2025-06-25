@@ -5,6 +5,8 @@ import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails } from '
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
+import User from '@/models/user';
+import Project from '@/models/project';
 
 class ProjectService {
 
@@ -69,14 +71,18 @@ class ProjectService {
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
 		const user = await models.User.findByPk(userId, {
-			include: [{ model: models.Project }]
+			include: [{ 
+				model: models.Project,
+				as: 'projects'
+			}],
+			order: [[ 'createdAt', 'DESC' ]]
 		});
 
 		if (!user) {
 			throw new Error(`User with id ${userId} not found.`);
 		}
 
-		const projects = user.get('Projects') as PlainProject[];
+		const projects = user.projects as Project[];
 
 		if (projects.length === 0) {
 
@@ -85,7 +91,7 @@ class ProjectService {
 		} else {
 
 			const projectsWithStats = await Promise.all(
-				projects.map(async (project: PlainProject) => {
+				projects.map(async (project: Project) => {
 
 					const projectId = project.id;
 		
@@ -94,15 +100,15 @@ class ProjectService {
 						models.Task.count({ where: { projectId } }),
 						models.Task.count({ where: { projectId, status: 'closed' } }),
 						models.ProjectMember.findOne({
-						where: {
-							projectId,
-							userId,
-							roleId: await models.Role.findOne({
-								where: { name: 'admin' },
-								attributes: ['id'],
-							}).then((role) => role?.id),
-						},
-						raw: true,
+							where: {
+								projectId,
+								userId,
+								roleId: await models.Role.findOne({
+									where: { name: 'admin' },
+									attributes: ['id'],
+								}).then((role) => role?.id),
+							},
+							raw: true,
 						}).then((member) => !!member),
 					]);
 	
@@ -162,7 +168,7 @@ class ProjectService {
 		try {
 
 			const deletedProjectCount = await models.Project.destroy({
-				where: {id: projectId}
+				where: { id: projectId }
 			});
 		
 			if (deletedProjectCount === 0) {
@@ -180,139 +186,158 @@ class ProjectService {
 
 	async getProjectDetails(userId: number, projectId: number): Promise<ProjectDetails> { 
 
-		const project = await models.Project.findByPk(projectId, {
-		  	attributes: ['id', 'title'],
-		});
+		try {
+
+			const project = await models.Project.findOne({
+				where: { id: projectId },
+				include: [{
+					model: models.User,
+					as: 'users',
+					attributes: ['fullName', 'email'],
+					through: {
+						as: 'projectMember',
+						attributes: ['id', 'position', 'roleId'] 
+					},
+				}]
+			});
+
+			if (!project) throw new Error("");
 	
-		if (!project) throw new Error('Project not found');
-	
-		const teamMembers = await models.ProjectMember.findAll({
-			where: { projectId },
-			attributes: ['id', 'position', 'roleId'],
-			include: [{ model: models.User, attributes: ['fullName', 'email'] }],
-		});
-	
-		const team = teamMembers.map((pm: ProjectMember) => ({
-			id: pm.id as number,
-			name: pm.User?.fullName!,
-			email: pm.User?.email!,
-			position: pm.position,
-			role: pm.roleId as number,
-		}));
-	
-		const tasks = await models.Task.findAll({
-			where: { projectId },
-			include: [
-				{
-					model: models.ProjectMember,
-					as: 'assignedByMember',
-					include: [{ model: models.User, attributes: ['fullName'] }],
-				},
-				{
-					model: models.ProjectMember,
-					as: 'assignedToMember',
-					include: [{ model: models.User, attributes: ['fullName'] }],
-				},
-				{ model: models.Subtask },
-			],
-		});
-	
-		const allTasks = tasks.map((task: Task) => ({
-			id: task.id as number,
-			title: task.title,
-			description: task.description as string,
-			priority: task.priority,
-			deadline: task.deadline,
-			subtask: task.Subtasks,
-			assignedBy: task.assignedByMember?.User?.fullName as string,
-			assignedTo: task.assignedToMember?.User?.fullName as string,
-			status: task.status,
-		}));
-	
-		const myTasks = tasks
-			.filter((task: Task) => task.assignedTo === userId)
-			.map((task: Task) => ({
+			const team = project.users.map((pm: User) => {
+
+				const projectMember = pm.projectMember;
+
+				return {
+					id: projectMember.id as number,
+					name: pm.fullName,
+					email: pm.email,
+					position: projectMember.position,
+					role: projectMember.roleId as number
+				}
+
+			});
+		
+			const tasks = await models.Task.findAll({
+				where: { projectId: projectId },
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'assignedByMember',
+						include: [{ 
+							model: models.User, 
+							attributes: ['fullName'] 
+						}],
+					},
+					{
+						model: models.ProjectMember,
+						as: 'assignedToMember',
+						include: [{ 
+							model: models.User, 
+							attributes: ['fullName'] 
+						}],
+					},
+					{ 
+						model: models.Subtask 
+					},
+				],
+			});
+		
+			const allTasks = tasks.map((task: Task) => ({
 				id: task.id as number,
 				title: task.title,
-				description: task.description,
+				description: task.description as string,
 				priority: task.priority,
 				deadline: task.deadline,
-				assignedBy: task.assignedByMember?.User?.fullName as string,
+				subtask: task.subtasks,
+				assignedBy: task.assignedByMember.user.fullName as string,
+				assignedTo: task.assignedToMember.user.fullName as string,
 				status: task.status,
-				subtask: task.Subtasks,
-				completion_note: task.completionNote as string | null,
-				rejection_reason: task.rejectionReason as string | null,
-				approval_note: task.approvalNote as string | null,
+			}));
+		
+			const myTasks = tasks
+				.filter((task: Task) => task.assignedTo === userId)
+				.map((task: Task) => ({
+					id: task.id as number,
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					deadline: task.deadline,
+					assignedBy: task.assignedByMember.user.fullName as string,
+					status: task.status,
+					subtask: task.subtasks,
+					completion_note: task.completionNote as string | null,
+					rejection_reason: task.rejectionReason as string | null,
+					approval_note: task.approvalNote as string | null,
+				}));
+		
+			const assignedTasks = tasks
+				.filter((task: Task) => task.assignedBy === userId)
+				.map((task: Task) => ({
+					id: task.id as number,
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					deadline: task.deadline,
+					assignedTo: task.assignedToMember.user.fullName as string,
+					subtask: task.subtasks,
+					status: task.status,
+					completion_note: task.completionNote as string | null,
+					rejection_reason: task.rejectionReason as string | null,
+					approval_note: task.approvalNote as string | null,
+				}));
+		
+			const reviews = tasks
+				.filter(
+					(task: Task) =>
+					task.assignedBy === userId && task.status === 'under review'
+				)
+				.map((task: Task) => ({
+					id: task.id as number,
+					title: task.title,
+					description: task.description,
+					priority: task.priority,
+					deadline: task.deadline,
+					assignedTo: task.assignedToMember.user.fullName as string,
+					subtask: task.subtasks,
+					status: task.status,
+					completion_note: task.completionNote as string | null,
+					rejection_reason: task.rejectionReason as string | null,
+					approval_note: task.approvalNote as string | null,
+					submitted: task.updatedAt,
+			}));
+		
+			const invites = await models.ProjectInvitation.findAll({
+				where: { projectId }
+			});
+		
+			const formattedInvites = invites.map((invite: ProjectInvitation) => ({
+				id: invite.id as number,
+				status: invite.status,
+				receiver_email: invite.receiverEmail as string,
+				receiver_name: invite.receiverName as string,
+				receiver_avatar_url: invite.receiverAvatarUrl as string | null,
+				created_at: invite.createdAt as Date,
+				position_offered: invite.positionOffered as string,
+				role_offered: invite.roleOffered,
 			}));
 	
-		const assignedTasks = tasks
-			.filter((task: Task) => task.assignedBy === userId)
-			.map((task: Task) => ({
-				id: task.id as number,
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				deadline: task.deadline,
-				assignedTo: task.assignedToMember?.User?.fullName as string,
-				subtask: task.Subtasks,
-				status: task.status,
-				completion_note: task.completionNote as string | null,
-				rejection_reason: task.rejectionReason as string | null,
-				approval_note: task.approvalNote as string | null,
-		  	}));
-	
-		const reviews = tasks
-			.filter(
-				(task: Task) =>
-				task.assignedBy === userId && task.status === 'under review'
-			)
-			.map((task: Task) => ({
-				id: task.id as number,
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				deadline: task.deadline,
-				assignedTo: task.assignedToMember?.User?.fullName as string,
-				subtask: task.Subtasks,
-				status: task.status,
-				completion_note: task.completionNote as string | null,
-				rejection_reason: task.rejectionReason as string | null,
-				approval_note: task.approvalNote as string | null,
-				submitted: task.updatedAt,
-		  }));
-	
-		const invites = await models.ProjectInvitation.findAll({
-			where: { projectId },
-			include: [
-				{
-					model: models.User,
-					as: 'receiver',
-					attributes: ['fullName', 'email', 'avatarUrl'],
-				},
-			],
-		});
-	
-		const formattedInvites = invites.map((invite: ProjectInvitation) => ({
-			id: invite.id as number,
-			status: invite.status,
-			receiver_email: invite.receiver?.email as string,
-			receiver_name: invite.receiver?.fullName as string,
-			receiver_avatar_url: invite.receiver?.avatarUrl as string | null,
-			created_at: invite.createdAt as Date,
-			position_offered: invite.positionOffered as string,
-			role_offered: invite.roleOffered,
-		}));
+			return {
+				team: team,
+				allTasks: allTasks,
+				myTasks: myTasks,
+				assignedTasks: assignedTasks,
+				reviews: reviews,
+				invites: formattedInvites,
+			} as ProjectDetails;
 
-		return {
-			id: project.id as number,
-			title: project.title as string,
-			team,
-			allTasks,
-			myTasks,
-			assignedTasks,
-			reviews,
-			invites: formattedInvites,
-		} as ProjectDetails;
+		} catch(err) {
+
+			const error = err as Error;
+
+			console.log(error.message);
+			throw new Error(error.message);
+
+		}
 
 	}
 

@@ -9,12 +9,12 @@ import {
 import User from './user';
 
 export interface ProjectMemberAssociations {
-  	User?: User;
+  	user: User;
 }
 
 class ProjectMember extends Model<
 	InferAttributes<ProjectMember, { omit: keyof ProjectMemberAssociations }>,
-	InferCreationAttributes<ProjectMember>
+	InferCreationAttributes<ProjectMember, { omit: keyof ProjectMemberAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare userId: number;
@@ -24,7 +24,7 @@ class ProjectMember extends Model<
 	declare busyLevel: CreationOptional<'free' | 'low' | 'medium' | 'high'>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare User?: User;
+	declare user: User;
 }
 
 ProjectMember.init(
@@ -40,7 +40,8 @@ ProjectMember.init(
 			references: {
 				model: 'users',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
 		projectId: {
 			type: DataTypes.INTEGER,
@@ -48,7 +49,8 @@ ProjectMember.init(
 			references: {
 				model: 'projects',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
 		roleId: {
 			type: DataTypes.INTEGER,

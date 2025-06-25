@@ -8,18 +8,21 @@ import {
 } from 'sequelize';
 import Project from './project';
 import User from './user';
+import Notification from './notification';
 
 export interface ProjectInvitationAssociations {
-	Project?: Project;
-	receiver?: User;
+	project: Project;
+	receiver: User;
+	notification: Notification;
 }
 
 class ProjectInvitation extends Model<
 	InferAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>,
-	InferCreationAttributes<ProjectInvitation>
+	InferCreationAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare projectId: number;
+	declare notificationId: number;
 	declare status: 'pending' | 'accepted' | 'rejected';
 	declare receiverEmail: string;
 	declare receiverName: string;
@@ -28,8 +31,9 @@ class ProjectInvitation extends Model<
 	declare roleOffered: 'manager' | 'member';
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-	declare Project?: Project;
-	declare receiver?: User;
+	declare project: Project;
+	declare receiver: User;
+	declare notification: Notification;
 }
 
 ProjectInvitation.init(
@@ -44,6 +48,14 @@ ProjectInvitation.init(
 			allowNull: false,
 			references: {
 				model: 'projects',
+				key: 'id'
+			}
+		},
+		notificationId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'project_invitations',
 				key: 'id'
 			}
 		},
