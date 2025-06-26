@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
-import { error } from 'console';
+import { transporter } from '@/config/email';
 
 async function leaveProject(
 	req: AuthenticatedRequest, 
@@ -66,6 +66,99 @@ async function createProject(
 
 }
 
+async function inviteToProject(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	const { receiverEmail, positionOffered, roleOffered } = req.body as {
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member',
+	};
+
+	const projectId: number = parseInt(req.params.projectId);
+	
+	try {
+
+		if (!receiverEmail || !positionOffered || !roleOffered) {
+			
+			res.status(400).json({
+				error: 'receiverEmail, positionOffered, and roleOffered are required',
+			});
+
+			return;
+
+		}
+
+		if (!projectId) {
+			res.status(400).json({
+				error: 'projectId is missing',
+			});
+
+			return;
+		}
+
+		if (req.memberPermissions?.includes('invitePeople')) {
+
+			const { projectInvitation, fullProdInvite} = await projectService.inviteToProject(
+				projectId, receiverEmail, positionOffered, roleOffered
+			);
+
+			const email = await transporter.sendMail({
+						
+				to: receiverEmail,
+				from: process.env.EMAIL,
+				subject: '📬 Project invitation',
+				html: `
+					<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
+					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
+
+					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
+						${fullProdInvite?.project?.title}
+					</h2>
+
+					<p style="font-size: 16px;">
+						<strong>Role:</strong> ${roleOffered}<br>
+						<strong>Position:</strong> ${positionOffered}
+					</p>
+
+					<a href="${process.env.FRONTEND_URL}/projects" style="
+						display: inline-block;
+						margin-top: 20px;
+						padding: 10px 20px;
+						background-color: #007BFF;
+						color: white;
+						text-decoration: none;
+						border-radius: 5px;
+						font-weight: bold;
+					">
+						Accept Invitation
+					</a>
+
+					</div>
+				`
+
+			});
+
+			res.status(201).json({ message: 'Project invitation sent successfully', projectInvitation, email });
+
+		} else {
+
+			res.sendStatus(403);
+			
+		}
+
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
 async function updateProject(
 	req: AuthenticatedRequest, 
 	res: Response, 
@@ -90,9 +183,12 @@ async function updateProject(
 			return;
 		}
 	
-		const updatedProject = await projectService.updateProject(projectId, updatedFields);
-	
-		res.status(200).json({ message: 'Project updated successfully', updatedProject });
+		if (req.memberPermissions?.includes('editProject')) {
+			const updatedProject = await projectService.updateProject(projectId, updatedFields);
+			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+		} else {
+			res.sendStatus(403);
+		}
 
 	} catch (error) {
 
@@ -238,6 +334,7 @@ async function deleteProject(
 const projectController = {
 	leaveProject,
 	createProject,
+	inviteToProject,
 	updateProject,
 	changeTeamMemberRole,
 	removeTeamMember,

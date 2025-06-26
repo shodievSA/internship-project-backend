@@ -6,6 +6,7 @@ import { getMemberPermissions } from "../../../../middlewares/getMemberPermissio
 
 const {
 	createProject,
+	inviteToProject,
 	getProjects,
 	getProjectDetails,
 	updateProject,
@@ -15,6 +16,7 @@ const {
 const router = Router();
 
 router.post('/', createProject as RequestHandler);
+router.post('/:projectId/invites', getMemberPermissions, inviteToProject as RequestHandler);
 router.get('/', getProjects as RequestHandler);
 router.get('/:projectId', getProjectDetails as RequestHandler);
 router.patch('/:projectId', getMemberPermissions, projectUpdateValid, updateProject as RequestHandler);

@@ -23,9 +23,9 @@ class ProjectInvitation extends Model<
 	declare id: CreationOptional<number>;
 	declare projectId: number;
 	declare notificationId: number;
-	declare status: 'pending' | 'accepted' | 'rejected';
-	declare receiverEmail: string;
-	declare receiverName: string;
+	declare status: CreationOptional<'pending' | 'accepted' | 'declined'>;
+	declare receiverEmail: string;	
+	declare receiverName: CreationOptional<string | null>;
 	declare receiverAvatarUrl: CreationOptional<string | null>;
 	declare positionOffered: string;
 	declare roleOffered: 'manager' | 'member';
@@ -55,7 +55,7 @@ ProjectInvitation.init(
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			references: {
-				model: 'project_invitations',
+				model: 'notifications',
 				key: 'id'
 			}
 		},
@@ -73,7 +73,8 @@ ProjectInvitation.init(
 		},
 		receiverName: {
 			type: DataTypes.STRING(30),
-			allowNull: false
+			allowNull: true,
+			defaultValue: 'Receiver',
 		},
 		receiverAvatarUrl: {
 			type: DataTypes.STRING(255),

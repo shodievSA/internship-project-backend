@@ -92,7 +92,8 @@ export function initAssociations() {
 	});
 
 	ProjectInvitation.belongsTo(Project, {
-		foreignKey: 'project_id'
+		foreignKey: 'project_id',
+		as: 'project'
 	});
 
 	Notification.hasOne(ProjectInvitation, {
@@ -207,7 +208,7 @@ export default async function initDB() {
 	try {
 
 		await sequelize.authenticate();
-		await sequelize.sync({ force: false});
+		await sequelize.sync({ force: false });
 		initAssociations();
 		await seedRoles();
 		await seedPermissions();
