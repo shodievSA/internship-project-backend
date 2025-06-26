@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { models } from '../models';
 import crypto from 'crypto';
 import { Profile } from 'passport';
-import { RegisteredUserCreationAttributes, UserAttributes } from '@/models/user';
+import { InvitedUserCreationAttributes, RegisteredUserCreationAttributes, UserAttributes } from '@/models/user';
 
 const encryptToken = (token: string): string => {
 
@@ -103,16 +103,24 @@ passport.use(new GoogleStrategy({
         const encryptedAccessToken = encryptToken(accessToken);
         const encryptedRefreshToken = encryptToken(refreshToken);
 
-        const [user, created] = await models.User.findOrCreate({
+        // const [user, created] = await models.User.findOrCreate({
+		// 	where: { googleId: profile.id },
+		// 	defaults: {
+		// 		googleId: profile.id,
+		// 		email: profile.emails![0].value,
+		// 		fullName: profile.displayName,
+		// 		avatarUrl: profile.photos?.[0]?.value ?? null,
+		// 		accessToken: encryptedAccessToken,
+		// 		refreshToken: encryptedRefreshToken
+		// 	} as RegisteredUserCreationAttributes
+        // });
+
+		const [user, created] = await models.User.findOrCreate({
 			where: { googleId: profile.id },
 			defaults: {
-				googleId: profile.id,
 				email: profile.emails![0].value,
-				fullName: profile.displayName,
-				avatarUrl: profile.photos?.[0]?.value ?? null,
-				accessToken: encryptedAccessToken,
-				refreshToken: encryptedRefreshToken
-			} as RegisteredUserCreationAttributes
+				isInvited: true
+			} as InvitedUserCreationAttributes
         });
 
         if (!created) {
