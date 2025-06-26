@@ -75,7 +75,7 @@ User.init(
 		},
 		googleId: {
 			type: DataTypes.STRING(255),
-			allowNull: false
+			allowNull: true
 		},
 		email: {
 			type: DataTypes.STRING(320),
@@ -85,7 +85,7 @@ User.init(
 		},
 		fullName: {
 			type: DataTypes.STRING(30),
-			allowNull: false
+			allowNull: true
 		},
 		avatarUrl: {
 			type: DataTypes.STRING(255),
@@ -93,7 +93,7 @@ User.init(
 		},
 		accessToken: {
 			type: DataTypes.STRING(512),
-			allowNull: false
+			allowNull: true
 		},
 		refreshToken: {
 			type: DataTypes.STRING(512),
