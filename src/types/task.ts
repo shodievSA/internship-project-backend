@@ -1,11 +1,3 @@
-export interface CreateTaskBody {
-  title: string;
-  description: string;
-  priority: 'low' | 'middle' | 'high';
-  deadline: Date;
-  assignedTo: number;
-  subtasks: string[];
-}
 export interface RawTask {
   id: number;
   title: string;

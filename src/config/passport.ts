@@ -133,7 +133,6 @@ passport.use(new GoogleStrategy({
         }
 
         const plainUser = user.get({ plain: true });
-        console.log(plainUser);
 
         return done(null, plainUser);
 

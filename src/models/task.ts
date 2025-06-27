@@ -19,6 +19,21 @@ export interface TaskAssociations {
 	comments: Comment[];
 }
 
+export interface TaskAttributes { 
+	title: string;
+	description: string;
+	priority: 'low' | 'middle' | 'high';
+	deadline: Date;
+	assignedBy?: number;
+	assignedTo: number;
+	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+	completionNote?: string | null;
+	rejectionReason?: string | null;
+	approvalNote?: string | null;
+    subtasks?: string[];
+	projectId: number;
+}
+
 class Task extends Model<
 	InferAttributes<Task, { omit: keyof TaskAssociations }>,
 	InferCreationAttributes<Task, { omit: keyof TaskAssociations }>
