@@ -1,15 +1,12 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails, Invite } from '@/types';
-import { FormattedProject, ProjectDetails } from '@/types';
+import { FormattedProject, ProjectDetails, Invite } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
 import User from '@/models/user';
 import Project from '@/models/project';
-import { TaskAttributes } from '@/models/task';
-import Subtask from '@/models/subTask';
 
 class ProjectService {
 
