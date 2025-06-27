@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
+import { transporter } from '@/config/email';
 
 async function leaveProject(
 	req: AuthenticatedRequest, 
@@ -9,26 +10,32 @@ async function leaveProject(
 	next: NextFunction
 ) {
 	
-	const projectId: number = parseInt(req.params.projectId);
-	const userId: number = req.user.id;
+	try {
 
-	if (req.memberPermissions?.includes('leaveProject')) {
+		const projectId: number = parseInt(req.params.projectId);
+		const userId: number = req.user.id;
 
-		try {
+		if (req.memberPermissions?.includes('leaveProject')) {
 
-			await projectService.leaveProject(projectId, userId);
-			res.status(200).json({ message: 'User left project' });
+			try {
 
-		} catch (error) {
+				await projectService.leaveProject(projectId, userId);
+				res.status(200).json({ message: 'User left project' });
 
-			return next(error);
+			} catch (error) {
 
+				return next(error);
+
+			}
+
+		} else {
+
+			res.sendStatus(403);
+			
 		}
-
-	} else {
-
-		res.sendStatus(403);
 		
+	} catch (error) {
+		next(error);
 	}
 
 }
@@ -59,6 +66,99 @@ async function createProject(
 
 }
 
+async function inviteToProject(
+	req: AuthenticatedRequest, 
+	res: Response, 
+	next: NextFunction
+): Promise<void> {
+
+	const { receiverEmail, positionOffered, roleOffered } = req.body as {
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member',
+	};
+
+	const projectId: number = parseInt(req.params.projectId);
+	
+	try {
+
+		if (!receiverEmail || !positionOffered || !roleOffered) {
+			
+			res.status(400).json({
+				error: 'receiverEmail, positionOffered, and roleOffered are required',
+			});
+
+			return;
+
+		}
+
+		if (!projectId) {
+			res.status(400).json({
+				error: 'projectId is missing',
+			});
+
+			return;
+		}
+
+		if (req.memberPermissions?.includes('invitePeople')) {
+
+			const { projectInvitation, fullProdInvite} = await projectService.inviteToProject(
+				projectId, receiverEmail, positionOffered, roleOffered
+			);
+
+			const email = await transporter.sendMail({
+						
+				to: receiverEmail,
+				from: process.env.EMAIL,
+				subject: '📬 Project invitation',
+				html: `
+					<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
+					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
+
+					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
+						${fullProdInvite?.project?.title}
+					</h2>
+
+					<p style="font-size: 16px;">
+						<strong>Role:</strong> ${roleOffered}<br>
+						<strong>Position:</strong> ${positionOffered}
+					</p>
+
+					<a href="${process.env.FRONTEND_URL}/projects" style="
+						display: inline-block;
+						margin-top: 20px;
+						padding: 10px 20px;
+						background-color: #007BFF;
+						color: white;
+						text-decoration: none;
+						border-radius: 5px;
+						font-weight: bold;
+					">
+						Accept Invitation
+					</a>
+
+					</div>
+				`
+
+			});
+
+			res.status(201).json({ message: 'Project invitation sent successfully', projectInvitation, email });
+
+		} else {
+
+			res.sendStatus(403);
+			
+		}
+
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
 async function updateProject(
 	req: AuthenticatedRequest, 
 	res: Response, 
@@ -70,61 +170,29 @@ async function updateProject(
 		const projectId: number = parseInt(req.params.projectId);
 		const updatedProjectProps = req.body.updatedProjectProps;
 
-		if (!updatedProjectProps) {
-			res.status(400).json({ error: 'Updated object does not exist' });
-			return;
-		}
-
 		const allowedStatuses = ['active', 'paused', 'completed'] as const;
 		type Status = typeof allowedStatuses[number];
-	
-		const allowedKeys = ['title', 'status'];
-		const keys = Object.keys(updatedProjectProps);
-		const isValidKeysOnly = keys.every((key) => allowedKeys.includes(key));
 
-		if (!isValidKeysOnly) {
-			res.status(400).json({ error: 'Only title and status fields are allowed for updates' });
-			return;
-		}
+		const title = updatedProjectProps.title.trim();
+		const status = updatedProjectProps.status;
 
-		const updatedFields: Partial<{ title: string; status: Status }> = {};
-	
-		if ('title' in updatedProjectProps) {
-			const title = updatedProjectProps.title.trim();
-	
-			if (typeof title !== 'string') {
-			res.status(400).json({ error: 'Title is undefined' });
-			return;
-			}
-	
-			updatedFields.title = title;
-		}
-	
-		if ('status' in updatedProjectProps) {
-			const status = updatedProjectProps.status;
-	
-			if (!allowedStatuses.includes(status)) {
-			res.status(400).json({
-				error: `Status must be one of: ${allowedStatuses.join(', ')}`,
-			});
-			return;
-			}
-	
-			updatedFields.status = status;
-		}
-	
+		const updatedFields: Partial<{ title: string; status: Status }> = {title, status};
+
 		if (Object.keys(updatedFields).length === 0) {
 			res.status(400).json({ error: 'No valid fields provided for update' });
 			return;
 		}
 	
-		const updatedProject = await projectService.updateProject(projectId, updatedFields);
-	
-		res.status(200).json({ message: 'Project updated successfully', updatedProject });
+		if (req.memberPermissions?.includes('editProject')) {
+			const updatedProject = await projectService.updateProject(projectId, updatedFields);
+			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+		} else {
+			res.sendStatus(403);
+		}
 
 	} catch (error) {
 
-		return next(error);
+		next(error);
 
 	}
 	
@@ -158,7 +226,7 @@ async function changeTeamMemberRole(
 
 	} catch (error) {
 
-		return next(error);
+		next(error);
 
 	}
 
@@ -186,7 +254,7 @@ async function removeTeamMember(
 
 		} catch (error) {
 
-			return next(error);
+			next(error);
 
 		}
 
@@ -231,7 +299,7 @@ async function getProjectDetails(
 			projectId
 		);
 
-		res.status(200).json({ projectDetails: projectDetails });
+		res.status(200).json({ projectDetails: projectDetails});
 
 	} catch (error) {
 
@@ -253,12 +321,11 @@ async function deleteProject(
 
 		await projectService.deleteProject(projectId);
 
-		res.sendStatus(201);
+		res.sendStatus(204);
 
 	} catch (error) {
 
-		console.error('Error deleting the project:', error);
-		throw new Error('Internal server error');
+		next(error)
 
 	}
 
@@ -267,6 +334,7 @@ async function deleteProject(
 const projectController = {
 	leaveProject,
 	createProject,
+	inviteToProject,
 	updateProject,
 	changeTeamMemberRole,
 	removeTeamMember,

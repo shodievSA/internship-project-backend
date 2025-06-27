@@ -92,7 +92,8 @@ export function initAssociations() {
 	});
 
 	ProjectInvitation.belongsTo(Project, {
-		foreignKey: 'project_id'
+		foreignKey: 'project_id',
+		as: 'project'
 	});
 
 	Notification.hasOne(ProjectInvitation, {

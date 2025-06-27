@@ -1,7 +1,7 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails } from '@/types';
+import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails, Invite } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
@@ -62,7 +62,111 @@ class ProjectService {
 
 			await transaction.rollback();
 			throw new Error('Internal server error');
+
+		}
+
+	}
+
+	async inviteToProject(
+		projectId: number,
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member'
+	): Promise<Invite> {
+
+		const transaction: Transaction = await sequelize.transaction();
+
+		try {
 			
+			const userExists = await models.User.findOne({
+				where: { email: receiverEmail },
+				transaction,
+			});
+
+			if (userExists) {
+
+				const userId = userExists.id;
+
+				return createInvite(userId);
+
+			} else {
+
+				const newUser = await models.User.create({
+
+					email: receiverEmail,
+					isInvited: true,
+
+				}, { transaction });
+
+				if (newUser) {
+
+					const userId = newUser.id;
+
+					return createInvite(userId);
+
+				}
+
+				throw new Error('Unexpected state: no user');
+
+			}
+
+			async function createInvite(userId: number) {
+				
+				try {
+					
+					const notification = await models.Notification.create({ 
+						message: 'You have been invited to join a project!',
+						type: 'invite',
+						priority: 'low',
+						userId: userId,
+						projectId: projectId,
+					}, { transaction });
+
+					const notificationId = notification.id;
+
+					const projectInvitation = await models.ProjectInvitation.create({ 
+						projectId: projectId,
+						notificationId: notificationId,
+						invitedUserId: userId,
+						positionOffered: positionOffered,
+						roleOffered: roleOffered,
+					}, { transaction });
+
+					const fullProdInvite = await models.ProjectInvitation.findOne({
+						where: { projectId: projectId },
+
+						include: [
+
+							{
+								model: models.Project,
+								as: 'project'
+							}
+
+						],
+
+						transaction
+
+					});
+
+					await transaction.commit();
+
+					return { projectInvitation, fullProdInvite };
+
+				} catch (error) {
+
+					console.error(error);
+					throw new Error('Error creating project invitation');
+					
+				}
+
+			}
+
+		} catch (error) {
+
+			console.error('Error sending project invitation:', error);
+
+			await transaction.rollback();
+			throw new Error('Internal server error');
 
 		}
 
