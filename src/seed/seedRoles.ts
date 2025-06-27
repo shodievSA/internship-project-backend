@@ -8,7 +8,7 @@ export default async function seedRoles () {
       await Role.findOrCreate({ where: { name: roleName } });
     }
 
-    console.log('Predefined roles inserted');
+    console.log('Roles seeded');
   } catch (error) {
 	  console.error('Error inserting predefined roles:', error);
   }

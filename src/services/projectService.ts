@@ -2,11 +2,14 @@ import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
 import { CreateTaskBody, PlainProject, FormattedProject, ProjectDetails, Invite } from '@/types';
+import { FormattedProject, ProjectDetails } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import ProjectInvitation from '@/models/projectInvitation';
 import User from '@/models/user';
 import Project from '@/models/project';
+import { TaskAttributes } from '@/models/task';
+import Subtask from '@/models/subTask';
 
 class ProjectService {
 
@@ -328,6 +331,7 @@ class ProjectService {
 						as: 'assignedByMember',
 						include: [{ 
 							model: models.User, 
+                            as: 'user',
 							attributes: ['fullName'] 
 						}],
 					},
@@ -336,6 +340,7 @@ class ProjectService {
 						as: 'assignedToMember',
 						include: [{ 
 							model: models.User, 
+                            as: 'user',
 							attributes: ['fullName'] 
 						}],
 					},
@@ -344,7 +349,7 @@ class ProjectService {
 					},
 				],
 			});
-		
+
 			const allTasks = tasks.map((task: Task) => ({
 				id: task.id as number,
 				title: task.title,
@@ -448,39 +453,28 @@ class ProjectService {
 
 	}
 
-	async createTask(assignerId: number, projectId: number, body: CreateTaskBody): Promise<object> {
+	async createTask(task : Task): Promise<object> {
 
     	const transaction = await sequelize.transaction();
 
 		try {
 
-			const task = await models.Task.create(
-				{
-					title: body.title,
-					description: body.description,
-					priority: body.priority,
-					deadline: body.deadline,
-					assignedTo: body.assignedTo,
-					assignedBy: assignerId,
-					projectId: projectId,
-				},
-				{ transaction }
-			);
+			const newTask = await models.Task.create(task, { transaction } );
+            
+			if (task.subtasks.length > 0) {
 
-			if (body.subtasks.length > 0) {
-
-				await models.Subtask.bulkCreate(body.subtasks.map((subtask) => (
+				await models.Subtask.bulkCreate(task.subtasks.map((subtask) => (
 					{
-						title: subtask,
-						taskId: task.get('id'),
+						title: subtask.title,
+						taskId: newTask.id,
 					}
 				)), { transaction });
 
-			}
+			} 
 
 			await transaction.commit();
 
-			return task.toJSON();
+			return newTask.toJSON();
 
 		} catch (error) {
 

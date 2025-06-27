@@ -3,6 +3,7 @@ import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
+import Task, { TaskAttributes } from '@/models/task';
 
 async function leaveProject(
 	req: AuthenticatedRequest, 
@@ -293,7 +294,6 @@ async function getProjectDetails(
 
 		const userId: any = req.user.id;
 		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-		
 		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
 			userId,
 			projectId
@@ -331,6 +331,34 @@ async function deleteProject(
 
 }
 
+async function createTask( 
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+): Promise<any> {
+
+    const task = req.body.task;
+    task.projectId = parseInt(req.params.projectId);
+    task.assignedBy = req.user.id
+
+        try { 
+            if ( req.memberPermissions?.includes('assignTasks') ) { 
+
+                const nTask = await projectService.createTask(task as Task)
+
+                return res.status(201).json(nTask)
+            }
+
+            return res.status(403).json({ message: 'Permission required'})
+        }
+
+        catch (error) { 
+
+            next(error)
+
+        }
+    }
+
 const projectController = {
 	leaveProject,
 	createProject,
@@ -340,7 +368,8 @@ const projectController = {
 	removeTeamMember,
 	getProjects,
 	getProjectDetails,
-	deleteProject
+	deleteProject,
+    createTask,
 };
 
 export default projectController;
