@@ -306,15 +306,19 @@ class ProjectService {
 			}));
 		
 			const invites = await models.ProjectInvitation.findAll({
-				where: { projectId }
+				where: { projectId },
+				include: [{
+					model: models.User,
+					as: 'user'
+				}]
 			});
 		
 			const formattedInvites = invites.map((invite: ProjectInvitation) => ({
 				id: invite.id as number,
 				status: invite.status,
-				receiver_email: invite.receiverEmail as string,
-				receiver_name: invite.receiverName as string,
-				receiver_avatar_url: invite.receiverAvatarUrl as string | null,
+				receiver_email: invite.user.email,
+				receiver_name: invite.user.fullName,
+				receiver_avatar_url: invite.user.avatarUrl,
 				created_at: invite.createdAt as Date,
 				position_offered: invite.positionOffered as string,
 				role_offered: invite.roleOffered,

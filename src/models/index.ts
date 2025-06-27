@@ -104,6 +104,11 @@ export function initAssociations() {
 		foreignKey: 'notification_id'
 	});
 
+	ProjectInvitation.belongsTo(User, {
+		foreignKey: 'invited_user_id',
+		as: 'user'
+	});
+
 	Project.hasMany(Task, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
@@ -207,7 +212,7 @@ export default async function initDB() {
 	try {
 
 		await sequelize.authenticate();
-		await sequelize.sync({ force: false});
+		await sequelize.sync({ force: false });
 		initAssociations();
 		await seedRoles();
 		await seedPermissions();
