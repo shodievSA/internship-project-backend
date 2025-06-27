@@ -6,8 +6,8 @@ import { transporter } from '@/config/email';
 import Task, { TaskAttributes } from '@/models/task';
 
 async function leaveProject(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ) {
 	
@@ -42,8 +42,8 @@ async function leaveProject(
 }
 
 async function createProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -161,8 +161,8 @@ async function inviteToProject(
 }
 
 async function updateProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -196,12 +196,12 @@ async function updateProject(
 		next(error);
 
 	}
-	
+
 }
 
 async function changeTeamMemberRole(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -223,7 +223,7 @@ async function changeTeamMemberRole(
 
 		const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
 
-		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole});
+		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole });
 
 	} catch (error) {
 
@@ -234,8 +234,8 @@ async function changeTeamMemberRole(
 }
 
 async function removeTeamMember(
-	req: AuthenticatedRequest, 
-	res:Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -264,8 +264,8 @@ async function removeTeamMember(
 }
 
 async function getProjects(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -285,8 +285,8 @@ async function getProjects(
 }
 
 async function getProjectDetails(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -310,8 +310,8 @@ async function getProjectDetails(
 }
 
 async function deleteProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
