@@ -10,7 +10,7 @@ async function markOverdueTasks() {
             {
                 where: {
                     deadline: { [Op.lt]: now },
-                    status: ['ongoing', 'under review'],
+                    status: ['ongoing', 'under review', 'rejected'],
                 },
             }
         );
