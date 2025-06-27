@@ -12,7 +12,7 @@ import Notification from './notification';
 
 export interface ProjectInvitationAssociations {
 	project: Project;
-	receiver: User;
+	user: User;
 	notification: Notification;
 }
 
@@ -23,16 +23,14 @@ class ProjectInvitation extends Model<
 	declare id: CreationOptional<number>;
 	declare projectId: number;
 	declare notificationId: number;
-	declare status: CreationOptional<'pending' | 'accepted' | 'declined'>;
-	declare receiverEmail: string;	
-	declare receiverName: CreationOptional<string | null>;
-	declare receiverAvatarUrl: CreationOptional<string | null>;
+	declare invitedUserId: number;
+	declare status: CreationOptional<'pending' | 'accepted' | 'rejected'>;
 	declare positionOffered: string;
 	declare roleOffered: 'manager' | 'member';
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 	declare project: Project;
-	declare receiver: User;
+	declare user: User;
 	declare notification: Notification;
 }
 
@@ -59,26 +57,18 @@ ProjectInvitation.init(
 				key: 'id'
 			}
 		},
+		invitedUserId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'users',
+				key: 'id'
+			}
+		},
 		status: {
 			type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
 			allowNull: false,
 			defaultValue: 'pending'
-		},
-		receiverEmail: {
-			type: DataTypes.STRING(320),
-			allowNull: false,
-			validate: {
-				isEmail: true,
-			}
-		},
-		receiverName: {
-			type: DataTypes.STRING(30),
-			allowNull: true,
-			defaultValue: 'Receiver',
-		},
-		receiverAvatarUrl: {
-			type: DataTypes.STRING(255),
-			allowNull: true
 		},
 		positionOffered: {
 			type: DataTypes.STRING(50),

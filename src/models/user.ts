@@ -8,12 +8,12 @@ import Project from './project';
 
 export interface UserAttributes {
 	id: number;
-	googleId: string;
+	googleId: string | null;
 	email: string;
-	fullName: string;
+	fullName: string | null;
 	avatarUrl: string | null;
-	accessToken: string;
-	refreshToken: string;
+	accessToken: string | null;
+	refreshToken: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 	isInvited: boolean;
@@ -49,12 +49,12 @@ class User extends Model<
 	UserAttributes, UserCreationAttributes
 > implements UserAttributes {
 	declare id: CreationOptional<number>;
-	declare googleId: string;
+	declare googleId: string | null;
 	declare email: string;
-	declare fullName: string;
+	declare fullName: string | null;
 	declare avatarUrl: CreationOptional<string | null>;
-	declare accessToken: string;
-	declare refreshToken: string;
+	declare accessToken: string | null;
+	declare refreshToken: string | null;
 	declare isInvited: CreationOptional<boolean>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;

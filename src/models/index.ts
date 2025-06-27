@@ -105,6 +105,11 @@ export function initAssociations() {
 		foreignKey: 'notification_id'
 	});
 
+	ProjectInvitation.belongsTo(User, {
+		foreignKey: 'invited_user_id',
+		as: 'user'
+	});
+
 	Project.hasMany(Task, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
