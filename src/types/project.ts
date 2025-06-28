@@ -1,4 +1,5 @@
 import Subtask from '@/models/subTask';
+import TaskHistory from '@/models/taskHistory';
 
 export interface PlainProject {
 	id: number;
@@ -39,6 +40,7 @@ export interface ProjectDetails {
 		assignedBy: string;
 		assignedTo: string;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+        history : TaskHistory[]
 	}[];
 	myTasks: {
 		id: number;
@@ -49,9 +51,7 @@ export interface ProjectDetails {
 		assignedBy: string;
 		subtask: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-		completion_note: string | null;
-		rejection_reason: string | null;
-		approval_note: string | null;
+        history : TaskHistory[]
 	}[]; // tasks where assigned_To = userId (userId comes from client);
 	assignedTasks: {
 		id: number;
@@ -62,9 +62,7 @@ export interface ProjectDetails {
 		assignedTo: string;
 		subtask: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-		completion_note: string | null;
-		rejection_reason: string | null;
-		approval_note: string | null;
+        history : TaskHistory[]
 	}[]; // assigned_by = userId
 	reviews: {
 		id: number;
@@ -75,9 +73,7 @@ export interface ProjectDetails {
 		assignedTo: string;
 		subtask: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-		completion_note: string | null;
-		rejection_reason: string | null;
-		approval_note: string | null;
+        history : TaskHistory[]
 		submitted: Date; // updated_at in table
 	}[]; // assigned_by= userId and status="under review"
 	invites: {

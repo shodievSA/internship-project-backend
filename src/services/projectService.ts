@@ -344,6 +344,12 @@ class ProjectService {
 					{ 
 						model: models.Subtask 
 					},
+                    {
+                        model: models.TaskHistory,
+                        as : 'history',
+                        separate : true,
+                        order : [['created_at', 'ASC']]
+                    }
 				],
 			});
 
@@ -357,6 +363,7 @@ class ProjectService {
 				assignedBy: task.assignedByMember.user.fullName as string,
 				assignedTo: task.assignedToMember.user.fullName as string,
 				status: task.status,
+                 history : task.history,
 			}));
 		
 			const myTasks = tasks
@@ -370,9 +377,7 @@ class ProjectService {
 					assignedBy: task.assignedByMember.user.fullName as string,
 					status: task.status,
 					subtask: task.subtasks,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 				}));
 		
 			const assignedTasks = tasks
@@ -386,9 +391,7 @@ class ProjectService {
 					assignedTo: task.assignedToMember.user.fullName as string,
 					subtask: task.subtasks,
 					status: task.status,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 				}));
 		
 			const reviews = tasks
@@ -405,9 +408,7 @@ class ProjectService {
 					assignedTo: task.assignedToMember.user.fullName as string,
 					subtask: task.subtasks,
 					status: task.status,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 					submitted: task.updatedAt,
 			}));
 		
@@ -452,11 +453,16 @@ class ProjectService {
 
 	async createTask(task : Task): Promise<object> {
 
-    	const transaction = await sequelize.transaction();
+    	const transaction = await sequelize.transaction()
 
 		try {
 
-			const newTask = await models.Task.create(task, { transaction } );
+            const project = await models.Project.findOne ({
+            where: {id : task.projectId},
+            attributes : ['title'],
+            })
+
+			const newTask = await models.Task.create(task, { transaction });
             
 			if (task.subtasks.length > 0) {
 
@@ -468,6 +474,22 @@ class ProjectService {
 				)), { transaction });
 
 			} 
+            
+            const notification= await models.Notification.create ({
+                message : `Project: ${project?.title}\nAssigned new task!`,
+                type: 'new task',
+                priority: task.priority,
+                userId : task.assignedTo,
+                projectId: task.projectId
+            },{transaction})
+            
+
+            await models.TaskHistory.create ({
+                taskId : newTask.id,
+                status : newTask.status,
+                notificationId : notification.id,
+
+            }, {transaction})
 
 			await transaction.commit();
 

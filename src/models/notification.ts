@@ -15,6 +15,7 @@ const notificationTypeEnum = [
 	'task rejection',
 	'task approval',
 	'comment',
+    //'announcement',
 	'task update',
 ] as const;
 

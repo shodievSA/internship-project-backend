@@ -1,4 +1,4 @@
-import User from './user';
+import User from './user'; 
 import Project from './project';
 import ProjectMember from './projectMember';
 import Permission from './permission';
@@ -14,6 +14,7 @@ import sequelize from '../clients/sequelize';
 import seedRoles from '../seed/seedRoles';
 import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
+import TaskHistory from './taskHistory';
 
 export interface Models {
 	User: typeof User;
@@ -28,6 +29,7 @@ export interface Models {
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
+    TaskHistory : typeof TaskHistory
 };
 
 export const models: Models = {
@@ -42,7 +44,8 @@ export const models: Models = {
 	Subtask,
 	DailyAiReport,
 	Comment,
-	Notification
+	Notification,
+    TaskHistory,
 };
 
 export function initAssociations() {
@@ -206,6 +209,17 @@ export function initAssociations() {
 	Comment.belongsTo(Task, {
 		foreignKey: 'task_id'
 	});
+
+    Task.hasMany(TaskHistory, {
+        foreignKey : 'task_id',
+        as : 'history',
+        onDelete: 'CASCADE',
+        hooks : true,
+    })
+    TaskHistory.belongsTo(Task, { 
+        foreignKey : 'task_id',
+        as : 'history',
+    })
 
 };
 
