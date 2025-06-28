@@ -4,6 +4,8 @@ import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
 import Task, { TaskAttributes } from '@/models/task';
+import { error } from 'console';
+import { models } from '@/models';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -103,7 +105,7 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { projectInvitation, fullProdInvite} = await projectService.inviteToProject(
+			const { projectInvitation, fullInvite} = await projectService.inviteToProject(
 				projectId, receiverEmail, positionOffered, roleOffered
 			);
 
@@ -117,7 +119,7 @@ async function inviteToProject(
 					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
 
 					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-						${fullProdInvite?.project?.title}
+						${fullInvite?.project?.title}
 					</h2>
 
 					<p style="font-size: 16px;">
@@ -154,6 +156,47 @@ async function inviteToProject(
 
 	} catch (error) {
 
+		next(error);
+
+	}
+
+}
+
+async function invitationStatus(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	const inviteStatus: 'accepted' | 'rejected' = req.body.status;
+	const inviteId: number = parseInt(req.params.inviteId);
+	
+	try {
+		
+		if (!inviteStatus) {
+			
+			res.status(400).json({ 
+				error: 'inviteStatus is missing'
+			});
+
+			return;
+
+		} else if (!inviteId) {
+
+			res.status(400).json({ 
+				error: 'inviteId is missing'
+			});
+
+			return;
+
+		} else {
+			const invitationStatus = await projectService.invitationStatus(inviteStatus, inviteId);
+
+			res.status(200).json({ message: 'Project invitation status changed successfully', invitationStatus});
+		}
+
+	} catch (error) {
+		
 		next(error);
 
 	}
@@ -363,6 +406,7 @@ const projectController = {
 	leaveProject,
 	createProject,
 	inviteToProject,
+	invitationStatus,
 	updateProject,
 	changeTeamMemberRole,
 	removeTeamMember,

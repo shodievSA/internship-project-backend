@@ -1,8 +1,8 @@
 import projectController from "../../../../controllers/projectController";
 import { RequestHandler, Router } from "express";
 
-const router = Router({ mergeParams: true })
+const router = Router({ mergeParams: true });
 
-router.post('/', projectController.createTask as RequestHandler)
+router.post('/', projectController.createTask as RequestHandler);
 
-export default router
+export default router;

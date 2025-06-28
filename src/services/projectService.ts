@@ -132,7 +132,7 @@ class ProjectService {
 						roleOffered: roleOffered,
 					}, { transaction });
 
-					const fullProdInvite = await models.ProjectInvitation.findOne({
+					const fullInvite = await models.ProjectInvitation.findOne({
 						where: { projectId: projectId },
 
 						include: [
@@ -150,7 +150,7 @@ class ProjectService {
 
 					await transaction.commit();
 
-					return { projectInvitation, fullProdInvite };
+					return { projectInvitation, fullInvite };
 
 				} catch (error) {
 
@@ -171,6 +171,95 @@ class ProjectService {
 		}
 
 	}
+
+	async invitationStatus(inviteStatus: 'accepted' | 'rejected', inviteId: number): Promise<object> {
+		
+		const transaction: Transaction = await sequelize.transaction();
+
+		try {
+			const [count] = await models.ProjectInvitation.update(
+
+				{ status: inviteStatus },
+
+				{
+					where: { id: inviteId },
+					transaction,
+				}
+				
+			);
+
+			if (count === 0) {
+				throw new Error('Project invitation not found');
+			}
+
+			const invite = await models.ProjectInvitation.findByPk(inviteId, { transaction });
+
+			if (!invite) {
+
+				throw new Error('Project invitation not found after update');
+
+			}
+
+			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
+
+			if (!projectId || !invitedUserId) {
+
+				throw new Error('Missing projectId or invitedUserId');
+
+			}
+
+			const roleId = roleOffered === 'manager' ? 2 : 3;
+
+			if (inviteStatus === 'accepted') {
+				const newMember = await models.ProjectMember.create(
+
+					{
+
+						userId: invitedUserId,
+						projectId,
+						roleId,
+						position: positionOffered,
+
+					},
+
+					{ transaction }
+
+				);
+
+				await transaction.commit();
+
+				return {
+
+					invitation: invite.toJSON(),
+					newMember,
+
+				};
+			}
+
+			if (inviteStatus === 'rejected') {
+
+				await transaction.commit();
+
+				return {
+
+					invitation: invite.toJSON(),
+
+				};
+			}
+
+			throw new Error('Invalid status');
+
+		} catch (error) {
+
+			console.error('Error updating project invitation status:', error);
+
+			await transaction.rollback();
+			throw new Error('Internal server error');
+
+		}
+
+	}
+
 
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
