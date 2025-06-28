@@ -34,7 +34,7 @@ Subtask.init(
 		title: {
 			type: DataTypes.STRING(50),
 			allowNull: false
-		},
+		}, 
 		taskId: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
