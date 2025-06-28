@@ -202,12 +202,6 @@ class ProjectService {
 
 			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
 
-			if (!projectId || !invitedUserId) {
-
-				throw new Error('Missing projectId or invitedUserId');
-
-			}
-
 			const roleId = roleOffered === 'manager' ? 2 : 3;
 
 			if (inviteStatus === 'accepted') {
