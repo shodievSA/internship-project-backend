@@ -37,7 +37,7 @@ export async function getMailContacts(
   try {
 
     const connections = await userService.getContacts(req.user.id);
-    res.status(200).json(connections);
+    res.status(200).json({ contacts: connections });
     return;
 
   } catch (error) {
