@@ -217,21 +217,27 @@ async function updateProject(
 		const allowedStatuses = ['active', 'paused', 'completed'] as const;
 		type Status = typeof allowedStatuses[number];
 
-		const title = updatedProjectProps.title.trim();
+		const title = updatedProjectProps.title;
 		const status = updatedProjectProps.status;
 
 		const updatedFields: Partial<{ title: string; status: Status }> = {title, status};
 
 		if (Object.keys(updatedFields).length === 0) {
+
 			res.status(400).json({ error: 'No valid fields provided for update' });
 			return;
+
 		}
 	
 		if (req.memberPermissions?.includes('editProject')) {
+
 			const updatedProject = await projectService.updateProject(projectId, updatedFields);
 			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+
 		} else {
+
 			res.sendStatus(403);
+
 		}
 
 	} catch (error) {

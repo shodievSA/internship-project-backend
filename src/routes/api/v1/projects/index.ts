@@ -1,5 +1,5 @@
 import { Router, RequestHandler } from 'express';
-import { projectUpdateValid } from '@/middlewares/projectUpdateValid';
+import { isProjectUpdateValid } from '@/middlewares/areUpdatedPropsValid';
 import memberRouter from './members';
 import projectController from '../../../../controllers/projectController';
 import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
@@ -18,7 +18,7 @@ const router = Router();
 router.post('/', createProject as RequestHandler);
 router.get('/', getProjects as RequestHandler);
 router.get('/:projectId', getProjectDetails as RequestHandler);
-router.patch('/:projectId', getMemberPermissions, projectUpdateValid, updateProject as RequestHandler);
+router.patch('/:projectId', getMemberPermissions, isProjectUpdateValid, updateProject as RequestHandler);
 router.delete('/:projectId', getMemberPermissions, deleteProject as RequestHandler);
 router.use('/:projectId/invites', inviteRouter);
 router.use('/:projectId/members', memberRouter);

@@ -325,18 +325,18 @@ class ProjectService {
 	}>): Promise<object> {
 
 		try {
-
-			if (!projectId) {
-				throw new Error('Project ID is required');
-			}
 		
 			const [count, rows] = await models.Project.update(updatedFields, {
+
 				where: { id: projectId },
 				returning: true,
+
 			});
 		
 			if (count === 0 || rows.length === 0) {
+
 				throw new Error('Project not found');
+				
 			}
 		
 			return rows[0].toJSON();
