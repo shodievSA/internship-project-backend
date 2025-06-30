@@ -4,7 +4,6 @@ import ProjectMember from './projectMember';
 import Permission from './permission';
 import Role from './role';
 import RolePermission from './rolePermission';
-import ProjectInvitation from './projectInvitation';
 import Task from './task';
 import Subtask from './subTask';
 import DailyAiReport from './dailyAiReport';
@@ -15,6 +14,7 @@ import seedRoles from '../seed/seedRoles';
 import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
+import Invite from './invites';
 
 export interface Models {
 	User: typeof User;
@@ -23,7 +23,7 @@ export interface Models {
 	Permission: typeof Permission;
 	Role: typeof Role;
 	RolePermission: typeof RolePermission;
-	ProjectInvitation: typeof ProjectInvitation;
+	Invite: typeof Invite;
 	Task: typeof Task;
 	Subtask: typeof Subtask;
 	DailyAiReport: typeof DailyAiReport;
@@ -39,7 +39,7 @@ export const models: Models = {
 	Permission,
 	Role,
 	RolePermission,
-	ProjectInvitation,
+	Invite,
 	Task,
 	Subtask,
 	DailyAiReport,
@@ -89,27 +89,18 @@ export function initAssociations() {
 		foreignKey: 'user_id'
 	});
 
-	Project.hasMany(ProjectInvitation, {
+	Project.hasMany(Invite, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
 		hooks: true
 	});
 
-	ProjectInvitation.belongsTo(Project, {
+	Invite.belongsTo(Project, {
 		foreignKey: 'project_id',
 		as: 'project'
 	});
 
-	Notification.hasOne(ProjectInvitation, {
-		foreignKey: 'notification_id',
-		onDelete: 'CASCADE'
-	});
-
-	ProjectInvitation.belongsTo(Notification, {
-		foreignKey: 'notification_id'
-	});
-
-	ProjectInvitation.belongsTo(User, {
+	Invite.belongsTo(User, {
 		foreignKey: 'invited_user_id',
 		as: 'user'
 	});

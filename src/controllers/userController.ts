@@ -6,6 +6,7 @@ import { UserData } from '@/types';
 const {
     getUserData,
     getContacts,
+    getInvites,
 } = userService
 
 async function getMe(
@@ -16,7 +17,7 @@ async function getMe(
 
 	try {
 
-		const userData: UserData | null = await userService.getUserData(req.user.id);
+		const userData: UserData | null = await getUserData(req.user.id);
 
 		res.status(200).json({ user: userData });
         return
@@ -36,9 +37,23 @@ export async function getMailContacts(
 ): Promise<void> {
   try {
 
-    const connections = await userService.getContacts(req.user.id);
+    const connections = await getContacts(req.user.id);
     res.status(200).json(connections);
     return;
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getInvitations(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+){  
+    try{
+        const notifications = await getInvites(req.user.id)
+        res.status(200).json(notifications);
 
   } catch (error) {
     next(error);
@@ -48,6 +63,7 @@ export async function getMailContacts(
 const userController = {
     getMe,
     getMailContacts,
+    getInvitations,
 }
 
 export default userController;

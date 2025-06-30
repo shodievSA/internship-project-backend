@@ -1,19 +1,19 @@
 import sequelize from '../clients/sequelize';
 import {
-	DataTypes,
+	DataTypes, 
 	Model,
 	InferAttributes,
 	InferCreationAttributes,
 	CreationOptional,
 } from 'sequelize';
-import ProjectInvitation from './projectInvitation';
+import Invite from './invites';
 import ProjectMember from './projectMember';
 import Task from './task';
 import User from './user';
 
 export interface ProjectAssociations {
 	projectMembers: ProjectMember[];
-	projectInvitations: ProjectInvitation[];
+	invites: Invite[];
 	tasks: Task[];
 	users: User[];
 }
@@ -27,12 +27,13 @@ class Project extends Model<
 	declare status: CreationOptional<'active' | 'completed' | 'paused'>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare projectMembers: ProjectMember[];
-	declare projectInvitations: ProjectInvitation[];
+	declare invites: Invite[];
 	declare tasks: Task[];
 	declare users: User[];
 }
-
+ 
 Project.init(
 	{
 		id: {

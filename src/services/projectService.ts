@@ -1,10 +1,10 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, Invite } from '@/types';
+import { FormattedProject, ProjectDetails, InviteType } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
-import ProjectInvitation from '@/models/projectInvitation';
+import Invite from '@/models/invites';
 import User from '@/models/user';
 import Project from '@/models/project';
 
@@ -72,7 +72,7 @@ class ProjectService {
 		receiverEmail: string,
 		positionOffered: string,
 		roleOffered: 'manager' | 'member'
-	): Promise<Invite> {
+	): Promise<InviteType> {
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -113,26 +113,15 @@ class ProjectService {
 			async function createInvite(userId: number) {
 				
 				try {
-					
-					const notification = await models.Notification.create({ 
-						message: 'You have been invited to join a project!',
-						type: 'invite',
-						priority: 'low',
-						userId: userId,
-						projectId: projectId,
-					}, { transaction });
 
-					const notificationId = notification.id;
-
-					const projectInvitation = await models.ProjectInvitation.create({ 
+					const invite = await models.Invite.create({ 
 						projectId: projectId,
-						notificationId: notificationId,
 						invitedUserId: userId,
 						positionOffered: positionOffered,
 						roleOffered: roleOffered,
 					}, { transaction });
 
-					const fullProdInvite = await models.ProjectInvitation.findOne({
+					const fullProdInvite = await models.Invite.findOne({
 						where: { projectId: projectId },
 
 						include: [
@@ -150,7 +139,7 @@ class ProjectService {
 
 					await transaction.commit();
 
-					return { projectInvitation, fullProdInvite };
+					return { Invites:invite, fullProdInvite };
 
 				} catch (error) {
 
@@ -412,7 +401,7 @@ class ProjectService {
 					submitted: task.updatedAt,
 			}));
 		
-			const invites = await models.ProjectInvitation.findAll({
+			const invites = await models.Invite.findAll({
 				where: { projectId },
 				include: [{
 					model: models.User,
@@ -420,7 +409,7 @@ class ProjectService {
 				}]
 			});
 		
-			const formattedInvites = invites.map((invite: ProjectInvitation) => ({
+			const formattedInvites = invites.map((invite: Invite) => ({
 				id: invite.id as number,
 				status: invite.status,
 				receiver_email: invite.user.email,

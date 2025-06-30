@@ -1,3 +1,4 @@
+import { models } from ".";
 import sequelize from "../clients/sequelize";
 import Task from "./task";
 import { 
@@ -78,7 +79,22 @@ TaskHistory.init({
 		allowNull: false
 	}
 },
-{
+{   hooks : {
+        afterCreate: async (record, options) => { 
+            
+            await models.Task.update( 
+
+                { status : record.status },
+                {   
+                    where : { id : record.taskId},
+                    transaction : options.transaction,
+                }
+
+            )
+            console.log("***Task changed by hook and options is:",options) // should be removed
+        }
+
+},
     sequelize,
     underscored: true,
 })

@@ -3,7 +3,7 @@ import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
-import Task, { TaskAttributes } from '@/models/task';
+import Task from '@/models/task';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -103,7 +103,7 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { projectInvitation, fullProdInvite} = await projectService.inviteToProject(
+			const { Invites, fullProdInvite} = await projectService.inviteToProject(
 				projectId, receiverEmail, positionOffered, roleOffered
 			);
 
@@ -143,7 +143,7 @@ async function inviteToProject(
 
 			});
 
-			res.status(201).json({ message: 'Project invitation sent successfully', projectInvitation, email });
+			res.status(201).json({ message: 'Project invitation sent successfully', Invites, email });
 
 		} else {
 

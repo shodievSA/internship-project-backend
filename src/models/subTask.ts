@@ -21,6 +21,7 @@ class Subtask extends Model<
 	declare taskId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare task: Task;
 }
 

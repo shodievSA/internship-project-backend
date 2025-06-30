@@ -26,7 +26,7 @@ export interface TaskAttributes {
 	description: string;
 	priority: 'low' | 'middle' | 'high';
 	deadline: Date;
-	assignedBy?: number;
+	assignedBy: number;
 	assignedTo: number;
 	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     subtasks?: string[];

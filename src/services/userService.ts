@@ -1,8 +1,12 @@
 import { models } from '../models';
-import { UserData } from '@/types';
+import { FrontInvite, UserData } from '@/types';
 import { decryptToken } from '../config/passport';
 import { google } from 'googleapis';
-import { Contact, GooglePerson } from '@/types';
+import { Contact, GooglePerson, Notification } from '@/types';
+import Task from '@/models/task';
+import Project from '@/models/project';
+import User from '@/models/user';
+
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -82,9 +86,69 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 	}
 }
 
+async function getInvites( userId: number ): Promise<FrontInvite[]> {
+    
+    try{ 
+
+        const rawInvites = await models.Invite.findAll({
+
+            where : { 
+
+                invitedUserId : userId,
+
+            },
+
+            include : [
+                {
+                    model: Project,
+                    as: 'project',
+                    attributes: ['title']
+                    
+                },
+
+                {
+                    model : User, 
+                    as: "user",
+                    attributes : ['fullName', 'email', 'avatarUrl']
+                }
+            ]
+        })
+        const invites : FrontInvite[] = rawInvites.map ( (record)=>({
+            id : record.id,
+            project : { 
+
+                title : record.project.title,
+                
+            },
+            from : { 
+
+                fullName : record.user.fullName!,
+                email : record.user.email,
+                avatarUrl : record.user.avatarUrl,
+                
+            },
+            positionOffered: record.positionOffered,
+            roleOffered : record.roleOffered,
+            status : record.status,
+            created_at :record.createdAt,
+            updated_at :record.updatedAt,
+        }))
+
+        return invites
+
+    }
+
+    catch(error) { 
+
+		console.log('Error getting notifications', error)
+		throw new Error('Error getting notifications');
+    }
+}
+
 const UserService = { 
     getUserData,
     getContacts,
+    getInvites,
 }
 
 export default UserService;
