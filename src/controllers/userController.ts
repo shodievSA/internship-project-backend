@@ -6,6 +6,7 @@ import { UserData } from '@/types';
 const {
     getUserData,
     getContacts,
+    getUserNotifications,
 } = userService
 
 async function getMe(
@@ -19,7 +20,7 @@ async function getMe(
 		const userData: UserData | null = await userService.getUserData(req.user.id);
 
 		res.status(200).json({ user: userData });
-        return
+    return;
 
 	} catch (error) {
 
@@ -34,6 +35,7 @@ export async function getMailContacts(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+
   try {
 
     const connections = await userService.getContacts(req.user.id);
@@ -41,13 +43,40 @@ export async function getMailContacts(
     return;
 
   } catch (error) {
+
     next(error);
+
   }
+
+}
+
+export async function fetchUserNotifications(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+
+  const userId: number = req.user.id;
+
+  try {
+
+    const notifications = await userService.getUserNotifications(userId);
+    res.status(200).json({ message: 'Notifications fetched successfully', notifications });
+
+    return;
+
+  } catch (error) {
+
+    next(error);
+
+  }
+
 }
 
 const userController = {
     getMe,
     getMailContacts,
+    fetchUserNotifications,
 }
 
 export default userController;

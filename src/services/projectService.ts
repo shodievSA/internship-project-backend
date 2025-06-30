@@ -114,25 +114,28 @@ class ProjectService {
 				
 				try {
 					
-					const notification = await models.Notification.create({ 
-						message: 'You have been invited to join a project!',
-						type: 'invite',
-						priority: 'low',
+					const notification = await models.Notification.create({
+
+						title: 'invite',
+						message: 'You have been invited to join a project!',		
 						userId: userId,
-						projectId: projectId,
+						
 					}, { transaction });
 
 					const notificationId = notification.id;
 
-					const projectInvitation = await models.ProjectInvitation.create({ 
+					const projectInvitation = await models.ProjectInvitation.create({
+
 						projectId: projectId,
 						notificationId: notificationId,
 						invitedUserId: userId,
 						positionOffered: positionOffered,
 						roleOffered: roleOffered,
+
 					}, { transaction });
 
-					const fullProdInvite = await models.ProjectInvitation.findOne({
+					const fullInvite = await models.ProjectInvitation.findOne({
+
 						where: { projectId: projectId },
 
 						include: [
@@ -150,7 +153,7 @@ class ProjectService {
 
 					await transaction.commit();
 
-					return { projectInvitation, fullProdInvite };
+					return { projectInvitation, fullInvite };
 
 				} catch (error) {
 
@@ -171,6 +174,89 @@ class ProjectService {
 		}
 
 	}
+
+	async invitationStatus(inviteStatus: 'accepted' | 'rejected', inviteId: number): Promise<object> {
+		
+		const transaction: Transaction = await sequelize.transaction();
+
+		try {
+			const [count] = await models.ProjectInvitation.update(
+
+				{ status: inviteStatus },
+
+				{
+					where: { id: inviteId },
+					transaction,
+				}
+				
+			);
+
+			if (count === 0) {
+				throw new Error('Project invitation not found');
+			}
+
+			const invite = await models.ProjectInvitation.findByPk(inviteId, { transaction });
+
+			if (!invite) {
+
+				throw new Error('Project invitation not found after update');
+
+			}
+
+			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
+
+			const roleId = roleOffered === 'manager' ? 2 : 3;
+
+			if (inviteStatus === 'accepted') {
+				const newMember = await models.ProjectMember.create(
+
+					{
+
+						userId: invitedUserId,
+						projectId,
+						roleId,
+						position: positionOffered,
+
+					},
+
+					{ transaction }
+
+				);
+
+				await transaction.commit();
+
+				return {
+
+					invitation: invite.toJSON(),
+					newMember,
+
+				};
+			}
+
+			if (inviteStatus === 'rejected') {
+
+				await transaction.commit();
+
+				return {
+
+					invitation: invite.toJSON(),
+
+				};
+			}
+
+			throw new Error('Invalid status');
+
+		} catch (error) {
+
+			console.error('Error updating project invitation status:', error);
+
+			await transaction.rollback();
+			throw new Error('Internal server error');
+
+		}
+
+	}
+
 
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
@@ -242,18 +328,18 @@ class ProjectService {
 	}>): Promise<object> {
 
 		try {
-
-			if (!projectId) {
-				throw new Error('Project ID is required');
-			}
 		
 			const [count, rows] = await models.Project.update(updatedFields, {
+
 				where: { id: projectId },
 				returning: true,
+
 			});
 		
 			if (count === 0 || rows.length === 0) {
+
 				throw new Error('Project not found');
+				
 			}
 		
 			return rows[0].toJSON();

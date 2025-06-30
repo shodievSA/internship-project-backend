@@ -93,9 +93,37 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 
 }
 
+async function getUserNotifications(userId: number): Promise<object> {
+	
+	try {
+
+		const notifications = await models.Notification.findAll({
+
+			where: {
+
+				userId: userId
+
+			},
+
+			attributes: { exclude: ['user_id'] }
+
+		});
+
+		return notifications;
+		
+	} catch (error) {
+		
+		console.error(error);
+		throw new Error("Internal server error");
+
+	}
+
+}
+
 const UserService = { 
     getUserData,
     getContacts,
+	getUserNotifications,
 }
 
 export default UserService;

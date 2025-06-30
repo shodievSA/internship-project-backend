@@ -121,16 +121,6 @@ export function initAssociations() {
 		foreignKey: 'project_id'
 	});
 
-	Project.hasMany(Notification, {
-		foreignKey: 'project_id',
-		onDelete: 'CASCADE',
-		hooks: true
-	});
-
-	Notification.belongsTo(Project, {
-		foreignKey: 'project_id'
-	});
-
 	ProjectMember.hasMany(Comment, {
 		foreignKey: 'project_member_id',
 		onDelete: 'CASCADE',
