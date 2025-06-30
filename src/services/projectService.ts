@@ -114,25 +114,28 @@ class ProjectService {
 				
 				try {
 					
-					const notification = await models.Notification.create({ 
-						message: 'You have been invited to join a project!',
-						type: 'invite',
-						priority: 'low',
+					const notification = await models.Notification.create({
+
+						title: 'invite',
+						message: 'You have been invited to join a project!',		
 						userId: userId,
-						projectId: projectId,
+						
 					}, { transaction });
 
 					const notificationId = notification.id;
 
-					const projectInvitation = await models.ProjectInvitation.create({ 
+					const projectInvitation = await models.ProjectInvitation.create({
+
 						projectId: projectId,
 						notificationId: notificationId,
 						invitedUserId: userId,
 						positionOffered: positionOffered,
 						roleOffered: roleOffered,
+
 					}, { transaction });
 
 					const fullInvite = await models.ProjectInvitation.findOne({
+
 						where: { projectId: projectId },
 
 						include: [

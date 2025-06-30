@@ -8,16 +8,6 @@ import {
 } from 'sequelize';
 import User from './user';
 
-const notificationTypeEnum = [
-	'invite',
-	'new task',
-	'task review',
-	'task rejection',
-	'task approval',
-	'comment',
-	'task update',
-] as const;
-
 export interface NotificationAssociations {
   	user: User;
 }
@@ -27,12 +17,10 @@ class Notification extends Model<
 	InferCreationAttributes<Notification, { omit: keyof NotificationAssociations }>
 > {
 	declare id: CreationOptional<number>;
+	declare title: string;
 	declare message: string;
-	declare type: (typeof notificationTypeEnum)[number];
-	declare priority: 'low' | 'middle' | 'high';
 	declare isViewed: CreationOptional<boolean>;
 	declare userId: number;
-	declare projectId: number | null;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 	declare user: User;
@@ -45,22 +33,18 @@ Notification.init(
 			primaryKey: true,
 			autoIncrement: true
 		},
+		title: {
+			type: DataTypes.STRING(50),
+			allowNull: false
+		},
 		message: {
 			type: DataTypes.TEXT,
-			allowNull: false
-		},
-		type: {
-			type: DataTypes.ENUM(...notificationTypeEnum),
-			allowNull: false
-		},
-		priority: {
-			type: DataTypes.ENUM('low', 'middle', 'high'),
 			allowNull: false
 		},
 		isViewed: {
 			type: DataTypes.BOOLEAN,
 			allowNull: false,
-			defaultValue: false
+			defaultValue: false	
 		},
 		userId: {
 			type: DataTypes.INTEGER,
@@ -68,14 +52,6 @@ Notification.init(
 			references: {
 				model: 'users',
 				key: 'id',
-			}
-		},
-		projectId: {
-			type: DataTypes.INTEGER,
-			allowNull: true,
-			references: {
-				model: 'projects',
-				key: 'id'
 			}
 		},
 		createdAt: {
