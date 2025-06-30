@@ -124,16 +124,10 @@ async function getUserNotifications(userId: number): Promise<object> {
 
 async function getInvites( userId: number ): Promise<FrontInvite[]> {
     
-    try{ 
+    try { 
 
         const rawInvites = await models.Invite.findAll({
-
-            where : { 
-
-                invitedUserId : userId,
-
-            },
-
+            where: { invitedUserId : userId },
             include : [
                 {
                     model: Project,
@@ -141,44 +135,42 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
                     attributes: ['title']
                     
                 },
-
                 {
                     model : User, 
-                    as: "user",
+                    as: "inviter",
                     attributes : ['fullName', 'email', 'avatarUrl']
                 }
-            ]
-        })
-        const invites : FrontInvite[] = rawInvites.map ( (record)=>({
-            id : record.id,
-            project : { 
+            ],
+			order: [[ 'createdAt', 'DESC' ]]
+        });
 
-                title : record.project.title,
-                
+        const invites : FrontInvite[] = rawInvites.map((record) => ({
+            id: record.id,
+			projectId: record.projectId,
+            project: { 
+                title: record.project.title,       
             },
-            from : { 
-
-                fullName : record.user.fullName!,
-                email : record.user.email,
-                avatarUrl : record.user.avatarUrl,
-                
+            from: { 
+                fullName: record.inviter.fullName as string,
+                email: record.inviter.email,
+                avatarUrl: record.inviter.avatarUrl,               
             },
             positionOffered: record.positionOffered,
-            roleOffered : record.roleOffered,
-            status : record.status,
-            created_at :record.createdAt,
-            updated_at :record.updatedAt,
-        }))
+            roleOffered: record.roleOffered,
+            status: record.status,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
+        }));
 
-        return invites
+        return invites;
 
-    }
+    } catch(error) { 
 
-    catch(error) { 
-
-		console.log('Error getting notifications', error)
+		console.log('Error getting notifications', error);
 		throw new Error('Error getting notifications');
+
     }
+
 }
 
 const UserService = { 

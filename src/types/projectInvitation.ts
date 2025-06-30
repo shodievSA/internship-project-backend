@@ -17,7 +17,6 @@ export interface FrontInvite {
     positionOffered : string , 
     roleOffered : 'manager' | 'member', 
     status : 'pending' | 'accepted' | 'rejected', 
-    created_at : Date, 
-    updated_at : Date,
-
+    createdAt : Date, 
+    updatedAt : Date
 }

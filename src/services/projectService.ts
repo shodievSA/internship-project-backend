@@ -68,6 +68,7 @@ class ProjectService {
 	}
 
 	async inviteToProject(
+		invitedBy: number,
 		projectId: number,
 		receiverEmail: string,
 		positionOffered: string,
@@ -87,7 +88,7 @@ class ProjectService {
 
 				const userId = userExists.id;
 
-				return createInvite(userId);
+				return createInvite(userId, invitedBy);
 
 			} else {
 
@@ -102,7 +103,7 @@ class ProjectService {
 
 					const userId = newUser.id;
 
-					return createInvite(userId);
+					return createInvite(userId, invitedBy);
 
 				}
 
@@ -110,7 +111,7 @@ class ProjectService {
 
 			}
 
-			async function createInvite(userId: number) {
+			async function createInvite(userId: number, invitedBy: number) {
 				
 				try {
 
@@ -119,6 +120,7 @@ class ProjectService {
 						invitedUserId: userId,
 						positionOffered: positionOffered,
 						roleOffered: roleOffered,
+						invitedBy: invitedBy
 
 					}, { transaction });
 

@@ -105,6 +105,11 @@ export function initAssociations() {
 		as: 'user'
 	});
 
+	Invite.belongsTo(User, {
+		foreignKey: 'invited_by',
+		as: 'inviter'
+	});
+
 	Project.hasMany(Task, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',

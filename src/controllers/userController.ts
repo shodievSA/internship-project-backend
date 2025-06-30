@@ -78,14 +78,19 @@ export async function getInvitations(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-){  
-    try{
-        const notifications = await getInvites(req.user.id)
-        res.status(200).json(notifications);
+) {  
 
-  } catch (error) {
-    next(error);
-  }
+    try {
+
+        const invites = await getInvites(req.user.id);
+        res.status(200).json({ invites: invites });
+
+  	} catch (error) {
+
+    	next(error);
+
+  	}
+
 }
 
 const userController = {

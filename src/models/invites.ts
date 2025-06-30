@@ -12,6 +12,7 @@ import User from './user';
 export interface InviteAssociations {
 	project: Project;
 	user: User;
+	inviter: User;
 }
 
 class Invite extends Model<
@@ -21,6 +22,7 @@ class Invite extends Model<
 	declare id: CreationOptional<number>;
 	declare projectId: number;
 	declare invitedUserId: number;
+	declare invitedBy: number;
 	declare status: CreationOptional<'pending' | 'accepted' | 'rejected'>;
 	declare positionOffered: string;
 	declare roleOffered: 'manager' | 'member';
@@ -29,6 +31,7 @@ class Invite extends Model<
     
 	declare project: Project;
 	declare user: User;
+	declare inviter: User;
 }
 
 Invite.init(
@@ -47,6 +50,14 @@ Invite.init(
 			}
 		},
 		invitedUserId: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: 'users',
+				key: 'id'
+			}
+		},
+		invitedBy: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			references: {

@@ -1,6 +1,7 @@
 import { RequestHandler, Router } from "express";
 import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
 import projectController from "@/controllers/projectController";
+
 const {
 	inviteToProject,
     invitationStatus,

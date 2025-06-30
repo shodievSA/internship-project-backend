@@ -104,7 +104,7 @@ async function inviteToProject(
 		if (req.memberPermissions?.includes('invitePeople')) {
 
 			const { Invites, fullProdInvite} = await projectService.inviteToProject(
-				projectId, receiverEmail, positionOffered, roleOffered
+				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
 			const email = await transporter.sendMail({
