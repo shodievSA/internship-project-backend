@@ -1,10 +1,10 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, Invite } from '@/types';
+import { FormattedProject, ProjectDetails, InviteType } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
-import ProjectInvitation from '@/models/projectInvitation';
+import Invite from '@/models/invites';
 import User from '@/models/user';
 import Project from '@/models/project';
 
@@ -72,7 +72,7 @@ class ProjectService {
 		receiverEmail: string,
 		positionOffered: string,
 		roleOffered: 'manager' | 'member'
-	): Promise<Invite> {
+	): Promise<InviteType> {
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -113,29 +113,16 @@ class ProjectService {
 			async function createInvite(userId: number) {
 				
 				try {
-					
-					const notification = await models.Notification.create({
 
-						title: 'invite',
-						message: 'You have been invited to join a project!',		
-						userId: userId,
-						
-					}, { transaction });
-
-					const notificationId = notification.id;
-
-					const projectInvitation = await models.ProjectInvitation.create({
-
+					const invite = await models.Invite.create({ 
 						projectId: projectId,
-						notificationId: notificationId,
 						invitedUserId: userId,
 						positionOffered: positionOffered,
 						roleOffered: roleOffered,
 
 					}, { transaction });
 
-					const fullInvite = await models.ProjectInvitation.findOne({
-
+					const fullProdInvite = await models.Invite.findOne({
 						where: { projectId: projectId },
 
 						include: [
@@ -153,7 +140,7 @@ class ProjectService {
 
 					await transaction.commit();
 
-					return { projectInvitation, fullInvite };
+					return { Invites:invite, fullProdInvite };
 
 				} catch (error) {
 
@@ -180,7 +167,7 @@ class ProjectService {
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
-			const [count] = await models.ProjectInvitation.update(
+			const [count] = await models.Invite.update(
 
 				{ status: inviteStatus },
 
@@ -195,7 +182,7 @@ class ProjectService {
 				throw new Error('Project invitation not found');
 			}
 
-			const invite = await models.ProjectInvitation.findByPk(inviteId, { transaction });
+			const invite = await models.Invite.findByPk(inviteId, { transaction });
 
 			if (!invite) {
 
@@ -430,6 +417,12 @@ class ProjectService {
 					{ 
 						model: models.Subtask 
 					},
+                    {
+                        model: models.TaskHistory,
+                        as : 'history',
+                        separate : true,
+                        order : [['created_at', 'ASC']]
+                    }
 				],
 			});
 
@@ -443,6 +436,7 @@ class ProjectService {
 				assignedBy: task.assignedByMember.user.fullName as string,
 				assignedTo: task.assignedToMember.user.fullName as string,
 				status: task.status,
+                 history : task.history,
 			}));
 		
 			const myTasks = tasks
@@ -456,9 +450,7 @@ class ProjectService {
 					assignedBy: task.assignedByMember.user.fullName as string,
 					status: task.status,
 					subtask: task.subtasks,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 				}));
 		
 			const assignedTasks = tasks
@@ -472,9 +464,7 @@ class ProjectService {
 					assignedTo: task.assignedToMember.user.fullName as string,
 					subtask: task.subtasks,
 					status: task.status,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 				}));
 		
 			const reviews = tasks
@@ -491,13 +481,11 @@ class ProjectService {
 					assignedTo: task.assignedToMember.user.fullName as string,
 					subtask: task.subtasks,
 					status: task.status,
-					completion_note: task.completionNote as string | null,
-					rejection_reason: task.rejectionReason as string | null,
-					approval_note: task.approvalNote as string | null,
+                    history : task.history,
 					submitted: task.updatedAt,
 			}));
 		
-			const invites = await models.ProjectInvitation.findAll({
+			const invites = await models.Invite.findAll({
 				where: { projectId },
 				include: [{
 					model: models.User,
@@ -505,7 +493,7 @@ class ProjectService {
 				}]
 			});
 		
-			const formattedInvites = invites.map((invite: ProjectInvitation) => ({
+			const formattedInvites = invites.map((invite: Invite) => ({
 				id: invite.id as number,
 				status: invite.status,
 				receiver_email: invite.user.email,
@@ -538,11 +526,16 @@ class ProjectService {
 
 	async createTask(task : Task): Promise<object> {
 
-    	const transaction = await sequelize.transaction();
+    	const transaction = await sequelize.transaction()
 
 		try {
 
-			const newTask = await models.Task.create(task, { transaction } );
+            const project = await models.Project.findOne ({
+            where: {id : task.projectId},
+            attributes : ['title'],
+            })
+
+			const newTask = await models.Task.create(task, { transaction });
             
 			if (task.subtasks.length > 0) {
 
@@ -554,6 +547,20 @@ class ProjectService {
 				)), { transaction });
 
 			} 
+            
+            const notification= await models.Notification.create({
+				title: "New Task",
+                message : `Project: ${project?.title}\nAssigned new task!`,
+                userId : task.assignedTo
+            },{transaction})
+            
+
+            await models.TaskHistory.create ({
+                taskId : newTask.id,
+                status : newTask.status,
+                notificationId : notification.id,
+
+            }, {transaction})
 
 			await transaction.commit();
 

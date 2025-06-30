@@ -21,6 +21,7 @@ class DailyAiReport extends Model<
 	declare userId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare user: User;
 }
 

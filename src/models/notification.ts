@@ -7,9 +7,11 @@ import {
 	CreationOptional
 } from 'sequelize';
 import User from './user';
+import Project from './project';
 
 export interface NotificationAssociations {
   	user: User;
+    project : Project;
 }
 
 class Notification extends Model<
@@ -23,7 +25,9 @@ class Notification extends Model<
 	declare userId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare user: User;
+    declare project : Project; 
 }
 
 Notification.init(

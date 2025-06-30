@@ -3,9 +3,7 @@ import projectService from '../services/projectService';
 import { FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
-import Task, { TaskAttributes } from '@/models/task';
-import { error } from 'console';
-import { models } from '@/models';
+import Task from '@/models/task';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -105,7 +103,7 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { projectInvitation, fullInvite} = await projectService.inviteToProject(
+			const { Invites, fullProdInvite} = await projectService.inviteToProject(
 				projectId, receiverEmail, positionOffered, roleOffered
 			);
 
@@ -119,7 +117,7 @@ async function inviteToProject(
 					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
 
 					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-						${fullInvite?.project?.title}
+						${fullProdInvite?.project?.title}
 					</h2>
 
 					<p style="font-size: 16px;">
@@ -145,7 +143,7 @@ async function inviteToProject(
 
 			});
 
-			res.status(201).json({ message: 'Project invitation sent successfully', projectInvitation, email });
+			res.status(201).json({ message: 'Project invitation sent successfully', Invites, email });
 
 		} else {
 

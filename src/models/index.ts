@@ -1,10 +1,9 @@
-import User from './user';
+import User from './user'; 
 import Project from './project';
 import ProjectMember from './projectMember';
 import Permission from './permission';
 import Role from './role';
 import RolePermission from './rolePermission';
-import ProjectInvitation from './projectInvitation';
 import Task from './task';
 import Subtask from './subTask';
 import DailyAiReport from './dailyAiReport';
@@ -14,6 +13,8 @@ import sequelize from '../clients/sequelize';
 import seedRoles from '../seed/seedRoles';
 import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
+import TaskHistory from './taskHistory';
+import Invite from './invites';
 
 export interface Models {
 	User: typeof User;
@@ -22,12 +23,13 @@ export interface Models {
 	Permission: typeof Permission;
 	Role: typeof Role;
 	RolePermission: typeof RolePermission;
-	ProjectInvitation: typeof ProjectInvitation;
+	Invite: typeof Invite;
 	Task: typeof Task;
 	Subtask: typeof Subtask;
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
+    TaskHistory : typeof TaskHistory
 };
 
 export const models: Models = {
@@ -37,12 +39,13 @@ export const models: Models = {
 	Permission,
 	Role,
 	RolePermission,
-	ProjectInvitation,
+	Invite,
 	Task,
 	Subtask,
 	DailyAiReport,
 	Comment,
-	Notification
+	Notification,
+    TaskHistory,
 };
 
 export function initAssociations() {
@@ -86,27 +89,18 @@ export function initAssociations() {
 		foreignKey: 'user_id'
 	});
 
-	Project.hasMany(ProjectInvitation, {
+	Project.hasMany(Invite, {
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
 		hooks: true
 	});
 
-	ProjectInvitation.belongsTo(Project, {
+	Invite.belongsTo(Project, {
 		foreignKey: 'project_id',
 		as: 'project'
 	});
 
-	Notification.hasOne(ProjectInvitation, {
-		foreignKey: 'notification_id',
-		onDelete: 'CASCADE'
-	});
-
-	ProjectInvitation.belongsTo(Notification, {
-		foreignKey: 'notification_id'
-	});
-
-	ProjectInvitation.belongsTo(User, {
+	Invite.belongsTo(User, {
 		foreignKey: 'invited_user_id',
 		as: 'user'
 	});
@@ -196,6 +190,17 @@ export function initAssociations() {
 	Comment.belongsTo(Task, {
 		foreignKey: 'task_id'
 	});
+
+    Task.hasMany(TaskHistory, {
+        foreignKey : 'task_id',
+        as : 'history',
+        onDelete: 'CASCADE',
+        hooks : true,
+    })
+    TaskHistory.belongsTo(Task, { 
+        foreignKey : 'task_id',
+        as : 'history',
+    })
 
 };
 

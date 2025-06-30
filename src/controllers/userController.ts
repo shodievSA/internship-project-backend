@@ -7,6 +7,7 @@ const {
     getUserData,
     getContacts,
     getUserNotifications,
+    getInvites,
 } = userService
 
 async function getMe(
@@ -17,7 +18,7 @@ async function getMe(
 
 	try {
 
-		const userData: UserData | null = await userService.getUserData(req.user.id);
+		const userData: UserData | null = await getUserData(req.user.id);
 
 		res.status(200).json({ user: userData });
     return;
@@ -73,10 +74,25 @@ export async function fetchUserNotifications(
 
 }
 
+export async function getInvitations(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+){  
+    try{
+        const notifications = await getInvites(req.user.id)
+        res.status(200).json(notifications);
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 const userController = {
     getMe,
     getMailContacts,
     fetchUserNotifications,
+    getInvitations,
 }
 
 export default userController;

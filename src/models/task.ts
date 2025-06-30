@@ -10,6 +10,7 @@ import Project from './project';
 import ProjectMember from './projectMember';
 import Subtask from './subTask';
 import Comment from './comment';
+import TaskHistory from './taskHistory';
 
 export interface TaskAssociations {
 	project: Project;
@@ -17,6 +18,7 @@ export interface TaskAssociations {
 	assignedToMember: ProjectMember;
 	subtasks: Subtask[];
 	comments: Comment[];
+    history: TaskHistory[];
 }
 
 export interface TaskAttributes { 
@@ -24,12 +26,9 @@ export interface TaskAttributes {
 	description: string;
 	priority: 'low' | 'middle' | 'high';
 	deadline: Date;
-	assignedBy?: number;
+	assignedBy: number;
 	assignedTo: number;
 	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-	completionNote?: string | null;
-	rejectionReason?: string | null;
-	approvalNote?: string | null;
     subtasks?: string[];
 	projectId: number;
 }
@@ -46,17 +45,16 @@ class Task extends Model<
 	declare assignedBy: number;
 	declare assignedTo: number;
 	declare status: CreationOptional<'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue'>;
-	declare completionNote: CreationOptional<string | null>;
-	declare rejectionReason: CreationOptional<string | null>;
-	declare approvalNote: CreationOptional<string | null>;
 	declare projectId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+
 	declare project: Project;
 	declare assignedByMember: ProjectMember;
 	declare assignedToMember: ProjectMember;
 	declare subtasks: Subtask[];
 	declare comments: Comment[];
+    declare history :TaskHistory[];
 }
 
 Task.init(
@@ -117,18 +115,6 @@ Task.init(
 				model: 'projects',
 				key: 'id'
 			}
-		},
-		completionNote: {
-			type: DataTypes.TEXT,
-			allowNull: true
-		},
-		rejectionReason: {
-			type: DataTypes.TEXT,
-			allowNull: true
-		},
-		approvalNote: {
-			type: DataTypes.TEXT,
-			allowNull: true
 		},
 		createdAt: {
 			type: DataTypes.DATE,

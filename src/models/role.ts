@@ -23,6 +23,7 @@ class Role extends Model<
 	declare description: CreationOptional<string | null>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare projectMembers: ProjectMember[];
 	declare permissions: Permission[];
 }

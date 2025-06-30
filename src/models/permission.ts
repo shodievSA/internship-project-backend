@@ -37,6 +37,7 @@ class Permission extends Model<
 	declare name: (typeof permissionEnum)[number];
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare Roles?: Role[];
 }
 

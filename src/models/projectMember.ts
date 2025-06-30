@@ -24,6 +24,7 @@ class ProjectMember extends Model<
 	declare busyLevel: CreationOptional<'free' | 'low' | 'medium' | 'high'>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare user: User;
 }
 

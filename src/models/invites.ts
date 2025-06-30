@@ -8,33 +8,30 @@ import {
 } from 'sequelize';
 import Project from './project';
 import User from './user';
-import Notification from './notification';
 
-export interface ProjectInvitationAssociations {
+export interface InviteAssociations {
 	project: Project;
 	user: User;
-	notification: Notification;
 }
 
-class ProjectInvitation extends Model<
-	InferAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>,
-	InferCreationAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>
+class Invite extends Model<
+	InferAttributes<Invite, { omit: keyof InviteAssociations }>,
+	InferCreationAttributes<Invite, { omit: keyof InviteAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare projectId: number;
-	declare notificationId: number;
 	declare invitedUserId: number;
 	declare status: CreationOptional<'pending' | 'accepted' | 'rejected'>;
 	declare positionOffered: string;
 	declare roleOffered: 'manager' | 'member';
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare project: Project;
 	declare user: User;
-	declare notification: Notification;
 }
 
-ProjectInvitation.init(
+Invite.init(
 	{
 		id: {
 			type: DataTypes.INTEGER,
@@ -46,14 +43,6 @@ ProjectInvitation.init(
 			allowNull: false,
 			references: {
 				model: 'projects',
-				key: 'id'
-			}
-		},
-		notificationId: {
-			type: DataTypes.INTEGER,
-			allowNull: false,
-			references: {
-				model: 'notifications',
 				key: 'id'
 			}
 		},
@@ -93,4 +82,4 @@ ProjectInvitation.init(
 	}
 );
 
-export default ProjectInvitation;
+export default Invite;

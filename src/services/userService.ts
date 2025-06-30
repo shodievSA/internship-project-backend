@@ -1,8 +1,10 @@
 import { models } from '../models';
-import { UserData } from '@/types';
+import { FrontInvite, UserData } from '@/types';
 import { decryptToken } from '../config/passport';
-import { google } from 'googleapis';
 import { Contact, GooglePerson } from '@/types';
+import Project from '@/models/project';
+import User from '@/models/user';
+import { auth, people } from 'googleapis/build/src/apis/people';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -40,7 +42,7 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 
 		const refreshToken = decryptToken(user?.refreshToken!);
 
-		const oauth2Client = new google.auth.OAuth2(
+		const oauth2Client = new auth.OAuth2(
 			process.env.GOOGLE_CLIENT_ID!,
 			process.env.GOOGLE_CLIENT_SECRET!,
 			`${process.env.BASE_URL}/api/v1/auth/google/callback`
@@ -48,7 +50,7 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 
 		oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-		const peopleAPI = google.people({ version: 'v1', auth: oauth2Client });
+		const peopleAPI = people({ version: 'v1', auth: oauth2Client });
 
 		let allConnections : Contact[] = [];
 		let nextPageToken : string | undefined = undefined; 
@@ -120,10 +122,70 @@ async function getUserNotifications(userId: number): Promise<object> {
 
 }
 
+async function getInvites( userId: number ): Promise<FrontInvite[]> {
+    
+    try{ 
+
+        const rawInvites = await models.Invite.findAll({
+
+            where : { 
+
+                invitedUserId : userId,
+
+            },
+
+            include : [
+                {
+                    model: Project,
+                    as: 'project',
+                    attributes: ['title']
+                    
+                },
+
+                {
+                    model : User, 
+                    as: "user",
+                    attributes : ['fullName', 'email', 'avatarUrl']
+                }
+            ]
+        })
+        const invites : FrontInvite[] = rawInvites.map ( (record)=>({
+            id : record.id,
+            project : { 
+
+                title : record.project.title,
+                
+            },
+            from : { 
+
+                fullName : record.user.fullName!,
+                email : record.user.email,
+                avatarUrl : record.user.avatarUrl,
+                
+            },
+            positionOffered: record.positionOffered,
+            roleOffered : record.roleOffered,
+            status : record.status,
+            created_at :record.createdAt,
+            updated_at :record.updatedAt,
+        }))
+
+        return invites
+
+    }
+
+    catch(error) { 
+
+		console.log('Error getting notifications', error)
+		throw new Error('Error getting notifications');
+    }
+}
+
 const UserService = { 
     getUserData,
     getContacts,
 	getUserNotifications,
+    getInvites,
 }
 
 export default UserService;
