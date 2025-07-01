@@ -147,7 +147,7 @@ class ProjectService {
 					await transaction.commit();
 
 					return { 
-                        invites:{
+                        invite:{
                             id : fullProdInvite?.id as number,
                             status : fullProdInvite?.status,
                             receiverName : fullProdInvite?.user.fullName,

@@ -1,5 +1,5 @@
 export interface InviteType {
-    invites: {
+    invite: {
         id: number,
 		status: "pending" | "accepted" | "rejected" | undefined,
 		receiverName: string | null | undefined,
