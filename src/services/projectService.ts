@@ -81,7 +81,9 @@ class ProjectService {
 			
 			const userExists = await models.User.findOne({
 				where: { email: receiverEmail },
-				transaction,
+                include : {
+                    model : models.Invite
+                }
 			});
 
 			if (userExists) {
@@ -115,17 +117,35 @@ class ProjectService {
 				
 				try {
 
-					const invite = await models.Invite.create({ 
-						projectId: projectId,
-						invitedUserId: userId,
-						positionOffered: positionOffered,
-						roleOffered: roleOffered,
-						invitedBy: invitedBy
 
-					}, { transaction });
+
+					const [_ , isCreated] = await models.Invite.findOrCreate(
+                        
+                        { 
+                            where: { 
+                                invitedUserId: userId,
+                                projectId: projectId,
+                            },
+
+                            defaults: {
+                                projectId: projectId,
+                                invitedUserId: userId,
+                                positionOffered: positionOffered,
+                                roleOffered: roleOffered,
+                                invitedBy: invitedBy
+                            }
+
+					    }
+                    );
+                    if (!isCreated) { 
+                        throw new Error('The invite has already been send')
+                    }
 
 					const fullProdInvite = await models.Invite.findOne({
-						where: { projectId: projectId },
+						where: { 
+                            projectId: projectId,
+                            invitedUserId : userId,
+                         },
 
 						include: [
 
@@ -145,6 +165,8 @@ class ProjectService {
 					});
 
 					await transaction.commit();
+
+                    
 
 					return { 
                         invite:{

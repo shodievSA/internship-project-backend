@@ -103,11 +103,11 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { invite, project} = await projectService.inviteToProject(
+			const { invite, project } = await projectService.inviteToProject(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
-			const email = await transporter.sendMail({
+			await transporter.sendMail({
 						
 				to: receiverEmail,
 				from: process.env.EMAIL,
@@ -143,7 +143,10 @@ async function inviteToProject(
 
 			});
 
-			res.status(201).json({ message: 'Project invitation sent successfully', invite });
+			res.status(201).json({ 
+                message: 'Project invitation sent successfully',
+                invite: invite,
+            });
 
 		} else {
 
