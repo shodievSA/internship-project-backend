@@ -214,7 +214,7 @@ export default async function initDB() {
 	try {
 
 		await sequelize.authenticate();
-		await sequelize.sync({ force: true });
+		await sequelize.sync({ force: false });
 		initAssociations();
 		await seedRoles();
 		await seedPermissions();
