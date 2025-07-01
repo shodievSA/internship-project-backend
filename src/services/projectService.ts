@@ -371,14 +371,14 @@ class ProjectService {
 				include: [{
 					model: models.User,
 					as: 'users',
-					attributes: ['fullName', 'email'],
+					attributes: ['fullName', 'email', 'avatarUrl'],
 					through: {
 						as: 'projectMember',
-						attributes: ['id', 'position', 'roleId'] 
+						attributes: ['id', 'position', 'roleId'],
 					},
-				}]
+                }]
 			});
-
+            
 			if (!project) throw new Error(`Couldn't find project with id - ${projectId}`);
 	
 			const team = project.users.map((pm: User) => {
@@ -389,8 +389,9 @@ class ProjectService {
 					id: projectMember.id as number,
 					name: pm.fullName,
 					email: pm.email,
+                    avatarUrl : pm.avatarUrl,
 					position: projectMember.position,
-					role: projectMember.roleId as number
+					role: projectMember.role as string
 				}
 
 			});
@@ -423,9 +424,10 @@ class ProjectService {
                         model: models.TaskHistory,
                         as : 'history',
                         separate : true,
-                        order : [['created_at', 'ASC']]
+                        order : [['created_at', 'DESC']]
                     }
 				],
+                order : [['updated_at', 'ASC']]
 			});
 
 			const allTasks = tasks.map((task: Task) => ({
@@ -475,35 +477,38 @@ class ProjectService {
 					task.assignedBy === userId && task.status === 'under review'
 				)
 				.map((task: Task) => ({
-					id: task.id as number,
-					title: task.title,
-					description: task.description,
-					priority: task.priority,
-					deadline: task.deadline,
-					assignedTo: task.assignedToMember.user.fullName as string,
-					subtask: task.subtasks,
-					status: task.status,
+                    
+                    id: task.id as number,
+                    title: task.title,
+                    description: task.description,
+                    priority: task.priority,
+                    deadline: task.deadline,
+                    assignedTo: task.assignedToMember.user.fullName as string,
+                    subtask: task.subtasks,
+                    status: task.status,
                     history : task.history,
-					submitted: task.updatedAt,
-			}));
+                    submitted: task.updatedAt,
+                    
+                }))
 		
 			const invites = await models.Invite.findAll({
 				where: { projectId },
 				include: [{
 					model: models.User,
 					as: 'user'
-				}]
+				}],
+                order : [['created_at', 'DESC']]
 			});
 		
 			const formattedInvites = invites.map((invite: Invite) => ({
 				id: invite.id as number,
 				status: invite.status,
-				receiver_email: invite.user.email,
-				receiver_name: invite.user.fullName,
-				receiver_avatar_url: invite.user.avatarUrl,
-				created_at: invite.createdAt as Date,
-				position_offered: invite.positionOffered as string,
-				role_offered: invite.roleOffered,
+				receiverEmail: invite.user.email,
+				receiverName: invite.user.fullName,
+				receiverAvatarUrl: invite.user.avatarUrl,
+				createdAt: invite.createdAt as Date,
+				positionOffered: invite.positionOffered as string,
+				roleOffered: invite.roleOffered,
 			}));
 	
 			return {

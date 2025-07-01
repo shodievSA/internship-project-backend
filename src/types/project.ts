@@ -27,8 +27,9 @@ export interface ProjectDetails {
 		id: number;
 		name: string;
 		email: string;
+        avatarUrl : string;
 		position: string;
-		role: number;
+		role: string;
 	}[]; // from table project_members where project_id = projectId (which comes from client side);
 	allTasks: {
 		id: number;
@@ -79,11 +80,11 @@ export interface ProjectDetails {
 	invites: {
 		id: number;
 		status: 'pending' | 'accepted' | 'rejected'; //(ENUM - "pending", "accepted", "rejected")
-		receiver_email: string;
-		receiver_name: string;
-		receiver_avatar_url: string | null;
-		created_at: Date;
-		position_offered: string;
-		role_offered: 'manager' | 'member'; //(ENUM - "admin","manager", "member")
+		receiverEmail: string;
+		receiverName: string;
+		receiverAvatarUrl: string | null;
+		createdAt: Date;
+		positionOffered: string;
+		roleOffered: 'manager' | 'member'; //(ENUM - "admin","manager", "member")
 	}[]; // project_id = projectId that comes from client
 }
