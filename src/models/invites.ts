@@ -47,7 +47,8 @@ Invite.init(
 			references: {
 				model: 'projects',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
 		invitedUserId: {
 			type: DataTypes.INTEGER,
