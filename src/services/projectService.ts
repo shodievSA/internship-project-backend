@@ -111,7 +111,7 @@ class ProjectService {
 
 			}
 
-			async function createInvite(userId: number, invitedBy: number) {
+			async function createInvite(userId: number, invitedBy: number): Promise<InviteType> {
 				
 				try {
 
@@ -131,18 +131,36 @@ class ProjectService {
 
 							{
 								model: models.Project,
-								as: 'project'
-							}
+								as: 'project',
+                                attributes: ['title'],
+							}, 
+
+                            {
+                                model : models.User,
+                                as : 'user'
+                            }
 
 						],
-
-						transaction
 
 					});
 
 					await transaction.commit();
 
-					return { Invites:invite, fullProdInvite };
+					return { 
+                        invites:{
+                            id : fullProdInvite?.id as number,
+                            status : fullProdInvite?.status,
+                            receiverName : fullProdInvite?.user.fullName,
+                            receiverEmail: fullProdInvite?.user.email as string,
+                            receiverAvatarUrl : fullProdInvite?.user.avatarUrl,
+                            positionOffered : fullProdInvite?.positionOffered as string,
+                            roleOffered : fullProdInvite?.roleOffered,
+                            createdAt : fullProdInvite?.createdAt as Date,
+                        },
+                        project : { 
+                            title : fullProdInvite?.project.title
+                        }
+                    };
 
 				} catch (error) {
 

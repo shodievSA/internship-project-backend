@@ -103,7 +103,7 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { Invites, fullProdInvite} = await projectService.inviteToProject(
+			const { invites, project} = await projectService.inviteToProject(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
@@ -117,7 +117,7 @@ async function inviteToProject(
 					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
 
 					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-						${fullProdInvite?.project?.title}
+						${project.title}
 					</h2>
 
 					<p style="font-size: 16px;">
@@ -143,7 +143,7 @@ async function inviteToProject(
 
 			});
 
-			res.status(201).json({ message: 'Project invitation sent successfully', Invites, email });
+			res.status(201).json({ message: 'Project invitation sent successfully', invites, email });
 
 		} else {
 

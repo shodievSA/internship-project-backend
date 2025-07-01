@@ -1,9 +1,20 @@
-import Invite from '@/models/invites';
-
 export interface InviteType {
-    Invites: Invite;
-	fullProdInvite: Invite | null;
+    invites: {
+        id: number,
+		status: "pending" | "accepted" | "rejected" | undefined,
+		receiverName: string | null | undefined,
+		receiverEmail: string,
+		receiverAvatarUrl: string | null | undefined,
+		positionOffered: string,
+		roleOffered: "manager" | "member" | undefined,
+		createdAt: Date,
+    };
+
+    project: {
+        title: string | undefined,
+    }
 }
+
 export interface FrontInvite { 
     id : number;
     project: { 

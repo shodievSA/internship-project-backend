@@ -25,9 +25,9 @@ export interface ProjectDetails {
 	title: string;
 	team: {
 		id: number;
-		name: string;
+		name: string | null ;
 		email: string;
-        avatarUrl : string;
+        avatarUrl : string | null ;
 		position: string;
 		role: string;
 	}[]; // from table project_members where project_id = projectId (which comes from client side);
@@ -81,7 +81,7 @@ export interface ProjectDetails {
 		id: number;
 		status: 'pending' | 'accepted' | 'rejected'; //(ENUM - "pending", "accepted", "rejected")
 		receiverEmail: string;
-		receiverName: string;
+		receiverName: string | null;
 		receiverAvatarUrl: string | null;
 		createdAt: Date;
 		positionOffered: string;
