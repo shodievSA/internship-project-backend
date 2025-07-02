@@ -144,23 +144,29 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
 			order: [[ 'createdAt', 'DESC' ]]
         });
 
-        const invites : FrontInvite[] = rawInvites.map((record) => ({
-            id: record.id,
-			projectId: record.projectId,
-            project: { 
-                title: record.project.title,       
-            },
-            from: { 
-                fullName: record.inviter.fullName as string,
-                email: record.inviter.email,
-                avatarUrl: record.inviter.avatarUrl,               
-            },
-            positionOffered: record.positionOffered,
-            roleOffered: record.roleOffered,
-            status: record.status,
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt,
-        }));
+        const invites: FrontInvite[] = [];
+		
+		for (const record of rawInvites) {
+
+			invites.push({
+				id: record.id,
+				projectId: record.projectId,
+				project: { 
+					title: record.project.title,       
+				},
+				from: { 
+					fullName: record.inviter.fullName as string,
+					email: record.inviter.email,
+					avatarUrl: record.inviter.avatarUrl,               
+				},
+				positionOffered: record.positionOffered,
+				roleOffered: record.roleOffered,
+				status: record.status,
+				createdAt: record.createdAt,
+				updatedAt: record.updatedAt,
+			});
+
+        };
 
         return invites;
 

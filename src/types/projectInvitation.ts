@@ -17,6 +17,7 @@ export interface InviteType {
 
 export interface FrontInvite { 
     id : number;
+	projectId: number;
     project: { 
         title : string;
     };

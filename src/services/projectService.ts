@@ -1,10 +1,9 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails } from '@/types';
+import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails, formattedInvites } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
-import Invite from '@/models/invites';
 import User from '@/models/user';
 import Project from '@/models/project';
 
@@ -474,7 +473,7 @@ class ProjectService {
             let assignedTasks: AssignedTaskType[]= []
             let reviews: ReviewType[]= []
 
-			tasks.forEach((task: Task) => {
+			for (const task of tasks) {
 
                 allTasks.push({
                     id: task.id as number,
@@ -561,7 +560,7 @@ class ProjectService {
 
                 } 
 
-			});
+			};
 		
 			const invites = await models.Invite.findAll({
 				where: { projectId },
@@ -571,17 +570,23 @@ class ProjectService {
 				}],
                 order: [['created_at', 'DESC']]
 			});
-		
-			const formattedInvites = invites.map((invite: Invite) => ({
-				id: invite.id as number,
-				status: invite.status,
-				receiverEmail: invite.user.email,
-				receiverName: invite.user.fullName,
-				receiverAvatarUrl: invite.user.avatarUrl,
-				createdAt: invite.createdAt as Date,
-				positionOffered: invite.positionOffered as string,
-				roleOffered: invite.roleOffered,
-			}));
+
+			const formattedInvites: formattedInvites[] = [];
+
+			for (const invite of invites) {
+
+				formattedInvites.push({
+					id: invite.id as number,
+					status: invite.status,
+					receiverEmail: invite.user.email,
+					receiverName: invite.user.fullName,
+					receiverAvatarUrl: invite.user.avatarUrl,
+					createdAt: invite.createdAt as Date,
+					positionOffered: invite.positionOffered as string,
+					roleOffered: invite.roleOffered,
+				});
+
+			}
 	
 			return {
 				team: team,

@@ -20,6 +20,17 @@ export interface FormattedProject {
 	isAdmin: boolean;
 }
 
+export interface formattedInvites {
+	id: number;
+	status: 'pending' | 'accepted' | 'rejected'; //(ENUM - "pending", "accepted", "rejected")
+	receiverEmail: string;
+	receiverName: string | null;
+	receiverAvatarUrl: string | null;
+	createdAt: Date;
+	positionOffered: string;
+	roleOffered: 'manager' | 'member'; //(ENUM - "admin","manager", "member")
+}
+
 
 export interface ProjectTaskDetails{ 
     id: number;
@@ -64,14 +75,5 @@ export interface ProjectDetails {
 	
     reviews: ReviewType[]; //assigned_by= userId and status="under review"
 	
-    invites: {
-		id: number;
-		status: 'pending' | 'accepted' | 'rejected'; //(ENUM - "pending", "accepted", "rejected")
-		receiverEmail: string;
-		receiverName: string | null;
-		receiverAvatarUrl: string | null;
-		createdAt: Date;
-		positionOffered: string;
-		roleOffered: 'manager' | 'member'; //(ENUM - "admin","manager", "member")
-	}[]; // project_id = projectId that comes from client
+    invites: formattedInvites[]; // project_id = projectId that comes from client
 }
