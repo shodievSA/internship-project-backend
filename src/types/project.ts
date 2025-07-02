@@ -37,7 +37,7 @@ export interface ProjectDetails {
 		description: string;
 		priority: 'low' | 'high' | 'middle';
 		deadline: Date;
-		subtask: Subtask[] | undefined;
+		subtasks: Subtask[] | undefined;
 		assignedBy: string;
 		assignedTo: string;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
@@ -50,7 +50,7 @@ export interface ProjectDetails {
 		priority: 'low' | 'high' | 'middle';
 		deadline: Date;
 		assignedBy: string;
-		subtask: Subtask[] | undefined;
+		subtasks: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
         history : TaskHistory[]
 	}[]; // tasks where assigned_To = userId (userId comes from client);
@@ -61,10 +61,10 @@ export interface ProjectDetails {
 		priority: 'low' | 'high' | 'middle';
 		deadline: Date;
 		assignedTo: string;
-		subtask: Subtask[] | undefined;
+		subtasks: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
         history : TaskHistory[]
-	}[]; // assigned_by = userId
+	}[]; // assigned_by = projectMemberId
 	reviews: {
 		id: number;
 		title: string | null;
@@ -72,7 +72,7 @@ export interface ProjectDetails {
 		priority: 'low' | 'high' | 'middle';
 		deadline: Date;
 		assignedTo: string;
-		subtask: Subtask[] | undefined;
+		subtasks: Subtask[] | undefined;
 		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
         history : TaskHistory[]
 		submitted: Date; // updated_at in table

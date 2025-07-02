@@ -80,10 +80,7 @@ class ProjectService {
 		try {
 			
 			const userExists = await models.User.findOne({
-				where: { email: receiverEmail },
-                include : {
-                    model : models.Invite
-                }
+				where: { email: receiverEmail }
 			});
 
 			if (userExists) {
@@ -117,26 +114,22 @@ class ProjectService {
 				
 				try {
 
+					const [_ , isCreated] = await models.Invite.findOrCreate({ 
+						where: { 
+							invitedUserId: userId,
+							projectId: projectId,
+							status: "pending"
+						},
+						defaults: {
+							projectId: projectId,
+							invitedUserId: userId,
+							positionOffered: positionOffered,
+							roleOffered: roleOffered,
+							invitedBy: invitedBy
+						},
+						transaction
+					});
 
-
-					const [_ , isCreated] = await models.Invite.findOrCreate(
-                        
-                        { 
-                            where: { 
-                                invitedUserId: userId,
-                                projectId: projectId,
-                            },
-
-                            defaults: {
-                                projectId: projectId,
-                                invitedUserId: userId,
-                                positionOffered: positionOffered,
-                                roleOffered: roleOffered,
-                                invitedBy: invitedBy
-                            }
-
-					    }
-                    );
                     if (!isCreated) { 
                         throw new Error('The invite has already been send')
                     }
@@ -145,10 +138,9 @@ class ProjectService {
 						where: { 
                             projectId: projectId,
                             invitedUserId : userId,
+							status: "pending"
                          },
-
 						include: [
-
 							{
 								model: models.Project,
 								as: 'project',
@@ -159,14 +151,11 @@ class ProjectService {
                                 model : models.User,
                                 as : 'user'
                             }
-
 						],
-
+						transaction
 					});
 
 					await transaction.commit();
-
-                    
 
 					return { 
                         invite:{
@@ -447,6 +436,7 @@ class ProjectService {
                             as: 'user',
 							attributes: ['fullName'] 
 						}],
+						attributes: ['id']
 					},
 					{
 						model: models.ProjectMember,
@@ -454,11 +444,13 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName'] 
+							attributes: ['fullName',] 
 						}],
+						attributes: ['id']
 					},
 					{ 
-						model: models.Subtask 
+						model: models.Subtask,
+						as: 'subtasks'
 					},
                     {
                         model: models.TaskHistory,
@@ -467,8 +459,10 @@ class ProjectService {
                         order : [['created_at', 'DESC']]
                     }
 				],
-                order : [['updated_at', 'ASC']]
+                order : [['created_at', 'DESC']]
 			});
+
+			console.log(tasks)
 
 			const allTasks = tasks.map((task: Task) => ({
 				id: task.id as number,
@@ -476,15 +470,22 @@ class ProjectService {
 				description: task.description as string,
 				priority: task.priority,
 				deadline: task.deadline,
-				subtask: task.subtasks,
+				subtasks: task.subtasks,
 				assignedBy: task.assignedByMember.user.fullName as string,
 				assignedTo: task.assignedToMember.user.fullName as string,
 				status: task.status,
-                 history : task.history,
+                history : task.history,
 			}));
+
+			const userProjectMember = await models.ProjectMember.findOne({
+				where: { userId: userId },
+				attributes: ['id']
+			});
+
+			if (!userProjectMember) throw new Error(`Project member doesn't exist`);
 		
 			const myTasks = tasks
-				.filter((task: Task) => task.assignedTo === userId)
+				.filter((task: Task) => task.assignedTo === userProjectMember.id)
 				.map((task: Task) => ({
 					id: task.id as number,
 					title: task.title,
@@ -493,28 +494,28 @@ class ProjectService {
 					deadline: task.deadline,
 					assignedBy: task.assignedByMember.user.fullName as string,
 					status: task.status,
-					subtask: task.subtasks,
+					subtasks: task.subtasks,
                     history : task.history,
 				}));
 		
 			const assignedTasks = tasks
-				.filter((task: Task) => task.assignedBy === userId)
-				.map((task: Task) => ({
-					id: task.id as number,
-					title: task.title,
-					description: task.description,
-					priority: task.priority,
-					deadline: task.deadline,
-					assignedTo: task.assignedToMember.user.fullName as string,
-					subtask: task.subtasks,
-					status: task.status,
-                    history : task.history,
-				}));
+			.filter((task: Task) => task.assignedBy === userProjectMember.id)
+			.map((task: Task) => ({
+				id: task.id as number,
+				title: task.title,
+				description: task.description,
+				priority: task.priority,
+				deadline: task.deadline,
+				assignedTo: task.assignedToMember.user.fullName as string,
+				subtasks: task.subtasks,
+				status: task.status,
+				history : task.history,
+			}));
 		
 			const reviews = tasks
 				.filter(
 					(task: Task) =>
-					task.assignedBy === userId && task.status === 'under review'
+					task.assignedBy === userProjectMember.id && task.status === 'under review'
 				)
 				.map((task: Task) => ({
                     
@@ -524,7 +525,7 @@ class ProjectService {
                     priority: task.priority,
                     deadline: task.deadline,
                     assignedTo: task.assignedToMember.user.fullName as string,
-                    subtask: task.subtasks,
+                    subtasks: task.subtasks,
                     status: task.status,
                     history : task.history,
                     submitted: task.updatedAt,
@@ -571,16 +572,23 @@ class ProjectService {
 
 	}
 
-	async createTask(task : Task): Promise<object> {
+	async createTask(task : Task, userId: number): Promise<object> {
 
     	const transaction = await sequelize.transaction()
 
 		try {
 
             const project = await models.Project.findOne ({
-            where: {id : task.projectId},
-            attributes : ['title'],
+				where: {id : task.projectId},
+				attributes : ['title'],
             })
+
+			const assignedBy = await models.ProjectMember.findOne({
+				where: { userId: userId },
+				attributes: ['id']
+			});
+
+			task.assignedBy = assignedBy?.id as number;
 
 			const newTask = await models.Task.create(task, { transaction });
             
@@ -598,7 +606,7 @@ class ProjectService {
             const notification= await models.Notification.create({
 				title: "New Task",
                 message : `Project: ${project?.title}\nAssigned new task!`,
-                userId : task.assignedTo
+                userId : userId
             },{transaction})
             
 

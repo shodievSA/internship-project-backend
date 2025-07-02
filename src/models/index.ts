@@ -179,7 +179,8 @@ export function initAssociations() {
 	Task.hasMany(Subtask, {
 		foreignKey: 'task_id',
 		onDelete: 'CASCADE',
-		hooks: true
+		hooks: true,
+		as: 'subtasks'
 	});
 
 	Subtask.belongsTo(Task, {

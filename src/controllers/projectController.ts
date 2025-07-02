@@ -388,13 +388,13 @@ async function createTask(
 ): Promise<any> {
 
     const task = req.body.task;
+	const userId = req.user.id;
     task.projectId = parseInt(req.params.projectId);
-    task.assignedBy = req.user.id
 
         try { 
             if ( req.memberPermissions?.includes('assignTasks') ) { 
 
-                const nTask = await projectService.createTask(task as Task)
+                const nTask = await projectService.createTask(task as Task, userId)
 
                 return res.status(201).json(nTask)
             }
