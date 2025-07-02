@@ -1,7 +1,7 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, InviteType } from '@/types';
+import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import Invite from '@/models/invites';
@@ -418,7 +418,7 @@ class ProjectService {
 					id: projectMember.id as number,
 					name: pm.fullName,
 					email: pm.email,
-                    avatarUrl : pm.avatarUrl,
+                    avatarUrl: pm.avatarUrl,
 					position: projectMember.position,
 					role: projectMember.role as string
 				}
@@ -434,7 +434,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName'] 
+							attributes: ['fullName', 'avatarUrl'] 
 						}],
 						attributes: ['id']
 					},
@@ -444,7 +444,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName',] 
+							attributes: ['fullName', 'avatarUrl'] 
 						}],
 						attributes: ['id']
 					},
@@ -454,83 +454,114 @@ class ProjectService {
 					},
                     {
                         model: models.TaskHistory,
-                        as : 'history',
-                        separate : true,
-                        order : [['created_at', 'DESC']]
+                        as: 'history',
+                        separate: true,
+                        order: [['created_at', 'DESC']]
                     }
 				],
-                order : [['created_at', 'DESC']]
+                order: [['created_at', 'DESC']]
 			});
+            
+            const userProjectMember = await models.ProjectMember.findOne({
+                where: { userId: userId },
+                attributes: ['id']
+            });
 
-			console.log(tasks)
+            if (!userProjectMember) throw new Error(`Project member doesn't exist`);
+            
+            let allTasks: ProjectTaskDetails[]= []
+            let myTasks: ProjectTaskDetails[]= []
+            let assignedTasks: AssignedTaskType[]= []
+            let reviews: ReviewType[]= []
 
-			const allTasks = tasks.map((task: Task) => ({
-				id: task.id as number,
-				title: task.title,
-				description: task.description as string,
-				priority: task.priority,
-				deadline: task.deadline,
-				subtasks: task.subtasks,
-				assignedBy: task.assignedByMember.user.fullName as string,
-				assignedTo: task.assignedToMember.user.fullName as string,
-				status: task.status,
-                history : task.history,
-			}));
+			tasks.forEach((task: Task) => {
 
-			const userProjectMember = await models.ProjectMember.findOne({
-				where: { userId: userId },
-				attributes: ['id']
-			});
-
-			if (!userProjectMember) throw new Error(`Project member doesn't exist`);
-		
-			const myTasks = tasks
-				.filter((task: Task) => task.assignedTo === userProjectMember.id)
-				.map((task: Task) => ({
-					id: task.id as number,
-					title: task.title,
-					description: task.description,
-					priority: task.priority,
-					deadline: task.deadline,
-					assignedBy: task.assignedByMember.user.fullName as string,
-					status: task.status,
-					subtasks: task.subtasks,
-                    history : task.history,
-				}));
-		
-			const assignedTasks = tasks
-			.filter((task: Task) => task.assignedBy === userProjectMember.id)
-			.map((task: Task) => ({
-				id: task.id as number,
-				title: task.title,
-				description: task.description,
-				priority: task.priority,
-				deadline: task.deadline,
-				assignedTo: task.assignedToMember.user.fullName as string,
-				subtasks: task.subtasks,
-				status: task.status,
-				history : task.history,
-			}));
-		
-			const reviews = tasks
-				.filter(
-					(task: Task) =>
-					task.assignedBy === userProjectMember.id && task.status === 'under review'
-				)
-				.map((task: Task) => ({
-                    
+                allTasks.push({
                     id: task.id as number,
                     title: task.title,
-                    description: task.description,
+                    description: task.description as string,
                     priority: task.priority,
                     deadline: task.deadline,
-                    assignedTo: task.assignedToMember.user.fullName as string,
                     subtasks: task.subtasks,
+                    assignedBy: {
+                        name: task.assignedByMember.user.fullName as string,
+                        avatarUrl: task.assignedByMember.user.avatarUrl 
+                    },
+                    assignedTo: {
+                        name: task.assignedToMember.user.fullName as string,
+                        avatarUrl: task.assignedToMember.user.avatarUrl 
+                    },
                     status: task.status,
                     history : task.history,
-                    submitted: task.updatedAt,
-                    
-                }))
+                    createdAt: task.createdAt
+                })
+
+                if (task.assignedBy === userProjectMember.id) {
+
+                    assignedTasks.push({ 
+                        id: task.id as number,
+                        title: task.title,
+                        description: task.description,
+                        priority: task.priority,
+                        deadline: task.deadline,
+                        assignedTo: {
+                            name: task.assignedToMember.user.fullName as string,
+                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                        },
+                        subtasks: task.subtasks,
+                        status: task.status,
+                        history : task.history,
+                        createdAt: task.createdAt
+                    });
+
+                }
+
+                if (task.assignedBy === userProjectMember.id && task.status === 'under review') { 
+
+                    reviews.push({
+                        id: task.id as number,
+                        title: task.title,
+                        description: task.description,
+                        priority: task.priority,
+                        deadline: task.deadline,
+                        assignedTo: {
+                            name: task.assignedToMember.user.fullName as string,
+                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                        },
+                        subtasks: task.subtasks,
+                        status: task.status,
+                        history : task.history,
+                        submitted: task.updatedAt,
+                        createdAt: task.createdAt,
+                    })
+
+                } 
+                
+                if (task.assignedTo === userProjectMember.id ) {  
+
+                    myTasks.push({
+                        id: task.id as number,
+                        title: task.title,
+                        description: task.description,
+                        priority: task.priority,
+                        deadline: task.deadline,
+                        assignedBy: {
+                            name: task.assignedByMember.user.fullName as string,
+                            avatarUrl: task.assignedByMember.user.avatarUrl 
+                        },
+                        assignedTo: {
+                            name: task.assignedToMember.user.fullName as string,
+                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                        },
+                        status: task.status,
+                        subtasks: task.subtasks,
+                        history : task.history,
+                        createdAt: task.createdAt,
+                    })
+
+                } 
+
+			});
 		
 			const invites = await models.Invite.findAll({
 				where: { projectId },
@@ -538,7 +569,7 @@ class ProjectService {
 					model: models.User,
 					as: 'user'
 				}],
-                order : [['created_at', 'DESC']]
+                order: [['created_at', 'DESC']]
 			});
 		
 			const formattedInvites = invites.map((invite: Invite) => ({
@@ -572,15 +603,15 @@ class ProjectService {
 
 	}
 
-	async createTask(task : Task, userId: number): Promise<object> {
+	async createTask(task: Task, userId: number): Promise<object> {
 
     	const transaction = await sequelize.transaction()
 
 		try {
 
             const project = await models.Project.findOne ({
-				where: {id : task.projectId},
-				attributes : ['title'],
+				where: {id: task.projectId},
+				attributes: ['title'],
             })
 
 			const assignedBy = await models.ProjectMember.findOne({
@@ -605,15 +636,15 @@ class ProjectService {
             
             const notification= await models.Notification.create({
 				title: "New Task",
-                message : `Project: ${project?.title}\nAssigned new task!`,
-                userId : userId
+                message: `Project: ${project?.title}\nAssigned new task!`,
+                userId: userId
             },{transaction})
             
 
             await models.TaskHistory.create ({
-                taskId : newTask.id,
-                status : newTask.status,
-                notificationId : notification.id,
+                taskId: newTask.id,
+                status: newTask.status,
+                notificationId: notification.id,
 
             }, {transaction})
 

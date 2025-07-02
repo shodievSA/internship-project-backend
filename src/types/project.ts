@@ -20,6 +20,30 @@ export interface FormattedProject {
 	isAdmin: boolean;
 }
 
+
+export interface ProjectTaskDetails{ 
+    id: number;
+    title: string | null;
+    description: string;
+    priority: 'low' | 'high' | 'middle';
+    deadline: Date;
+    subtasks: Subtask[] | undefined;
+    assignedBy: {
+        name: string,
+        avatarUrl: string | null,
+    };
+    assignedTo: {
+        name: string,
+        avatarUrl: string | null,
+    };
+    status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+    history : TaskHistory[]
+    createdAt : Date,
+}
+
+export type AssignedTaskType = Omit<ProjectTaskDetails, 'assignedBy'>
+export type ReviewType = Omit<ProjectTaskDetails, 'assignedBy'> & {submitted: Date}
+
 export interface ProjectDetails {
 	id: number;
 	title: string;
@@ -31,53 +55,16 @@ export interface ProjectDetails {
 		position: string;
 		role: string;
 	}[]; // from table project_members where project_id = projectId (which comes from client side);
-	allTasks: {
-		id: number;
-		title: string | null;
-		description: string;
-		priority: 'low' | 'high' | 'middle';
-		deadline: Date;
-		subtasks: Subtask[] | undefined;
-		assignedBy: string;
-		assignedTo: string;
-		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-        history : TaskHistory[]
-	}[];
-	myTasks: {
-		id: number;
-		title: string | null;
-		description: string;
-		priority: 'low' | 'high' | 'middle';
-		deadline: Date;
-		assignedBy: string;
-		subtasks: Subtask[] | undefined;
-		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-        history : TaskHistory[]
-	}[]; // tasks where assigned_To = userId (userId comes from client);
-	assignedTasks: {
-		id: number;
-		title: string | null;
-		description: string;
-		priority: 'low' | 'high' | 'middle';
-		deadline: Date;
-		assignedTo: string;
-		subtasks: Subtask[] | undefined;
-		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-        history : TaskHistory[]
-	}[]; // assigned_by = projectMemberId
-	reviews: {
-		id: number;
-		title: string | null;
-		description: string;
-		priority: 'low' | 'high' | 'middle';
-		deadline: Date;
-		assignedTo: string;
-		subtasks: Subtask[] | undefined;
-		status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-        history : TaskHistory[]
-		submitted: Date; // updated_at in table
-	}[]; // assigned_by= userId and status="under review"
-	invites: {
+	
+    allTasks: ProjectTaskDetails[]
+
+	myTasks: ProjectTaskDetails[] // tasks where assigned_To = userId (userId comes from client);
+	
+    assignedTasks: AssignedTaskType[] //assigned_by = projectMemberId
+	
+    reviews: ReviewType[]; //assigned_by= userId and status="under review"
+	
+    invites: {
 		id: number;
 		status: 'pending' | 'accepted' | 'rejected'; //(ENUM - "pending", "accepted", "rejected")
 		receiverEmail: string;
