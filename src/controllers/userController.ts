@@ -8,6 +8,8 @@ const {
     getContacts,
     getUserNotifications,
     getInvites,
+    deleteNotification,
+    updateNotification    
 } = userService
 
 async function getMe(
@@ -31,7 +33,7 @@ async function getMe(
 
 }
 
-export async function getMailContacts(
+async function getMailContacts(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -39,7 +41,7 @@ export async function getMailContacts(
 
   try {
 
-    const connections = await userService.getContacts(req.user.id);
+    const connections = await getContacts(req.user.id);
     res.status(200).json({ contacts: connections });
     return;
 
@@ -51,7 +53,7 @@ export async function getMailContacts(
 
 }
 
-export async function fetchUserNotifications(
+async function fetchUserNotifications(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -61,7 +63,7 @@ export async function fetchUserNotifications(
 
   try {
 
-    const notifications = await userService.getUserNotifications(userId);
+    const notifications = await getUserNotifications(userId);
     res.status(200).json({ message: 'Notifications fetched successfully', notifications });
 
     return;
@@ -74,7 +76,7 @@ export async function fetchUserNotifications(
 
 }
 
-export async function getInvitations(
+async function getInvitations(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
@@ -93,11 +95,53 @@ export async function getInvitations(
 
 }
 
+async function deleteNotifications(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+    try {
+
+        const notificationsToDelete = req.body.notificationsToDelete as { notificationIds: number[]}
+
+        const message = await deleteNotification(req.user.id, notificationsToDelete.notificationIds)
+
+        res.status(200).json({ message: message });
+
+  	} catch (error) {
+
+    	next(error);
+
+  	}
+}
+
+async function updateNotifications(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+        try {
+
+        const notificationViewUpdates = req.body.notificationViewUpdates as { notificationIds: number[], isViewed:boolean}
+
+        const newRecords = await updateNotification(req.user.id, notificationViewUpdates)
+
+        res.status(200).json({ updatedNotifications: newRecords });
+
+  	} catch (error) {
+
+    	next(error);
+
+  	}
+}
+
 const userController = {
     getMe,
     getMailContacts,
     fetchUserNotifications,
     getInvitations,
+    deleteNotifications,
+    updateNotifications
 }
 
 export default userController;

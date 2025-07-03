@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import Task from '../models/task';
 import { Op } from 'sequelize';
+import { AppError } from '@/types';
 
 async function markOverdueTasks() {
     try {
@@ -18,7 +19,7 @@ async function markOverdueTasks() {
             console.log(`Marked ${updatedCount} tasks as overdue.`);
         }
     } catch (err) {
-        console.error('Error marking overdue tasks:', err);
+        throw new AppError(`Error marking overdue tasks: ${err}`);
     }
 }
 

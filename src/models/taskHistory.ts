@@ -20,7 +20,6 @@ InferCreationAttributes<TaskHistory, {omit : keyof TaskHistoryAssociations}>
     declare taskId : number;
     declare status :  'ongoing'| 'closed'| 'rejected'| 'under review'| 'overdue' ;
     declare comment : CreationOptional<string>;
-    declare notificationId : number;
     declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 
@@ -42,7 +41,8 @@ TaskHistory.init({
 
             model: 'tasks',
             key: 'id',
-        }
+        },
+        onDelete : 'CASCADE',
     },
 
     status : {
@@ -58,15 +58,6 @@ TaskHistory.init({
         type: DataTypes.TEXT, 
         allowNull: true,
 
-    },
-
-    notificationId: {
-        type : DataTypes.INTEGER, 
-        allowNull : false,
-        references : { 
-            model : 'notifications' , 
-            key : 'id'
-        }
     },
 
     createdAt: {
@@ -91,7 +82,6 @@ TaskHistory.init({
                 }
 
             )
-            console.log("***Task changed by hook and options is:",options) // should be removed
         }
 
 },

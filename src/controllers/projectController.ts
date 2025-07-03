@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import { FormattedProject, ProjectDetails } from '@/types';
+import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
 import Task from '@/models/task';
@@ -407,7 +407,31 @@ async function createTask(
             next(error)
 
         }
+}
+
+async function deleteTask(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+    try {   
+        const projectId = parseInt(req.params.projectId)
+        const taskId = parseInt(req.params.taskId)
+
+        if (req.memberPermissions?.includes('deleteTasks')){
+            
+            await projectService.deleteTask( req.user.id, projectId, taskId )
+            res.sendStatus(204)
+            return
+        }
+        throw new AppError('No permission', 403)
     }
+    catch(error){ 
+
+        next(error)
+    }    
+}
+
 
 const projectController = {
 	leaveProject,
@@ -421,6 +445,7 @@ const projectController = {
 	getProjectDetails,
 	deleteProject,
     createTask,
+    deleteTask,
 };
 
 export default projectController;
