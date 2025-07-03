@@ -2,7 +2,7 @@ import { DataTypes, Model, CreationOptional } from 'sequelize';
 import ProjectMember from './projectMember';
 import DailyAiReport from './dailyAiReport';
 import Notification from './notification';
-import ProjectInvitation from './projectInvitation';
+import Invite from './invites';
 import sequelize from '../clients/sequelize';
 import Project from './project';
 
@@ -41,7 +41,7 @@ export interface UserAssociations {
 	projectMember: ProjectMember;
 	dailyAiReport: DailyAiReport[];
 	notifications: Notification[];
-	projectInvitation: ProjectInvitation[];
+	Invites: Invite[];
 	projects: Project[];
 }
 
@@ -58,11 +58,12 @@ class User extends Model<
 	declare isInvited: CreationOptional<boolean>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare projectMember: ProjectMember;
 	declare projectMembers: ProjectMember[];
 	declare dailyAiReport: DailyAiReport[];
 	declare notifications: Notification[];
-	declare projectInvitation: ProjectInvitation[];
+	declare Invites: Invite[];
 	declare projects: Project[];
 }
 

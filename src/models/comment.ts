@@ -24,6 +24,7 @@ class Comment extends Model<
 	declare projectMemberId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare task: Task;
 	declare projectMember: ProjectMember;
 }

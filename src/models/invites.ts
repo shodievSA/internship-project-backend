@@ -8,33 +8,33 @@ import {
 } from 'sequelize';
 import Project from './project';
 import User from './user';
-import Notification from './notification';
 
-export interface ProjectInvitationAssociations {
+export interface InviteAssociations {
 	project: Project;
 	user: User;
-	notification: Notification;
+	inviter: User;
 }
 
-class ProjectInvitation extends Model<
-	InferAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>,
-	InferCreationAttributes<ProjectInvitation, { omit: keyof ProjectInvitationAssociations }>
+class Invite extends Model<
+	InferAttributes<Invite, { omit: keyof InviteAssociations }>,
+	InferCreationAttributes<Invite, { omit: keyof InviteAssociations }>
 > {
 	declare id: CreationOptional<number>;
 	declare projectId: number;
-	declare notificationId: number;
 	declare invitedUserId: number;
+	declare invitedBy: number;
 	declare status: CreationOptional<'pending' | 'accepted' | 'rejected'>;
 	declare positionOffered: string;
 	declare roleOffered: 'manager' | 'member';
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare project: Project;
 	declare user: User;
-	declare notification: Notification;
+	declare inviter: User;
 }
 
-ProjectInvitation.init(
+Invite.init(
 	{
 		id: {
 			type: DataTypes.INTEGER,
@@ -47,17 +47,18 @@ ProjectInvitation.init(
 			references: {
 				model: 'projects',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
-		notificationId: {
+		invitedUserId: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			references: {
-				model: 'notifications',
+				model: 'users',
 				key: 'id'
 			}
 		},
-		invitedUserId: {
+		invitedBy: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			references: {
@@ -93,4 +94,4 @@ ProjectInvitation.init(
 	}
 );
 
-export default ProjectInvitation;
+export default Invite;

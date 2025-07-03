@@ -21,6 +21,7 @@ class Subtask extends Model<
 	declare taskId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
+    
 	declare task: Task;
 }
 
@@ -34,7 +35,7 @@ Subtask.init(
 		title: {
 			type: DataTypes.STRING(50),
 			allowNull: false
-		},
+		}, 
 		taskId: {
 			type: DataTypes.INTEGER,
 			allowNull: false,

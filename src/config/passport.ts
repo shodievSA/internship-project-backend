@@ -100,31 +100,52 @@ passport.use(new GoogleStrategy({
         if (!profile.id) throw new Error('Invalid profile: missing Google ID');
         if (!accessToken) throw new Error('No access token received from Google');
 
-        const encryptedAccessToken = encryptToken(accessToken);
+		const encryptedAccessToken = encryptToken(accessToken);
         const encryptedRefreshToken = encryptToken(refreshToken);
 
-        const [user, created] = await models.User.findOrCreate({
-			where: { googleId: profile.id },
-			defaults: {
+		const user = await models.User.findOne({
+			where: { email: profile.emails![0].value }
+		});
+
+		if (user) {
+
+			if (user.isInvited) {
+
+				await user.update({
+					googleId: profile.id,
+					fullName: profile.displayName,
+					avatarUrl: profile.photos?.[0]?.value ?? null,
+					accessToken: encryptedAccessToken,
+					refreshToken: encryptedRefreshToken,
+					isInvited: false
+				});
+
+			} else {
+
+				await user.update({
+					accessToken: encryptedAccessToken,
+					refreshToken: encryptedRefreshToken,
+				});
+
+			}
+
+			return done(null, user);
+
+		} else {
+
+			const newUser = await models.User.create({
 				googleId: profile.id,
 				email: profile.emails![0].value,
 				fullName: profile.displayName,
 				avatarUrl: profile.photos?.[0]?.value ?? null,
 				accessToken: encryptedAccessToken,
-				refreshToken: encryptedRefreshToken
-			} as RegisteredUserCreationAttributes
-        });
-
-        if (!created) {
-
-			await user.update({
-				accessToken: encryptedAccessToken,
 				refreshToken: encryptedRefreshToken,
+				isInvited: false
 			});
 
-        }
+			return done(null, newUser);
 
-        return done(null, user);
+		}
 
     } catch (err) {
 

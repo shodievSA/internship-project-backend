@@ -1,7 +1,7 @@
 export interface Contact{ 
     email : string; 
     fullName : string; 
-    avatarUrl : string; 
+    avatarUrl : string | null; 
 }
 
 export interface GooglePerson { 

@@ -4,3 +4,4 @@ export * from './task';
 export * from './projectInvitation';
 export * from './authenticatedRequest';
 export * from './connections'; 
+export * from './notification'
