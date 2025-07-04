@@ -18,7 +18,7 @@ async function getMe(
 	next: NextFunction
 ): Promise<void> {
 
-	try {
+	try {    
 
 		const userData: UserData | null = await getUserData(req.user.id);
 

@@ -14,7 +14,10 @@ import {
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import User from '@/models/user';
+import Subtask from '@/models/subTask';
+import TaskHistory from '@/models/taskHistory';
 import Project from '@/models/project';
+import { transporter } from '@/config/email';
 
 class ProjectService {
 
@@ -121,7 +124,7 @@ class ProjectService {
 				
 				try {
 
-					const [_ , isCreated] = await models.Invite.findOrCreate({ 
+					const [_, isCreated] = await models.Invite.findOrCreate({ 
 						where: { 
 							invitedUserId: userId,
 							projectId: projectId,
@@ -193,6 +196,51 @@ class ProjectService {
             throw error
 
 		}
+
+	}
+
+	async sendEmail(
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member',
+		projectTitle: string
+	): Promise<void> {
+
+		await transporter.sendMail({
+						
+			to: receiverEmail,
+			from: process.env.EMAIL,
+			subject: '📬 Project invitation',
+			html: `
+				<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
+				<h1 style="color: #007BFF;">You've been invited to a project!</h1>
+
+				<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
+					${projectTitle}
+				</h2>
+
+				<p style="font-size: 16px;">
+					<strong>Role:</strong> ${roleOffered}<br>
+					<strong>Position:</strong> ${positionOffered}
+				</p>
+
+				<a href="${process.env.FRONTEND_URL}/projects" style="
+					display: inline-block;
+					margin-top: 20px;
+					padding: 10px 20px;
+					background-color: #007BFF;
+					color: white;
+					text-decoration: none;
+					border-radius: 5px;
+					font-weight: bold;
+				">
+					Accept Invitation
+				</a>
+
+				</div>
+			`
+			
+		});
 
 	}
 
@@ -277,6 +325,166 @@ class ProjectService {
 
 	}
 
+	async changeTaskStatus(
+		taskId: number,
+		updatedTaskStatus: 'under review' | 'rejected' | 'closed',
+		comment: string,
+		fullname: string,
+	): Promise<object> {
+
+		const transaction: Transaction = await sequelize.transaction();
+
+		try {
+
+			const [affectedRows] = await models.Task.update(
+
+				{ status: updatedTaskStatus },
+
+				{
+
+					where: { id: taskId },
+					transaction,
+
+				}
+
+			);
+
+			if (affectedRows === 0) {
+
+				throw new AppError("Task not found");
+				
+			}
+
+			const task = await models.Task.findOne({
+
+				where: { id: taskId },
+
+				include: [
+					
+					{
+						model: models.Project,
+						as: 'project',
+						attributes: ['title']
+					},
+
+					{
+						model: models.ProjectMember,
+						as: 'assignedByMember',
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+					},
+
+					{
+						model: models.ProjectMember,
+						as: 'assignedToMember',
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+					},
+
+					{
+						model: models.Subtask,
+						as: 'subtasks',
+						attributes: {
+
+							exclude: ['task_id']
+
+						}
+					},
+
+					{
+						model: models.TaskHistory,
+						as: 'history',
+						attributes: {
+
+							exclude: ['task_id']
+							
+						}
+					}
+
+				],
+
+				transaction
+
+			}) as Task & {
+
+				assignedByMember: ProjectMember & { user: User };
+				assignedToMember: ProjectMember & { user: User };
+				project: Project;
+				subtasks: Subtask[];
+				history: TaskHistory[];
+
+			};
+
+			const updatedTask = {
+
+				id: task.id,
+				title: task.title,
+				description: task.description,
+				priority: task.priority,
+				deadline: task.deadline,
+				createdAt: task.createdAt,
+				assignedBy: {
+					name: task.assignedByMember?.user?.fullName || null,
+					avatarUrl: task.assignedByMember?.user?.avatarUrl || null,
+					id: task.assignedByMember.id
+				},
+				assignedTo: {
+					name: task.assignedToMember?.user?.fullName || null,
+					avatarUrl: task.assignedToMember?.user?.avatarUrl || null,
+					id: task.assignedToMember.id
+				},
+				status: task.status,
+				subtasks: task.subtasks,
+				history: task.history
+
+			};
+
+			let message: string;
+
+			switch (updatedTaskStatus) {
+				case 'under review':
+					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
+					break;
+				
+				case 'rejected':
+					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					break;
+
+				case 'closed':
+					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					break;
+			
+				default:
+					const _exhaustiveCheck: never = updatedTaskStatus;
+					throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
+			}
+
+			await models.Notification.create({ 
+
+				title: 'Task submitted for review',
+				message: message,
+				userId: task.assignedByMember.user.id
+
+			}, { transaction });
+
+			await models.TaskHistory.create({ 
+
+				taskId: taskId,
+				status: updatedTaskStatus,
+				comment,
+
+			}, { transaction });
+
+			await transaction.commit();
+
+			return updatedTask;
+			
+		} catch (error) {
+
+			await transaction.rollback();
+			throw error;
+
+		}
+
+	}
 
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
@@ -349,20 +557,20 @@ class ProjectService {
 
 		try {
 		
-			const [count, rows] = await models.Project.update(updatedFields, {
+			const [count, affectedRows] = await models.Project.update(updatedFields, {
 
 				where: { id: projectId },
 				returning: true,
 
 			});
 		
-			if (count === 0 || rows.length === 0) {
+			if (count === 0 || affectedRows.length === 0) {
 
 				throw new AppError('Project not found');
 				
 			}
 		
-			return rows[0].toJSON();
+			return affectedRows[0].toJSON();
 
 		} catch (error) {
 
@@ -742,7 +950,7 @@ class ProjectService {
 			);
 		
 			if (count === 0 || rows.length === 0) {
-				throw new AppError('Failed to update team member role');
+				throw new Error('Failed to update team member role');
 			}
 			
 			return rows[0].toJSON() as ProjectMember;

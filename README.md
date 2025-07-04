@@ -9,12 +9,3 @@ To run this project, do the following:
 4. Run "npm run dev" from the root folder and it'll start the express app together with sequelize. However, if you want to compile ts code into js code in the dist folder first before running the server, you can execute npm run build command and then npm start in terminal.
 
 After completing all these steps, make sure to create new branch with your name (e.g fanil) and switch to it. After this, feel free to make changes to the repository.
-
-
-*** TO RUN THE PROJECT FROM DOCKER CONTAINER IN DEVELOPMENT MODE EXECUTE THE FOLLOWING COMMAND: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build ***
-
-*** TO RUN THE PROJECT FROM DOCKER CONTAINER IN PRODUCTION MODE EXECUTE THE FOLLOWING COMMAND: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build ***
-
-* docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build --scale node_app=2 -d // For second node server instance.
-
-# However note, first you must have a docker desktop app running on your machine to execute the commands above.
