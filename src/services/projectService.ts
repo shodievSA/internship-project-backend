@@ -350,7 +350,7 @@ class ProjectService {
 
 			if (affectedRows === 0) {
 
-				throw new Error("Task not found");
+				throw new AppError("Task not found");
 				
 			}
 
@@ -462,11 +462,9 @@ class ProjectService {
 			return updatedTask;
 			
 		} catch (error) {
-			
-			console.error('Error updating task status:', error);
 
 			await transaction.rollback();
-			throw new Error('Internal server error');
+			throw error;
 
 		}
 
