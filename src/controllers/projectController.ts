@@ -389,25 +389,27 @@ async function createTask(
 
     const task = req.body.task;
 	const userId = req.user.id;
+
     task.projectId = parseInt(req.params.projectId);
 
-        try { 
-            if ( req.memberPermissions?.includes('assignTasks') ) { 
+	try { 
+		
+		if (req.memberPermissions?.includes('assignTasks')) { 
 
-                const nTask = await projectService.createTask(task as Task, userId)
+			const nTask = await projectService.createTask(task as Task, userId);
+			return res.status(201).json(nTask);
 
-                return res.status(201).json(nTask)
-            }
+		}
 
-            return res.status(403).json({ message: 'Permission required'})
-        }
+		return res.status(403).json({ message: 'Permission required'});
 
-        catch (error) { 
+	} catch (error) { 
 
-            next(error)
+		next(error);
 
-        }
-    }
+	}
+
+}
 
 const projectController = {
 	leaveProject,
@@ -420,7 +422,7 @@ const projectController = {
 	getProjects,
 	getProjectDetails,
 	deleteProject,
-    createTask,
+    createTask
 };
 
 export default projectController;

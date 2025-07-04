@@ -42,18 +42,20 @@ export interface ProjectTaskDetails{
     assignedBy: {
         name: string,
         avatarUrl: string | null,
+		id: number
     };
     assignedTo: {
         name: string,
         avatarUrl: string | null,
+		id: number
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history : TaskHistory[]
     createdAt : Date,
 }
 
-export type AssignedTaskType = Omit<ProjectTaskDetails, 'assignedBy'>
-export type ReviewType = Omit<ProjectTaskDetails, 'assignedBy'> & {submitted: Date}
+export type AssignedTaskType = ProjectTaskDetails;
+export type ReviewType = Omit<ProjectTaskDetails, 'assignedBy'> & { submitted: Date };
 
 export interface ProjectDetails {
 	id: number;

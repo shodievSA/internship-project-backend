@@ -468,10 +468,10 @@ class ProjectService {
 
             if (!userProjectMember) throw new Error(`Project member doesn't exist`);
             
-            let allTasks: ProjectTaskDetails[]= []
-            let myTasks: ProjectTaskDetails[]= []
-            let assignedTasks: AssignedTaskType[]= []
-            let reviews: ReviewType[]= []
+            let allTasks: ProjectTaskDetails[] = [];
+            let myTasks: ProjectTaskDetails[] = [];
+            let assignedTasks: AssignedTaskType[] = [];
+            let reviews: ReviewType[] = [];
 
 			for (const task of tasks) {
 
@@ -484,16 +484,18 @@ class ProjectService {
                     subtasks: task.subtasks,
                     assignedBy: {
                         name: task.assignedByMember.user.fullName as string,
-                        avatarUrl: task.assignedByMember.user.avatarUrl 
+                        avatarUrl: task.assignedByMember.user.avatarUrl,
+						id: task.assignedByMember.id
                     },
                     assignedTo: {
                         name: task.assignedToMember.user.fullName as string,
-                        avatarUrl: task.assignedToMember.user.avatarUrl 
+                        avatarUrl: task.assignedToMember.user.avatarUrl,
+						id: task.assignedToMember.id
                     },
                     status: task.status,
                     history : task.history,
                     createdAt: task.createdAt
-                })
+                });
 
                 if (task.assignedBy === userProjectMember.id) {
 
@@ -505,8 +507,14 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id
                         },
+						assignedBy: {
+							name: task.assignedByMember.user.fullName as string,
+							avatarUrl: task.assignedByMember.user.avatarUrl,
+							id: task.assignedByMember.id
+                    	},
                         subtasks: task.subtasks,
                         status: task.status,
                         history : task.history,
@@ -525,7 +533,8 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id 
                         },
                         subtasks: task.subtasks,
                         status: task.status,
@@ -546,11 +555,13 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedBy: {
                             name: task.assignedByMember.user.fullName as string,
-                            avatarUrl: task.assignedByMember.user.avatarUrl 
+                            avatarUrl: task.assignedByMember.user.avatarUrl,
+							id: task.assignedByMember.id
                         },
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id
                         },
                         status: task.status,
                         subtasks: task.subtasks,
@@ -614,10 +625,10 @@ class ProjectService {
 
 		try {
 
-            const project = await models.Project.findOne ({
-				where: {id: task.projectId},
-				attributes: ['title'],
-            })
+            const project = await models.Project.findOne({
+				where: { id: task.projectId },
+				attributes: ['title']
+            });
 
 			const assignedBy = await models.ProjectMember.findOne({
 				where: { userId: userId },
