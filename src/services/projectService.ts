@@ -440,15 +440,15 @@ class ProjectService {
 
 			switch (updatedTaskStatus) {
 				case 'under review':
-					message = `${fullname} has submitted the task ${task.title || 'task title is not specified'} in project ${task.project.title} for your review.`;
+					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
 					break;
 				
 				case 'rejected':
-					message = `${fullname} has rejected the task ${task.title || 'task title is not specified'} in project ${task.project.title}.`;
+					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
 					break;
 
 				case 'closed':
-					message = `${fullname} has closed the task ${task.title || 'task title is not specified'} in project ${task.project.title}.`;
+					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
 					break;
 			
 				default:
