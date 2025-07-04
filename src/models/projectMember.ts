@@ -28,7 +28,7 @@ class ProjectMember extends Model<
     
 	declare user: User;
 
-    get role (): string{ 
+    get role (): string { 
         const roles: Record<number, string > = {
             1: 'admin',
             2: 'manager',

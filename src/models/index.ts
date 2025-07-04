@@ -111,12 +111,14 @@ export function initAssociations() {
 	});
 
 	Project.hasMany(Task, {
+		as: 'tasks',
 		foreignKey: 'project_id',
 		onDelete: 'CASCADE',
 		hooks: true
 	});
 
 	Task.belongsTo(Project, {
+		as: 'project',
 		foreignKey: 'project_id'
 	});
 
@@ -202,11 +204,12 @@ export function initAssociations() {
         as : 'history',
         onDelete: 'CASCADE',
         hooks : true,
-    })
+    });
+
     TaskHistory.belongsTo(Task, { 
         foreignKey : 'task_id',
         as : 'history',
-    })
+    });
 
 };
 
@@ -215,7 +218,7 @@ export default async function initDB() {
 	try {
 
 		await sequelize.authenticate();
-		await sequelize.sync({ force: false });
+		await sequelize.sync({ force: true });
 		initAssociations();
 		await seedRoles();
 		await seedPermissions();

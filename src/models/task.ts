@@ -54,7 +54,7 @@ class Task extends Model<
 	declare assignedToMember: ProjectMember;
 	declare subtasks: Subtask[];
 	declare comments: Comment[];
-    declare history :TaskHistory[];
+    declare history: TaskHistory[];
 }
 
 Task.init(
