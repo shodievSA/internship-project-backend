@@ -1,7 +1,26 @@
-import { NextFunction, Request, Response, ErrorRequestHandler } from 'express';
+import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+import { AppError } from '@/types/customError';
 
-const errorHandler: ErrorRequestHandler = (err, req: Request, res: Response, next: NextFunction) => {
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
-};
+const errorHandler : ErrorRequestHandler = function(
+  err: any,
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) {
+  // AppError
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      message: err.message
+    });
+    return
+  }
 
-export default errorHandler;
+  // Fallback for unexpected errors
+  console.error('UNEXPECTED ERROR:', err);
+  res.status(500).json({
+    message: 'Something went wrong'
+  });
+  return
+}
+
+export default errorHandler

@@ -19,7 +19,7 @@ export interface TaskAssociations {
 	subtasks: Subtask[];
 	comments: Comment[];
     history: TaskHistory[];
-}
+} 
 
 export interface TaskAttributes { 
 	title: string;

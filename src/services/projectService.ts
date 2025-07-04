@@ -1,7 +1,7 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails, formattedInvites } from '@/types';
+import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails, formattedInvites, AppError } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import User from '@/models/user';
@@ -13,21 +13,20 @@ class ProjectService {
 			
 		try {
 
-			if (!projectId) { throw new Error('Project ID is required') };
-			if (!userId) { throw new Error('User ID is required') };
+			if (!projectId) { throw new AppError('Project ID is required') };
+			if (!userId) { throw new AppError('User ID is required') };
 
 			const leftProjectCount =  await models.ProjectMember.destroy({
 				where: { projectId: projectId, userId: userId }
 			});
 
 			if (leftProjectCount === 0) {
-				throw new Error("Could not leave the project"); 
+				throw new AppError("Could not leave the project"); 
 			}
 
 		} catch (error) {
 
-			console.error('Error leaving the project:', error);
-			throw new Error('Internal server error');
+            throw error
 
 		}
 
@@ -40,6 +39,10 @@ class ProjectService {
 		try {
 
 			const project = await models.Project.create({ title }, { transaction });
+
+            if (!project) { 
+                throw new AppError('Failed creating project')
+            }
 		
 			await models.ProjectMember.create(
 				{
@@ -56,12 +59,8 @@ class ProjectService {
 			return project;
 
 		} catch (error) {
-
-			console.error('Error creating new project:', error);
-
-			await transaction.rollback();
-			throw new Error('Internal server error');
-
+            transaction.rollback()
+            throw error
 		}
 
 	}
@@ -105,7 +104,7 @@ class ProjectService {
 
 				}
 
-				throw new Error('Unexpected state: no user');
+				throw new AppError('Unexpected state: no user');
 
 			}
 
@@ -130,7 +129,7 @@ class ProjectService {
 					});
 
                     if (!isCreated) { 
-                        throw new Error('The invite has already been send')
+                        throw new AppError('The invite has already been send')
                     }
 
 					const fullProdInvite = await models.Invite.findOne({
@@ -173,20 +172,16 @@ class ProjectService {
                     };
 
 				} catch (error) {
-
-					console.error(error);
-					throw new Error('Error creating project invitation');
+                    transaction.rollback()
+                    throw error
 					
 				}
 
 			}
 
 		} catch (error) {
-
-			console.error('Error sending project invitation:', error);
-
-			await transaction.rollback();
-			throw new Error('Internal server error');
+            transaction.rollback()
+            throw error
 
 		}
 
@@ -209,14 +204,14 @@ class ProjectService {
 			);
 
 			if (count === 0) {
-				throw new Error('Project invitation not found');
+				throw new AppError('Project invitation not found');
 			}
 
 			const invite = await models.Invite.findByPk(inviteId, { transaction });
 
 			if (!invite) {
 
-				throw new Error('Project invitation not found after update');
+				throw new AppError('Project invitation not found after update');
 
 			}
 
@@ -261,14 +256,13 @@ class ProjectService {
 				};
 			}
 
-			throw new Error('Invalid status');
+			throw new AppError('Invalid status');
 
 		} catch (error) {
 
-			console.error('Error updating project invitation status:', error);
 
 			await transaction.rollback();
-			throw new Error('Internal server error');
+			throw error
 
 		}
 
@@ -286,7 +280,7 @@ class ProjectService {
 		});
 
 		if (!user) {
-			throw new Error(`User with id ${userId} not found.`);
+			throw new AppError(`User not found.`);
 		}
 
 		const projects = user.projects as Project[];
@@ -355,7 +349,7 @@ class ProjectService {
 		
 			if (count === 0 || rows.length === 0) {
 
-				throw new Error('Project not found');
+				throw new AppError('Project not found');
 				
 			}
 		
@@ -363,8 +357,7 @@ class ProjectService {
 
 		} catch (error) {
 
-			console.error('Error updating the project:', error);
-			throw new Error('Internal server error');
+            throw error
 
 		}
 
@@ -379,13 +372,12 @@ class ProjectService {
 			});
 		
 			if (deletedProjectCount === 0) {
-				throw new Error('Project not found');
+				throw new AppError('Project not found');
 			}
 
 		} catch (error) {
 
-			console.error('Error deleting the project:', error);
-			throw new Error('Internal server error');
+			throw error
 
 		}
 
@@ -407,7 +399,7 @@ class ProjectService {
                 }]
 			});
             
-			if (!project) throw new Error(`Couldn't find project with id - ${projectId}`);
+			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 	
 			const team = project.users.map((pm: User) => {
 
@@ -466,12 +458,12 @@ class ProjectService {
                 attributes: ['id']
             });
 
-            if (!userProjectMember) throw new Error(`Project member doesn't exist`);
+            if (!userProjectMember) throw new AppError(`Project member doesn't exist`);
             
-            let allTasks: ProjectTaskDetails[]= []
-            let myTasks: ProjectTaskDetails[]= []
-            let assignedTasks: AssignedTaskType[]= []
-            let reviews: ReviewType[]= []
+            let allTasks: ProjectTaskDetails[] = [];
+            let myTasks: ProjectTaskDetails[] = [];
+            let assignedTasks: AssignedTaskType[] = [];
+            let reviews: ReviewType[] = [];
 
 			for (const task of tasks) {
 
@@ -484,16 +476,18 @@ class ProjectService {
                     subtasks: task.subtasks,
                     assignedBy: {
                         name: task.assignedByMember.user.fullName as string,
-                        avatarUrl: task.assignedByMember.user.avatarUrl 
+                        avatarUrl: task.assignedByMember.user.avatarUrl,
+						id: task.assignedByMember.id
                     },
                     assignedTo: {
                         name: task.assignedToMember.user.fullName as string,
-                        avatarUrl: task.assignedToMember.user.avatarUrl 
+                        avatarUrl: task.assignedToMember.user.avatarUrl,
+						id: task.assignedToMember.id
                     },
                     status: task.status,
                     history : task.history,
                     createdAt: task.createdAt
-                })
+                });
 
                 if (task.assignedBy === userProjectMember.id) {
 
@@ -505,8 +499,14 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id
                         },
+						assignedBy: {
+							name: task.assignedByMember.user.fullName as string,
+							avatarUrl: task.assignedByMember.user.avatarUrl,
+							id: task.assignedByMember.id
+                    	},
                         subtasks: task.subtasks,
                         status: task.status,
                         history : task.history,
@@ -525,7 +525,8 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id 
                         },
                         subtasks: task.subtasks,
                         status: task.status,
@@ -546,11 +547,13 @@ class ProjectService {
                         deadline: task.deadline,
                         assignedBy: {
                             name: task.assignedByMember.user.fullName as string,
-                            avatarUrl: task.assignedByMember.user.avatarUrl 
+                            avatarUrl: task.assignedByMember.user.avatarUrl,
+							id: task.assignedByMember.id
                         },
                         assignedTo: {
                             name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl 
+                            avatarUrl: task.assignedToMember.user.avatarUrl,
+							id: task.assignedToMember.id
                         },
                         status: task.status,
                         subtasks: task.subtasks,
@@ -597,12 +600,8 @@ class ProjectService {
 				invites: formattedInvites,
 			} as ProjectDetails;
 
-		} catch(err) {
-
-			const error = err as Error;
-
-			console.log(error.message);
-			throw new Error(error.message);
+		} catch(error) {  
+            throw error
 
 		}
 
@@ -614,10 +613,10 @@ class ProjectService {
 
 		try {
 
-            const project = await models.Project.findOne ({
-				where: {id: task.projectId},
-				attributes: ['title'],
-            })
+            const project = await models.Project.findOne({
+				where: { id: task.projectId },
+				attributes: ['title']
+            });
 
 			const assignedBy = await models.ProjectMember.findOne({
 				where: { userId: userId },
@@ -639,7 +638,7 @@ class ProjectService {
 
 			} 
             
-            const notification= await models.Notification.create({
+            await models.Notification.create({
 				title: "New Task",
                 message: `Project: ${project?.title}\nAssigned new task!`,
                 userId: userId
@@ -649,7 +648,6 @@ class ProjectService {
             await models.TaskHistory.create ({
                 taskId: newTask.id,
                 status: newTask.status,
-                notificationId: notification.id,
 
             }, {transaction})
 
@@ -659,10 +657,8 @@ class ProjectService {
 
 		} catch (error) {
 
-			console.error('Error creating task', error);
-
 			await transaction.rollback();
-			throw new Error('Internal server error');
+			throw error
 
 		}
 
@@ -672,13 +668,13 @@ class ProjectService {
 
 		try {
 
-			if (!projectId) { throw new Error('Project ID is required') };
-			if (!memberId) { throw new Error('Member ID is required') };
+			if (!projectId) { throw new AppError('Project ID is required') };
+			if (!memberId) { throw new AppError('Member ID is required') };
 		
 			const project = await models.Project.findByPk(projectId);
-			if (!project) throw new Error('Project not found');
+			if (!project) throw new AppError('Project not found');
 			const member = await models.ProjectMember.findByPk(memberId);
-			if (!member) throw new Error('Team member not found');
+			if (!member) throw new AppError('Team member not found');
 		
 			const role = await models.Role.findOne({ where: { name: newRole }});
 		
@@ -688,15 +684,14 @@ class ProjectService {
 			);
 		
 			if (count === 0 || rows.length === 0) {
-				throw new Error('Failed to update team member role');
+				throw new AppError('Failed to update team member role');
 			}
 			
 			return rows[0].toJSON() as ProjectMember;
 
 		} catch (error) {
 
-			console.error('Error updating the team members role in the Project:', error);
-			throw new Error('Internal server error');
+            throw error
 
 		}
 
@@ -706,24 +701,45 @@ class ProjectService {
 
 		try {
 
-			if (!projectId) { throw new Error('Project ID is required') };
-			if (!memberId) { throw new Error('Member ID is required') };
+			if (!projectId) { throw new AppError('Project ID is required') };
+			if (!memberId) { throw new AppError('Member ID is required') };
 		
 			const removedTeamMemberCount = await models.ProjectMember.destroy({ where: { id: memberId, projectId: projectId } });
 		
 			if (removedTeamMemberCount === 0) {
-				throw new Error("Team member or project not found"); 
+				throw new AppError("Team member or project not found"); 
 			}
 
 		} catch (error) {
 
-			console.error('Error removing the team member from the project:', error);
-			throw new Error('Internal server error');
+            throw error
 
 		}
 
 	}
 
+    async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
+        try{
+
+            const isDeleted = await models.Task.destroy({
+                where : { 
+                    id: taskId,
+                    projectId: projectId,
+                    assignedBy: userId,
+    
+                }
+            })
+    
+            if (!isDeleted) { 
+                throw new AppError('Failed to delete or no such task')
+            }
+
+        }
+        catch(error) {
+            throw error
+        }
+
+    }
 }
 
 export default new ProjectService();

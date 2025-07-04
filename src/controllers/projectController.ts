@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import { FormattedProject, ProjectDetails } from '@/types';
+import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { transporter } from '@/config/email';
 import Task from '@/models/task';
@@ -389,25 +389,50 @@ async function createTask(
 
     const task = req.body.task;
 	const userId = req.user.id;
+
     task.projectId = parseInt(req.params.projectId);
 
-        try { 
-            if ( req.memberPermissions?.includes('assignTasks') ) { 
+	try { 
+		
+		if (req.memberPermissions?.includes('assignTasks')) { 
 
-                const nTask = await projectService.createTask(task as Task, userId)
+			const nTask = await projectService.createTask(task as Task, userId);
+			return res.status(201).json(nTask);
 
-                return res.status(201).json(nTask)
-            }
+		}
 
-            return res.status(403).json({ message: 'Permission required'})
+		return res.status(403).json({ message: 'Permission required'});
+
+	} catch (error) { 
+
+		next(error);
+
         }
+}
 
-        catch (error) { 
+async function deleteTask(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+    try {   
+        const projectId = parseInt(req.params.projectId)
+        const taskId = parseInt(req.params.taskId)
 
-            next(error)
-
+        if (req.memberPermissions?.includes('deleteTasks')){
+            
+            await projectService.deleteTask( req.user.id, projectId, taskId )
+            res.sendStatus(204)
+            return
         }
+        throw new AppError('No permission', 403)
     }
+    catch(error){ 
+
+        next(error)
+    }    
+}
+
 
 const projectController = {
 	leaveProject,
@@ -421,6 +446,7 @@ const projectController = {
 	getProjectDetails,
 	deleteProject,
     createTask,
+    deleteTask,
 };
 
 export default projectController;

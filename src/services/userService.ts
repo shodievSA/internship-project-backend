@@ -1,10 +1,12 @@
 import { models } from '../models';
-import { FrontInvite, UserData } from '@/types';
+import { AppError, FrontInvite, UserData } from '@/types';
 import { decryptToken } from '../config/passport';
 import { Contact, GooglePerson } from '@/types';
 import Project from '@/models/project';
 import User from '@/models/user';
 import { auth, people } from 'googleapis/build/src/apis/people';
+import sequelize from '@/clients/sequelize';
+import { Transaction, ValidationError } from 'sequelize';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -24,8 +26,7 @@ async function getUserData(userId: number): Promise<UserData | null> {
 
 	} catch (error) {
 
-		console.error('Error fetching user data:', error);
-		throw new Error('Internal server error' );
+		throw new AppError(`${error}`,500);
 		
 	}
 
@@ -63,7 +64,9 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 				personFields: 'names,emailAddresses,photos',
 				pageToken : nextPageToken,
 			});
-
+            if ( !response) { 
+                throw new AppError('Could not get list of connections', 502);
+            }
 			const connections: GooglePerson[] = response.data.connections || []
 			const connectionsWithEmail = connections.filter((connection) => {
 				return connection.emailAddresses
@@ -88,9 +91,7 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 		return allConnections;
 
 	} catch(error) { 
-
-		console.log('Error getting contacts', error)
-		throw new Error('Error getting contacts');
+        throw error
 	}
 
 }
@@ -115,8 +116,7 @@ async function getUserNotifications(userId: number): Promise<object> {
 		
 	} catch (error) {
 		
-		console.error(error);
-		throw new Error("Internal server error");
+		throw new AppError(`${error}`);
 
 	}
 
@@ -143,6 +143,10 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
             ],
 			order: [[ 'createdAt', 'DESC' ]]
         });
+
+        if (!rawInvites) {
+            throw new AppError('No Invites found')
+        }
 
         const invites: FrontInvite[] = [];
 		
@@ -172,11 +176,100 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
 
     } catch(error) { 
 
-		console.log('Error getting notifications', error);
-		throw new Error('Error getting notifications');
+        throw error
 
     }
 
+}
+
+async function deleteNotification( userId: number, notificationIds: number[]): Promise<string>{ 
+    
+    const transaction: Transaction = await sequelize.transaction();
+
+    let message = 'Successfully deleted'
+
+    try {
+        
+        const usersNotifications = await models.Notification.findAll({
+            where: {
+                id: notificationIds,
+                userId: userId,
+            },
+            attributes: ['id'],
+            transaction
+        })
+
+        if (usersNotifications.length === 0 ) { 
+
+            throw new AppError('Empty or incorrect notification Ids');
+
+        }
+
+        const notificationsToDelete: number[] = []
+
+        for (const notification of usersNotifications) { 
+
+            notificationsToDelete.push(notification.id)
+        }
+        
+        await models.Notification.destroy({
+            where: {
+                id: notificationsToDelete
+            },
+            transaction
+        })
+
+        transaction.commit()
+        return message
+    }
+    catch (error) { 
+
+        transaction.rollback()
+        
+        throw error
+    }
+}
+
+async function updateNotification( 
+    userId: number,
+    notificationViewUpdates: {
+        notificationIds: number[],
+        isViewed: boolean,
+    }
+) {
+
+    const transaction = await sequelize.transaction();
+
+    try {
+
+        await models.Notification.update({
+            isViewed:notificationViewUpdates.isViewed,
+        },
+        {
+            where: { 
+
+                id: notificationViewUpdates.notificationIds,
+                userId: userId,
+            },
+            returning: true,
+            transaction,
+        })
+
+        transaction.commit()
+
+        return { 
+            notificationIds: notificationViewUpdates.notificationIds,
+            updatedViewStatus: notificationViewUpdates.isViewed
+        }
+    }
+    
+    catch(error){ 
+
+        transaction.rollback()
+
+        throw error
+    }
+    
 }
 
 const UserService = { 
@@ -184,6 +277,8 @@ const UserService = {
     getContacts,
 	getUserNotifications,
     getInvites,
+    deleteNotification,
+    updateNotification,
 }
 
 export default UserService;
