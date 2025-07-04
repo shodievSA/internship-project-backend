@@ -375,7 +375,7 @@ class ProjectService {
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						include: [{ model: models.User, as: 'user', attributes: ['fullName', 'avatarUrl'] }]
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
 					},
 
 					{
@@ -404,48 +404,63 @@ class ProjectService {
 
 			}) as Task & {
 
-				assignedByMember?: ProjectMember & { user?: User };
-				assignedToMember?: ProjectMember & { user?: User };
-				project?: Project;
-				subtasks?: Subtask[];
-				history?: TaskHistory[];
+				assignedByMember: ProjectMember & { user: User };
+				assignedToMember: ProjectMember & { user: User };
+				project: Project;
+				subtasks: Subtask[];
+				history: TaskHistory[];
 
 			};
 
 			const updatedTask = {
 
-				id: task!.id,
-				title: task!.title,
-				description: task!.description,
-				priority: task!.priority,
-				deadline: task!.deadline,
-				createdAt: task!.createdAt,
+				id: task.id,
+				title: task.title,
+				description: task.description,
+				priority: task.priority,
+				deadline: task.deadline,
+				createdAt: task.createdAt,
 				assignedBy: {
-					name: task!.assignedByMember?.user?.fullName,
-					avatarUrl: task!.assignedByMember?.user?.avatarUrl || null
+					name: task.assignedByMember?.user?.fullName || null,
+					avatarUrl: task.assignedByMember?.user?.avatarUrl || null,
+					id: task.assignedByMember.id
 				},
 				assignedTo: {
-					name: task!.assignedToMember?.user?.fullName,
-					avatarUrl: task!.assignedToMember?.user?.avatarUrl || null
+					name: task.assignedToMember?.user?.fullName || null,
+					avatarUrl: task.assignedToMember?.user?.avatarUrl || null,
+					id: task.assignedToMember.id
 				},
-				status: task!.status,
-				subtasks: task!.subtasks,
-				history: task!.history
+				status: task.status,
+				subtasks: task.subtasks,
+				history: task.history
 
 			};
+
+			let message: string;
+
+			switch (updatedTaskStatus) {
+				case 'under review':
+					message = `${fullname} has submitted the task ${task.title || 'task title is not specified'} in project ${task.project.title} for your review.`;
+					break;
+				
+				case 'rejected':
+					message = `${fullname} has rejected the task ${task.title || 'task title is not specified'} in project ${task.project.title}.`;
+					break;
+
+				case 'closed':
+					message = `${fullname} has closed the task ${task.title || 'task title is not specified'} in project ${task.project.title}.`;
+					break;
+			
+				default:
+					const _exhaustiveCheck: never = updatedTaskStatus;
+					throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
+			}
 
 			await models.Notification.create({ 
 
 				title: 'Task submitted for review',
-
-				message: `
-						  ${fullname} has submitted the task:
-						  ${task?.title || 'task title is not specified'}
-							in project:
-						  ${task?.project?.title} for your review.
-						`,
-
-				userId: task!.assignedByMember?.user?.id
+				message: message,
+				userId: task.assignedByMember.user.id
 
 			}, { transaction });
 
