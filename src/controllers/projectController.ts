@@ -3,7 +3,6 @@ import projectService from '../services/projectService';
 import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import Task from '@/models/task';
-import { error } from 'console';
 
 async function leaveProject(
 	req: AuthenticatedRequest,

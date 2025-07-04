@@ -6,5 +6,6 @@ const router = Router({ mergeParams: true });
 
 router.post('/', projectController.createTask as RequestHandler);
 router.patch('/:taskId', getMemberPermissions, projectController.changeTaskStatus as RequestHandler);
+router.delete('/:taskId', projectController.deleteTask as RequestHandler);
 
 export default router;
