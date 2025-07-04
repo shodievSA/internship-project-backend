@@ -58,8 +58,6 @@ export type AssignedTaskType = ProjectTaskDetails;
 export type ReviewType = Omit<ProjectTaskDetails, 'assignedBy'> & { submitted: Date };
 
 export interface ProjectDetails {
-	id: number;
-	title: string;
 	team: {
 		id: number;
 		name: string | null ;
@@ -78,4 +76,5 @@ export interface ProjectDetails {
     reviews: ReviewType[]; //assigned_by= userId and status="under review"
 	
     invites: formattedInvites[]; // project_id = projectId that comes from client
+	userProjectMemberId: number;
 }

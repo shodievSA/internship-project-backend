@@ -1,7 +1,16 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { FormattedProject, ProjectDetails, InviteType, AssignedTaskType, ReviewType, ProjectTaskDetails, formattedInvites, AppError } from '@/types';
+import { 
+	FormattedProject, 
+	ProjectDetails, 
+	InviteType, 
+	AssignedTaskType, 
+	ReviewType, 
+	ProjectTaskDetails, 
+	formattedInvites, 
+	AppError 
+} from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
 import User from '@/models/user';
@@ -394,7 +403,7 @@ class ProjectService {
 					attributes: ['fullName', 'email', 'avatarUrl'],
 					through: {
 						as: 'projectMember',
-						attributes: ['id', 'position', 'roleId'],
+						attributes: ['id', 'userId', 'position', 'roleId'],
 					},
                 }]
 			});
@@ -598,6 +607,7 @@ class ProjectService {
 				assignedTasks: assignedTasks,
 				reviews: reviews,
 				invites: formattedInvites,
+				userProjectMemberId: userProjectMember.id
 			} as ProjectDetails;
 
 		} catch(error) {  
@@ -609,56 +619,104 @@ class ProjectService {
 
 	async createTask(task: Task, userId: number): Promise<object> {
 
-    	const transaction = await sequelize.transaction()
+    	const transaction = await sequelize.transaction();
 
 		try {
 
-            const project = await models.Project.findOne({
-				where: { id: task.projectId },
-				attributes: ['title']
-            });
+			const newTask = await models.Task.create(task, 
+				{ transaction },
+			);
 
 			const assignedBy = await models.ProjectMember.findOne({
 				where: { userId: userId },
-				attributes: ['id']
+				attributes: ['id'],
+				include: [{
+					model: models.User,
+					as: 'user'
+				}]
 			});
 
-			task.assignedBy = assignedBy?.id as number;
+			const assignedTo = await models.ProjectMember.findOne({
+				where: { id: task.assignedTo },
+				include: [{
+					model: models.User,
+					as: 'user'
+				}]
+			});
 
-			const newTask = await models.Task.create(task, { transaction });
+			let newTaskSubtasks: { id: number, title: string }[] = [];
             
 			if (task.subtasks.length > 0) {
 
-				await models.Subtask.bulkCreate(task.subtasks.map((subtask) => (
+				const subtasks = await models.Subtask.bulkCreate(task.subtasks.map((subtask) => (
 					{
 						title: subtask.title,
 						taskId: newTask.id,
 					}
 				)), { transaction });
 
-			} 
-            
-            await models.Notification.create({
-				title: "New Task",
-                message: `Project: ${project?.title}\nAssigned new task!`,
-                userId: userId
-            },{transaction})
-            
+				newTaskSubtasks = subtasks;
 
-            await models.TaskHistory.create ({
-                taskId: newTask.id,
-                status: newTask.status,
+			} else {
 
-            }, {transaction})
+				newTaskSubtasks = [];
+
+			}
+
+			const history = await models.TaskHistory.create(
+				{
+					taskId: newTask.id,
+					status: newTask.status,
+            	}, 
+				{ transaction }
+			);
+
+			let newTaskHistory = [history];
+
+			 const project = await models.Project.findOne({
+				where: { id: task.projectId },
+				attributes: ['title']
+            });
+            
+            await models.Notification.create(
+				{
+					title: "New Task",
+					message: `Project: ${project?.title}\nAssigned new task!`,
+					userId: userId
+            	},
+				{ transaction }
+			);
 
 			await transaction.commit();
 
-			return newTask.toJSON();
+			const formattedNewTask = {
+				deadline: newTask.deadline,
+				createdAt: newTask.createdAt,
+				description: newTask.description,
+				id: newTask.id,
+				priority: newTask.priority,
+				status: newTask.status,
+				title: newTask.title,
+				assignedBy: {
+					id: assignedBy?.id,
+					name: assignedBy?.user.fullName,
+					avatarUrl: assignedBy?.user.avatarUrl
+				},
+				assignedTo: {
+					id: assignedTo?.id,
+					name: assignedTo?.user.fullName,
+					avatarUrl: assignedTo?.user.avatarUrl
+				},
+				history: newTaskHistory,
+				subtasks: newTaskSubtasks
+			} as ProjectTaskDetails;
+
+			return formattedNewTask;
 
 		} catch (error) {
 
 			await transaction.rollback();
-			throw error
+			throw error;
 
 		}
 
@@ -719,24 +777,32 @@ class ProjectService {
 	}
 
     async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
-        try{
+
+        try {
+
+			const assignedBy = await models.ProjectMember.findOne({
+				where: { userId: userId },
+				attributes: ['id']
+			});
+
+			if (!assignedBy) throw new Error("");
 
             const isDeleted = await models.Task.destroy({
                 where : { 
                     id: taskId,
                     projectId: projectId,
-                    assignedBy: userId,
-    
+                    assignedBy: assignedBy.id
                 }
-            })
+            });
     
             if (!isDeleted) { 
-                throw new AppError('Failed to delete or no such task')
+                throw new AppError('Failed to delete or no such task');
             }
 
-        }
-        catch(error) {
-            throw error
+        } catch(error) {
+
+            throw error;
+
         }
 
     }
