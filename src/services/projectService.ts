@@ -434,7 +434,7 @@ class ProjectService {
 
 			};
 
-			const notification = await models.Notification.create({ 
+			await models.Notification.create({ 
 
 				title: 'Task submitted for review',
 
@@ -471,7 +471,6 @@ class ProjectService {
 		}
 
 	}
-
 
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
@@ -882,7 +881,7 @@ class ProjectService {
 		
 			const role = await models.Role.findOne({ where: { name: newRole }});
 		
-			const [count, affectedRows] = await models.ProjectMember.update(
+			const [count, rows] = await models.ProjectMember.update(
 				{ roleId:  role?.id},
 				{ where: { id: memberId, projectId: projectId}, returning: true }
 			);
@@ -891,7 +890,7 @@ class ProjectService {
 				throw new Error('Failed to update team member role');
 			}
 			
-			return affectedRows[0].toJSON() as ProjectMember;
+			return rows[0].toJSON() as ProjectMember;
 
 		} catch (error) {
 

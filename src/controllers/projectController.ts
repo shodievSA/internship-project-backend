@@ -258,8 +258,12 @@ async function changeTaskStatus(
 ): Promise<void> {
 
 	const taskId: number = parseInt(req.params.taskId);
-	const updatedTaskStatus: 'under review' | 'rejected' | 'closed' = req.body.updatedTaskStatus;
-	const comment: string = req.body.comment;
+	
+	const { updatedTaskStatus, comment }: {
+		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
+		comment: string;
+	} = req.body.updatedTaskStatus;
+
 	const fullname = req.user.fullName as string;
 
 	if (!taskId) {
@@ -269,9 +273,9 @@ async function changeTaskStatus(
 
 	}
 
-	if (!updatedTaskStatus || !comment) {
+	if (!updatedTaskStatus) {
 		
-		res.status(400).json({ error: 'Missing updatedTaskStatus or comment' });
+		res.status(400).json({ error: 'Missing updatedTaskStatus' });
 		return;
 
 	}
