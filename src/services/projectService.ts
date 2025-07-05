@@ -5,10 +5,8 @@ import {
 	FormattedProject, 
 	ProjectDetails, 
 	InviteType, 
-	AssignedTaskType, 
-	ReviewType, 
-	ProjectTaskDetails, 
-	formattedInvites, 
+	ProjectTask, 
+	ProjectInvite, 
 	AppError 
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
@@ -633,7 +631,7 @@ class ProjectService {
 
 			});
 		
-			const tasks = await models.Task.findAll({
+			const projectTasks = await models.Task.findAll({
 				where: { projectId: projectId },
 				include: [
 					{
@@ -669,22 +667,12 @@ class ProjectService {
 				],
                 order: [['created_at', 'DESC']]
 			});
-            
-            const userProjectMember = await models.ProjectMember.findOne({
-                where: { userId: userId },
-                attributes: ['id']
-            });
 
-            if (!userProjectMember) throw new AppError(`Project member doesn't exist`);
-            
-            let allTasks: ProjectTaskDetails[] = [];
-            let myTasks: ProjectTaskDetails[] = [];
-            let assignedTasks: AssignedTaskType[] = [];
-            let reviews: ReviewType[] = [];
+			const tasks: ProjectTask[] = [];
 
-			for (const task of tasks) {
+			for (const task of projectTasks) {
 
-                allTasks.push({
+                tasks.push({
                     id: task.id as number,
                     title: task.title,
                     description: task.description as string,
@@ -706,83 +694,9 @@ class ProjectService {
                     createdAt: task.createdAt
                 });
 
-                if (task.assignedBy === userProjectMember.id) {
-
-                    assignedTasks.push({ 
-                        id: task.id as number,
-                        title: task.title,
-                        description: task.description,
-                        priority: task.priority,
-                        deadline: task.deadline,
-                        assignedTo: {
-                            name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl,
-							id: task.assignedToMember.id
-                        },
-						assignedBy: {
-							name: task.assignedByMember.user.fullName as string,
-							avatarUrl: task.assignedByMember.user.avatarUrl,
-							id: task.assignedByMember.id
-                    	},
-                        subtasks: task.subtasks,
-                        status: task.status,
-                        history : task.history,
-                        createdAt: task.createdAt
-                    });
-
-                }
-
-                if (task.assignedBy === userProjectMember.id && task.status === 'under review') { 
-
-                    reviews.push({
-                        id: task.id as number,
-                        title: task.title,
-                        description: task.description,
-                        priority: task.priority,
-                        deadline: task.deadline,
-                        assignedTo: {
-                            name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl,
-							id: task.assignedToMember.id 
-                        },
-                        subtasks: task.subtasks,
-                        status: task.status,
-                        history : task.history,
-                        submitted: task.updatedAt,
-                        createdAt: task.createdAt,
-                    })
-
-                } 
-                
-                if (task.assignedTo === userProjectMember.id ) {  
-
-                    myTasks.push({
-                        id: task.id as number,
-                        title: task.title,
-                        description: task.description,
-                        priority: task.priority,
-                        deadline: task.deadline,
-                        assignedBy: {
-                            name: task.assignedByMember.user.fullName as string,
-                            avatarUrl: task.assignedByMember.user.avatarUrl,
-							id: task.assignedByMember.id
-                        },
-                        assignedTo: {
-                            name: task.assignedToMember.user.fullName as string,
-                            avatarUrl: task.assignedToMember.user.avatarUrl,
-							id: task.assignedToMember.id
-                        },
-                        status: task.status,
-                        subtasks: task.subtasks,
-                        history : task.history,
-                        createdAt: task.createdAt,
-                    })
-
-                } 
-
 			};
 		
-			const invites = await models.Invite.findAll({
+			const projectInvites = await models.Invite.findAll({
 				where: { projectId },
 				include: [{
 					model: models.User,
@@ -791,11 +705,11 @@ class ProjectService {
                 order: [['created_at', 'DESC']]
 			});
 
-			const formattedInvites: formattedInvites[] = [];
+			const invites: ProjectInvite[] = [];
 
-			for (const invite of invites) {
+			for (const invite of projectInvites) {
 
-				formattedInvites.push({
+				invites.push({
 					id: invite.id as number,
 					status: invite.status,
 					receiverEmail: invite.user.email,
@@ -807,19 +721,24 @@ class ProjectService {
 				});
 
 			}
+
+			const currentMember = await models.ProjectMember.findOne({
+                where: { userId: userId },
+                attributes: ['id']
+            });
+
+            if (!currentMember) throw new AppError(`Project member doesn't exist`);
 	
 			return {
 				team: team,
-				allTasks: allTasks,
-				myTasks: myTasks,
-				assignedTasks: assignedTasks,
-				reviews: reviews,
-				invites: formattedInvites,
-				userProjectMemberId: userProjectMember.id
+				tasks: tasks,
+				invites: invites,
+				currentMemberId: currentMember.id
 			} as ProjectDetails;
 
-		} catch(error) {  
-            throw error
+		} catch(err) {  
+
+            throw err;
 
 		}
 
@@ -917,7 +836,7 @@ class ProjectService {
 				},
 				history: newTaskHistory,
 				subtasks: newTaskSubtasks
-			} as ProjectTaskDetails;
+			} as ProjectTask;
 
 			return formattedNewTask;
 
