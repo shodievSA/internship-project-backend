@@ -261,7 +261,7 @@ async function changeTaskStatus(
 	const { updatedTaskStatus, comment }: {
 		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
 		comment: string;
-	} = req.body.updatedTaskStatus;
+	} = req.body;
 
 	const fullname = req.user.fullName as string;
 
