@@ -1,8 +1,7 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import { FormattedProject, ProjectDetails } from '@/types';
+import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
-import { transporter } from '@/config/email';
 import Task from '@/models/task';
 
 async function leaveProject(
@@ -107,41 +106,9 @@ async function inviteToProject(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
-			await transporter.sendMail({
-						
-				to: receiverEmail,
-				from: process.env.EMAIL,
-				subject: '📬 Project invitation',
-				html: `
-					<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
-					<h1 style="color: #007BFF;">You've been invited to a project!</h1>
+			const title = project.title as string;
 
-					<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-						${project.title}
-					</h2>
-
-					<p style="font-size: 16px;">
-						<strong>Role:</strong> ${roleOffered}<br>
-						<strong>Position:</strong> ${positionOffered}
-					</p>
-
-					<a href="${process.env.FRONTEND_URL}/projects" style="
-						display: inline-block;
-						margin-top: 20px;
-						padding: 10px 20px;
-						background-color: #007BFF;
-						color: white;
-						text-decoration: none;
-						border-radius: 5px;
-						font-weight: bold;
-					">
-						Accept Invitation
-					</a>
-
-					</div>
-				`
-
-			});
+			await projectService.sendEmail(receiverEmail, positionOffered, roleOffered, title);
 
 			res.status(201).json({ 
                 message: 'Project invitation sent successfully',
@@ -283,6 +250,56 @@ async function changeTeamMemberRole(
 
 }
 
+async function changeTaskStatus(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	const taskId: number = parseInt(req.params.taskId);
+	
+	const { updatedTaskStatus, comment }: {
+		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
+		comment: string;
+	} = req.body;
+
+	const fullname = req.user.fullName as string;
+
+	if (!taskId) {
+		
+		res.status(400).json({ error: 'Task Id is missing' });
+		return;
+
+	}
+
+	if (!updatedTaskStatus) {
+		
+		res.status(400).json({ error: 'Missing updatedTaskStatus' });
+		return;
+
+	}
+
+	if (!req.memberPermissions?.includes('editTasks')) {
+
+		res.sendStatus(403);
+
+	} else {
+
+		try {
+
+			const updatedTask = await projectService.changeTaskStatus(taskId, updatedTaskStatus, comment, fullname);
+			res.status(200).json({ message: 'Task status changed successfully', updatedTask });
+
+		} catch (error) {
+
+			next(error);
+
+		}
+
+	}
+
+}
+
 async function removeTeamMember(
 	req: AuthenticatedRequest,
 	res: Response,
@@ -389,25 +406,50 @@ async function createTask(
 
     const task = req.body.task;
 	const userId = req.user.id;
+
     task.projectId = parseInt(req.params.projectId);
 
-        try { 
-            if ( req.memberPermissions?.includes('assignTasks') ) { 
+	try { 
+		
+		if (req.memberPermissions?.includes('assignTasks')) { 
 
-                const nTask = await projectService.createTask(task as Task, userId)
+			const nTask = await projectService.createTask(task as Task, userId);
+			return res.status(201).json(nTask);
 
-                return res.status(201).json(nTask)
-            }
+		}
 
-            return res.status(403).json({ message: 'Permission required'})
+		return res.status(403).json({ message: 'Permission required'});
+
+	} catch (error) { 
+
+		next(error);
+
         }
+}
 
-        catch (error) { 
+async function deleteTask(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+    try {   
+        const projectId = parseInt(req.params.projectId)
+        const taskId = parseInt(req.params.taskId)
 
-            next(error)
-
+        if (req.memberPermissions?.includes('deleteTasks')){
+            
+            await projectService.deleteTask( req.user.id, projectId, taskId )
+            res.sendStatus(204)
+            return
         }
+        throw new AppError('No permission', 403)
     }
+    catch(error){ 
+
+        next(error)
+    }    
+}
+
 
 const projectController = {
 	leaveProject,
@@ -416,11 +458,13 @@ const projectController = {
 	invitationStatus,
 	updateProject,
 	changeTeamMemberRole,
+	changeTaskStatus,
 	removeTeamMember,
 	getProjects,
 	getProjectDetails,
 	deleteProject,
     createTask,
+    deleteTask,
 };
 
 export default projectController;

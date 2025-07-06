@@ -19,7 +19,7 @@ export interface TaskAssociations {
 	subtasks: Subtask[];
 	comments: Comment[];
     history: TaskHistory[];
-}
+} 
 
 export interface TaskAttributes { 
 	title: string;
@@ -54,7 +54,7 @@ class Task extends Model<
 	declare assignedToMember: ProjectMember;
 	declare subtasks: Subtask[];
 	declare comments: Comment[];
-    declare history :TaskHistory[];
+    declare history: TaskHistory[];
 }
 
 Task.init(
