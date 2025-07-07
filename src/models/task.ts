@@ -116,7 +116,8 @@ Task.init(
 			references: {
 				model: 'projects',
 				key: 'id'
-			}
+			},
+			onDelete: "CASCADE"
 		},
 		createdAt: {
 			type: DataTypes.DATE,
