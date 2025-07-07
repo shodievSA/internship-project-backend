@@ -476,7 +476,7 @@ async function updateTask(
         if ( req.memberPermissions?.includes('editTasks')){
     
             const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
-            return res.status(200).json({task: result})
+            return res.status(200).json({ updatedTask: result })
         }
         else{
             throw new AppError('No permission to edit task')
