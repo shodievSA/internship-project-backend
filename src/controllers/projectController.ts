@@ -35,7 +35,9 @@ async function leaveProject(
 		}
 		
 	} catch (error) {
+
 		next(error);
+
 	}
 
 }
@@ -110,7 +112,7 @@ async function inviteToProject(
 
 			await projectService.sendEmail(receiverEmail, positionOffered, roleOffered, title);
 
-			res.status(201).json({ 
+			res.status(201).json({
                 message: 'Project invitation sent successfully',
                 invite: invite,
             });
@@ -308,6 +310,7 @@ async function removeTeamMember(
 
 	const projectId: number = parseInt(req.params.projectId);
 	const memberId: number = parseInt(req.params.memberId);
+	const userId: number = req.user.id;
 
 	if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
 
@@ -317,7 +320,7 @@ async function removeTeamMember(
 
 		try {
 
-			await projectService.removeTeamMember(projectId, memberId);
+			await projectService.removeTeamMember(projectId, memberId, userId);
 			res.status(200).json({ message: 'User removed from the project successfully' });
 
 		} catch (error) {
@@ -392,7 +395,7 @@ async function deleteProject(
 
 	} catch (error) {
 
-		next(error)
+		next(error);
 
 	}
 
@@ -446,7 +449,7 @@ async function deleteTask(
     }
     catch(error){ 
 
-        next(error)
+        next(error);
     }    
 }
 

@@ -108,7 +108,8 @@ async function getUserNotifications(userId: number): Promise<object> {
 
 			},
 
-			attributes: { exclude: ['user_id'] }
+			attributes: { exclude: ['user_id'] },
+            order: [['createdAt', 'DESC']]
 
 		});
 

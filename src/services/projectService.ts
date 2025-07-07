@@ -1,4 +1,5 @@
 import sequelize from '../clients/sequelize';
+import { Op } from 'sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
 import { 
@@ -20,23 +21,54 @@ import { transporter } from '@/config/email';
 class ProjectService {
 
 	async leaveProject(projectId: number, userId: number): Promise<void> {
+
+		const transaction: Transaction = await sequelize.transaction(); 
 			
 		try {
 
-			if (!projectId) { throw new AppError('Project ID is required') };
-			if (!userId) { throw new AppError('User ID is required') };
+			if (!projectId) throw new AppError(`No such project with an id - ${projectId}`);
+			if (!userId) throw new AppError('User ID is required');
 
-			const leftProjectCount =  await models.ProjectMember.destroy({
-				where: { projectId: projectId, userId: userId }
+			const projectMember = await models.ProjectMember.findOne({
+				where: { projectId, userId },
+				transaction,
 			});
 
-			if (leftProjectCount === 0) {
-				throw new AppError("Could not leave the project"); 
-			}
+			if (!projectMember) throw new AppError('Project member not found');
+
+			const [user, project] = await Promise.all([
+				models.User.findOne({ where: { id: userId }, attributes: ['fullName'], transaction }),
+				models.Project.findOne({ where: { id: projectId }, attributes: ['title'], transaction })
+			]);
+
+			if (!user) throw new AppError(`No such user with id ${userId}`);
+			if (!project) throw new AppError(`No such project with id ${projectId}`);
+
+			const admin = await models.ProjectMember.findOne({
+				where: {
+					projectId: projectId,
+					roleId: 1,
+				},
+				attributes: ['userId'],
+				transaction,
+			});
+
+			if (!admin) throw new AppError(`No other admin to notify`);
+
+			await projectMember.destroy({ transaction });
+
+			await models.Notification.create({
+				title: 'User left the project',
+				message: `${user.fullName} left the project "${project.title}"`,
+				userId: admin.userId,
+			}, { transaction });
+
+			await transaction.commit();
 
 		} catch (error) {
 
-            throw error
+			await transaction.rollback();
+            throw error;
 
 		}
 
@@ -69,8 +101,10 @@ class ProjectService {
 			return project;
 
 		} catch (error) {
-            transaction.rollback()
-            throw error
+
+            transaction.rollback();
+            throw error;
+
 		}
 
 	}
@@ -182,16 +216,18 @@ class ProjectService {
                     };
 
 				} catch (error) {
-                    transaction.rollback()
-                    throw error
+
+                    transaction.rollback();
+                    throw error;
 					
 				}
 
 			}
 
 		} catch (error) {
-            transaction.rollback()
-            throw error
+
+            transaction.rollback();
+            throw error;
 
 		}
 
@@ -315,9 +351,8 @@ class ProjectService {
 
 		} catch (error) {
 
-
 			await transaction.rollback();
-			throw error
+			throw error;
 
 		}
 
@@ -572,7 +607,7 @@ class ProjectService {
 
 		} catch (error) {
 
-            throw error
+            throw error;
 
 		}
 
@@ -592,7 +627,7 @@ class ProjectService {
 
 		} catch (error) {
 
-			throw error
+			throw error;
 
 		}
 
@@ -876,31 +911,60 @@ class ProjectService {
 
 		} catch (error) {
 
-            throw error
+            throw error;
 
 		}
 
 	}
 
-	async removeTeamMember(projectId: number, memberId: number): Promise<void> {
+	async removeTeamMember(projectId: number, memberId: number, userId: number): Promise<void> {
+
+		if (!projectId) throw new AppError('Project ID is required');
+		if (!memberId) throw new AppError('Member ID is required');
+		if (!userId) throw new AppError("User id ID is required");
+
+		const transaction: Transaction = await sequelize.transaction();
 
 		try {
 
-			if (!projectId) { throw new AppError('Project ID is required') };
-			if (!memberId) { throw new AppError('Member ID is required') };
-		
-			const removedTeamMemberCount = await models.ProjectMember.destroy({ where: { id: memberId, projectId: projectId } });
-		
-			if (removedTeamMemberCount === 0) {
-				throw new AppError("Team member or project not found"); 
-			}
+			const project = await models.Project.findOne({
+				where: { id: projectId },
+				attributes: ['title']
+			});
+
+			const userToRemove = await models.ProjectMember.findOne({
+				where: { id: memberId },
+				include: [{
+					model: models.User,
+					attributes: ["id"],
+					as: "user"
+				}],
+				transaction
+			});
+
+			if (!userToRemove) throw new Error("User not found");
+
+			if (!project) throw new AppError(`Project with id - ${projectId} does not exist`);
+			
+			await models.ProjectMember.destroy({
+				where: { id: memberId, projectId: projectId },
+				transaction,
+			});
+
+			await models.Notification.create({
+				title: 'Removed from project',
+				message: `You have been removed from the project - "${project.title}".`,
+				userId: userToRemove.user.id,
+			}, { transaction });
+
+			await transaction.commit();
 
 		} catch (error) {
 
-            throw error
-
+			await transaction.rollback();
+			throw error;
+			
 		}
-
 	}
 
     async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
