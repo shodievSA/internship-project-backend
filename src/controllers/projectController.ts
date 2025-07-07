@@ -2,7 +2,9 @@ import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
 import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
-import Task from '@/models/task';
+import Task, { TaskAttributes } from '@/models/task';
+import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
+import { models } from '@/models';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -410,6 +412,9 @@ async function createTask(
     task.projectId = parseInt(req.params.projectId);
 
 	try { 
+        if (!hasOnlyKeysOfB(task, models.Task)){ 
+            throw new AppError('Invalid fields in request body')
+        }
 		
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
@@ -450,6 +455,42 @@ async function deleteTask(
     }    
 }
 
+async function updateTask(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+    const projectId = parseInt(req.params.projectId)
+    const taskId = parseInt(req.params.taskId)
+
+    const updatedTaskProps = req.body.updatedTaskProps
+    if (!updateProject || !projectId || !taskId) { 
+        throw new AppError('Empty input')
+    }
+    if(!hasOnlyKeysOfB(updatedTaskProps, models.Task)){
+        throw new AppError('Invalid fields forbidden')
+    }
+
+    try {
+
+        if ( req.memberPermissions?.includes('editTasks')){
+    
+            const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
+            return res.status(200).json({task: result})
+        }
+        else{
+            throw new AppError('No permission to edit task')
+        }
+
+
+}
+catch(error) { 
+    next (error)
+}
+
+    
+}
+
 
 const projectController = {
 	leaveProject,
@@ -465,6 +506,7 @@ const projectController = {
 	deleteProject,
     createTask,
     deleteTask,
+    updateTask,
 };
 
 export default projectController;

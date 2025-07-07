@@ -18,7 +18,7 @@ const errorHandler : ErrorRequestHandler = function(
   // Fallback for unexpected errors
   console.error('UNEXPECTED ERROR:', err);
   res.status(500).json({
-    message: 'Something went wrong'
+  message: 'Something went wrong '+ err.errors[0].message.split('.')[1]
   });
   return
 }

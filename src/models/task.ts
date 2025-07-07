@@ -25,12 +25,14 @@ export interface TaskAttributes {
 	title: string;
 	description: string;
 	priority: 'low' | 'middle' | 'high';
-	deadline: Date;
+	deadline: Date | string;
 	assignedBy: number;
 	assignedTo: number;
-	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-    subtasks?: string[];
+	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+    subtasks?: {title: string, id: number}[];
 	projectId: number;
+    updatedAt: Date | string;
+    createdAt: Date | string;
 }
 
 class Task extends Model<
@@ -123,7 +125,7 @@ Task.init(
 		updatedAt: {
 			type: DataTypes.DATE,
 			allowNull: false
-		}
+		},
 	},
 	{
 		sequelize,

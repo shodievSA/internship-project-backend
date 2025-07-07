@@ -10,12 +10,14 @@ import {
 	AppError 
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import Task from '@/models/task';
+import Task, { TaskAttributes } from '@/models/task';
 import User from '@/models/user';
 import Subtask from '@/models/subTask';
 import TaskHistory from '@/models/taskHistory';
 import Project from '@/models/project';
 import { transporter } from '@/config/email';
+import { createNotification } from './notificationService';
+import { title } from 'process';
 
 class ProjectService {
 
@@ -744,32 +746,39 @@ class ProjectService {
 
 	}
 
-	async createTask(task: Task, userId: number): Promise<object> {
+	async createTask(task: Task, userId: number,): Promise<object> {
 
     	const transaction = await sequelize.transaction();
 
 		try {
 
+            const assignedBy = await models.ProjectMember.findOne({
+                where: { userId: userId },
+                attributes: ['id'],
+                include: [{
+                    model: models.User,
+                    as: 'user'
+                }],
+                transaction
+            });
+
+            const assignedTo = await models.ProjectMember.findOne({
+                where: { id: task.assignedTo },
+                include: [{
+                    model: models.User,
+                    as: 'user'
+                }],
+                transaction
+            })
+
+            if (!assignedBy || !assignedTo) { 
+                throw new AppError('No such users in project')
+            }
+
 			const newTask = await models.Task.create(task, 
 				{ transaction },
 			);
 
-			const assignedBy = await models.ProjectMember.findOne({
-				where: { userId: userId },
-				attributes: ['id'],
-				include: [{
-					model: models.User,
-					as: 'user'
-				}]
-			});
-
-			const assignedTo = await models.ProjectMember.findOne({
-				where: { id: task.assignedTo },
-				include: [{
-					model: models.User,
-					as: 'user'
-				}]
-			});
 
 			let newTaskSubtasks: { id: number, title: string }[] = [];
             
@@ -799,20 +808,14 @@ class ProjectService {
 			);
 
 			let newTaskHistory = [history];
-
-			 const project = await models.Project.findOne({
-				where: { id: task.projectId },
-				attributes: ['title']
-            });
             
-            await models.Notification.create(
-				{
-					title: "New Task",
-					message: `Project: ${project?.title}\nAssigned new task!`,
-					userId: userId
-            	},
-				{ transaction }
-			);
+            await createNotification(
+                assignedTo.user.id,
+                task.projectId,
+                task.title,
+                transaction,
+                'newTask'
+            )
 
 			await transaction.commit();
 
@@ -919,7 +922,8 @@ class ProjectService {
                     id: taskId,
                     projectId: projectId,
                     assignedBy: assignedBy.id
-                }
+                },
+                force: true,
             });
     
             if (!isDeleted) { 
@@ -932,6 +936,175 @@ class ProjectService {
 
         }
 
+    }
+
+    async  updateTask(
+        projectId: number,
+        taskId: number,
+        updatedTaskProps: TaskAttributes
+     ): Promise<ProjectTask> {
+
+        const transaction: Transaction = await sequelize.transaction()
+        
+         try {
+
+             const task = await models.Task.findOne( {
+                 where: { 
+                    id: taskId, 
+                    projectId: projectId,
+                },
+                include: [
+                    {
+                        model: models.ProjectMember,
+                        as: 'assignedByMember',
+                        include: [{ 
+                            model: models.User, 
+                            as: 'user',
+                            attributes: ['fullName', 'avatarUrl', 'id'] 
+                        }],
+                        attributes: ['id']
+                    },
+                    {
+                        model: models.ProjectMember,
+                        as: 'assignedToMember',
+                        include: [{ 
+                            model: models.User, 
+                            as: 'user',
+                            attributes: ['fullName', 'avatarUrl', 'id'] 
+                        }],
+                        attributes: ['id']
+                    },
+                    { 
+                        model: models.Subtask,
+                        as: 'subtasks'
+                    },
+                    {
+                        model: models.TaskHistory,
+                        as: 'history',
+                        separate: true,
+                        order: [['created_at', 'DESC']]
+                    }], 
+                    
+                    transaction,
+                    
+                })
+                    
+            if (!task) throw new AppError('Invalid task or project')
+
+            if (updatedTaskProps.deadline) { 
+                        
+                const newDeadline = new Date(updatedTaskProps.deadline)
+                        
+                    if ( new Date(Date.now()) > newDeadline ){
+                        throw new AppError('Cannot assign past date!') 
+                    }
+
+                    task.deadline = newDeadline
+                }
+
+            if (updatedTaskProps.assignedBy && task.assignedBy !== updatedTaskProps.assignedBy) { 
+                throw new AppError('Cannot change property assignedBy')
+            }
+
+            if (updatedTaskProps.status && task.status !== updatedTaskProps.status || updatedTaskProps.projectId && task.projectId !== updatedTaskProps.projectId){ 
+                throw new AppError('Cannot change status of task or projectId')
+            }
+
+            let newAssignedUser: ProjectMember | null = null
+
+            if (updatedTaskProps.assignedTo && task.assignedTo !== updatedTaskProps.assignedTo)  {
+
+                newAssignedUser = await models.ProjectMember.findOne({
+                    where: {
+                        id: updatedTaskProps.assignedTo,
+                        projectId: projectId,
+                    },
+                    include : [{ 
+                        model: models.User,
+                        as: 'user',
+                        attributes: ['id', 'fullName', 'avatarUrl']
+
+                    }],
+                    transaction
+                }) as ProjectMember
+
+                if (!newAssignedUser) { 
+                    throw new AppError ('No such user to assign task')
+                }
+
+                await createNotification(
+                    task.assignedToMember.user.id,
+                    projectId,
+                    task.title,
+                    transaction,
+                    'reassignTask'
+                )
+                //change receiver
+                task.assignedToMember.user = newAssignedUser.user
+            }
+
+            let subtasks: Subtask[] | null = null
+
+            if(updatedTaskProps.subtasks) { 
+                
+                // delete subtasks
+                await models.Subtask.destroy({
+                    where: {taskId: taskId},
+                    transaction  
+                })
+                
+                //create new subtasks
+                subtasks = await models.Subtask.bulkCreate(
+                    updatedTaskProps.subtasks.map((subtask) => ({
+						title: subtask.title,
+						taskId: task.id,
+					})),
+                    { transaction, returning: true }
+                );
+
+                // delete property to fit to Task
+                delete updatedTaskProps.subtasks
+            }
+
+            await task.update(updatedTaskProps as Task, {transaction});
+
+            await createNotification(
+                task.assignedToMember.user.id,
+                projectId,
+                task.title,
+                transaction,
+                'updatedTask',
+            )
+
+            await transaction.commit();
+
+            return { 
+                id: task.id,
+                title: updatedTaskProps.title || task.title,
+                description: updatedTaskProps.description || task.description,
+                priority: updatedTaskProps.priority || task.priority,
+                deadline: task.deadline,
+                subtasks: subtasks || task.subtasks,
+                assignedBy: {
+                    id: task.assignedToMember.id,
+                    name: task.assignedByMember.user.fullName,
+                    avatarUrl: task.assignedByMember.user.avatarUrl
+                },
+                assignedTo: { 
+                    id: task.assignedToMember.id,
+                    name: task.assignedToMember.user.fullName,
+                    avatarUrl: task.assignedToMember.user.avatarUrl,
+                },
+                status: task.status,
+                history: task.history,
+                createdAt: task.createdAt 
+            } as ProjectTask
+
+        }
+        catch(error) {
+            throw error
+        }      
+        
     }
 }
 
