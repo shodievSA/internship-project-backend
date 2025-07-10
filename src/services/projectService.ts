@@ -761,7 +761,7 @@ class ProjectService {
 
 			const currentMember = await models.ProjectMember.findOne({
                 where: { userId: userId },
-                attributes: ['id']
+                attributes: ['id', "roleId"]
             });
 
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
@@ -770,7 +770,8 @@ class ProjectService {
 				team: team,
 				tasks: tasks,
 				invites: invites,
-				currentMemberId: currentMember.id
+				currentMemberId: currentMember.id,
+                currentMemberRole : currentMember.role
 			} as ProjectDetails;
 
 		} catch(err) {  
@@ -1105,6 +1106,23 @@ class ProjectService {
                 )
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
+
+                await createNotification(
+                    task.assignedToMember.user.id,
+                    projectId,
+                    task.title,
+                    transaction,
+                    'newTask'
+                )
+            }else { 
+                await createNotification(
+                    task.assignedToMember.user.id,
+                    projectId,
+                    task.title,
+                    transaction,
+                    'updatedTask',
+                )
+
             }
 
             let subtasks: Subtask[] | null = null
@@ -1131,14 +1149,6 @@ class ProjectService {
             }
 
             await task.update(updatedTaskProps as Task, {transaction});
-
-            await createNotification(
-                task.assignedToMember.user.id,
-                projectId,
-                task.title,
-                transaction,
-                'updatedTask',
-            )
 
             await transaction.commit();
 

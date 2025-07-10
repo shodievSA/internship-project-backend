@@ -93,11 +93,12 @@ Task.init(
 		},
 		assignedTo: {
 			type: DataTypes.INTEGER,
-			allowNull: false,
+			allowNull: true,
 			references: {
 				model: 'project_members',
 				key: 'id'
-			}
+			},
+            onDelete: "SET NULL"
 		},
 		status: {
 			type: DataTypes.ENUM(

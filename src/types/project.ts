@@ -59,4 +59,5 @@ export interface ProjectDetails {
     tasks: ProjectTask[];
     invites: ProjectInvite[];
 	currentMemberId: number;
+    currentMemberRole : "admin" | "manager" | "member"
 }
