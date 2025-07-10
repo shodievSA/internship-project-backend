@@ -17,23 +17,28 @@ async function leaveProject(
 		const projectId: number = parseInt(req.params.projectId);
 		const userId: number = req.user.id;
 
-		if (req.memberPermissions?.includes('leaveProject')) {
+		if (!req.memberPermissions?.includes("leaveProject")) {
 
-			try {
+			throw new AppError("As admin, you can't leave your own project", 403);
 
-				await projectService.leaveProject(projectId, userId);
-				res.status(200).json({ message: 'User left project' });
+		} 
 
-			} catch (error) {
+		try {
 
-				return next(error);
+			await projectService.leaveProject(projectId, userId);
 
-			}
+			res.sendStatus(204);
 
-		} else {
+		} catch (err) {
 
-			res.sendStatus(403);
-			
+			console.log(
+				"The following error occured in leaveProject function: " + (err as Error).message
+			);
+
+			throw new AppError(
+				"Unexpected error occured on our side while trying to make you leave the project. Please, try again later."
+			);
+
 		}
 		
 	} catch (error) {
