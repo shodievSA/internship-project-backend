@@ -54,9 +54,18 @@ export interface ProjectTeam {
 	role: string;
 }
 
+export interface ProjectMetaData {
+	id: number;
+	title: string;
+	status: 'active' | 'paused' | 'completed';
+	createdAt: Date;
+}
+
 export interface ProjectDetails {
+	metaData: ProjectMetaData;
 	team: ProjectTeam[];
     tasks: ProjectTask[];
     invites: ProjectInvite[];
 	currentMemberId: number;
+	currentMemberRole: string;
 }

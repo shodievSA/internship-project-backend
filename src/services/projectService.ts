@@ -640,6 +640,7 @@ class ProjectService {
 		try {
 
 			const project = await models.Project.findByPk(projectId, {
+				attributes: ['id', 'title', 'status', 'createdAt'],
 				include: [{
 					model: models.User,
 					as: 'users',
@@ -652,6 +653,13 @@ class ProjectService {
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+
+			const metaData = {
+				id: project.id,
+				title: project.title,
+				status: project.status,
+				createdAt: project.createdAt
+			};
 	
 			const team = project.users.map((pm: User) => {
 
@@ -760,17 +768,22 @@ class ProjectService {
 			}
 
 			const currentMember = await models.ProjectMember.findOne({
-                where: { userId: userId },
-                attributes: ['id']
+                where: { 
+					userId: userId, 
+					projectId: projectId 
+				},
+                attributes: ['id', 'roleId']
             });
 
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
 	
 			return {
+				metaData: metaData,
 				team: team,
 				tasks: tasks,
 				invites: invites,
-				currentMemberId: currentMember.id
+				currentMemberId: currentMember.id,
+				currentMemberRole: currentMember.role
 			} as ProjectDetails;
 
 		} catch(err) {  
