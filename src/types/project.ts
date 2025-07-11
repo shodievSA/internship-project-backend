@@ -45,7 +45,7 @@ export interface ProjectTask {
     createdAt: Date;
 }
 
-export interface ProjectTeam {
+export interface TeamMember {
 	id: number;
 	name: string | null;
 	email: string;
@@ -63,7 +63,7 @@ export interface ProjectMetaData {
 
 export interface ProjectDetails {
 	metaData: ProjectMetaData;
-	team: ProjectTeam[];
+	team: TeamMember[];
     tasks: ProjectTask[];
     invites: ProjectInvite[];
 	currentMemberId: number;

@@ -247,9 +247,9 @@ async function changeTeamMemberRole(
 			return;
 		}
 
-		const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
+		const updatedTeamMember = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
 
-		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole });
+		res.status(200).json({ updatedTeamMember });
 
 	} catch (error) {
 
@@ -328,7 +328,8 @@ async function removeTeamMember(
 		try {
 
 			await projectService.removeTeamMember(projectId, memberId, userId);
-			res.status(200).json({ message: 'User removed from the project successfully' });
+			
+			res.sendStatus(204);
 
 		} catch (error) {
 
