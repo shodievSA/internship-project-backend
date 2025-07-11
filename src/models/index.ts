@@ -5,7 +5,6 @@ import Permission from './permission';
 import Role from './role';
 import RolePermission from './rolePermission';
 import Task from './task';
-import Subtask from './subTask';
 import DailyAiReport from './dailyAiReport';
 import Comment from './comment';
 import Notification from './notification';
@@ -25,7 +24,6 @@ export interface Models {
 	RolePermission: typeof RolePermission;
 	Invite: typeof Invite;
 	Task: typeof Task;
-	Subtask: typeof Subtask;
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
@@ -41,7 +39,6 @@ export const models: Models = {
 	RolePermission,
 	Invite,
 	Task,
-	Subtask,
 	DailyAiReport,
 	Comment,
 	Notification,
@@ -176,17 +173,6 @@ export function initAssociations() {
 		otherKey: 'role_id',
 		onDelete: 'CASCADE',
 		hooks: true
-	});
-
-	Task.hasMany(Subtask, {
-		foreignKey: 'task_id',
-		onDelete: 'CASCADE',
-		hooks: true,
-		as: 'subtasks'
-	});
-
-	Subtask.belongsTo(Task, {
-		foreignKey: 'task_id'
 	});
 
 	Task.hasMany(Comment, {

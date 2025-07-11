@@ -6,7 +6,7 @@ import Project from '@/models/project';
 import User from '@/models/user';
 import { auth, people } from 'googleapis/build/src/apis/people';
 import sequelize from '@/clients/sequelize';
-import { Transaction, ValidationError } from 'sequelize';
+import { Transaction } from 'sequelize';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -19,6 +19,7 @@ async function getUserData(userId: number): Promise<UserData | null> {
 				'fullName',
 				'avatarUrl',
 				'createdAt',
+				'isInvited'
 			],
 		});
 

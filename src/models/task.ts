@@ -8,7 +8,6 @@ import {
 } from 'sequelize';
 import Project from './project';
 import ProjectMember from './projectMember';
-import Subtask from './subTask';
 import Comment from './comment';
 import TaskHistory from './taskHistory';
 
@@ -16,7 +15,6 @@ export interface TaskAssociations {
 	project: Project;
 	assignedByMember: ProjectMember;
 	assignedToMember: ProjectMember;
-	subtasks: Subtask[];
 	comments: Comment[];
     history: TaskHistory[];
 } 
@@ -29,7 +27,6 @@ export interface TaskAttributes {
 	assignedBy: number;
 	assignedTo: number;
 	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
-    subtasks?: {title: string, id: number}[];
 	projectId: number;
     updatedAt: Date | string;
     createdAt: Date | string;
@@ -54,7 +51,6 @@ class Task extends Model<
 	declare project: Project;
 	declare assignedByMember: ProjectMember;
 	declare assignedToMember: ProjectMember;
-	declare subtasks: Subtask[];
 	declare comments: Comment[];
     declare history: TaskHistory[];
 }

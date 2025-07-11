@@ -1,4 +1,3 @@
-import Subtask from '@/models/subTask';
 import TaskHistory from '@/models/taskHistory';
 
 export interface FormattedProject {
@@ -29,7 +28,6 @@ export interface ProjectTask {
     description: string;
     priority: 'low' | 'high' | 'middle';
     deadline: Date;
-    subtasks: Subtask[] | undefined;
     assignedBy: {
         name: string,
         avatarUrl: string | null,
@@ -45,7 +43,7 @@ export interface ProjectTask {
     createdAt: Date;
 }
 
-export interface ProjectTeam {
+export interface TeamMember {
 	id: number;
 	name: string | null;
 	email: string;
@@ -54,8 +52,16 @@ export interface ProjectTeam {
 	role: string;
 }
 
+export interface ProjectMetaData {
+	id: number;
+	title: string;
+	status: 'active' | 'paused' | 'completed';
+	createdAt: Date;
+}
+
 export interface ProjectDetails {
-	team: ProjectTeam[];
+	metaData: ProjectMetaData;
+	team: TeamMember[];
     tasks: ProjectTask[];
     invites: ProjectInvite[];
 	currentMemberId: number;
