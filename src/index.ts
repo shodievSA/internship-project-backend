@@ -8,6 +8,8 @@ import initDB from './models';
 import v1Router from './routes/api/v1/index';
 import errorHandler from './middlewares/errorHandler';
 import { startCronJobs } from './services/cronService';
+import { createServer } from 'http';
+import { WebSocketServer, WebSocket as WSWebSocket } from 'ws';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,13 +26,30 @@ app.use(passport.session());
 app.use('/api/v1', v1Router);
 app.use(errorHandler);
 
+// Map<taskId, Set<WSWebSocket>>
+export const taskConnectionsMap: Map<number, Set<WSWebSocket>> = new Map();
+
+const server = createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+	// Only handle websocket upgrades for /comments
+	if (request.url && request.url.startsWith('/comments')) {
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			wss.emit('connection', ws, request);
+		});
+	} else {
+		socket.destroy();
+	}
+});
+
 async function main() {
 
 	try {
 
 		await initDB();
 		await startCronJobs();
-		app.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
+		server.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
 
 	} catch (error) {
 
@@ -39,5 +58,7 @@ async function main() {
 	}
 
 }
+
+export { wss };
 
 main();

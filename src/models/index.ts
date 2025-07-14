@@ -68,7 +68,7 @@ export function initAssociations() {
 
 	ProjectMember.belongsTo(User, {
 		foreignKey: 'user_id',
-        as: 'user'
+		as: 'user'
 	});
 
 	User.hasMany(DailyAiReport, {
