@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { commentService } from "../services/commentService";
-import { wss, taskConnectionsMap } from "../index";
+import { taskConnectionsMap } from "../index";
 import type { WebSocket as WSWebSocket } from "ws";
 import { saveAndBroadcastComment } from "../services/commentService";
 
@@ -19,55 +19,50 @@ interface NewCommentMsg {
 type IncomingMsg = JoinCommentSectionMsg | NewCommentMsg;
 
 // --- WebSocket Handler for Real-Time Comments ---
-function setupCommentWebSocketHandler() {
-  wss.on("connection", (ws: WSWebSocket) => {
-    let joinedTaskId: number | null = null;
+export function handleCommentWSConnection(ws: WSWebSocket) {
+  let joinedTaskId: number | null = null;
 
-    ws.on("message", async (data: string) => {
-      try {
-        const msg: IncomingMsg = JSON.parse(data.toString());
-        if (msg.type === "join-comment-section") {
-          // Add ws to the set for this taskId
-          joinedTaskId = msg.taskId;
-          if (!taskConnectionsMap.has(msg.taskId)) {
-            taskConnectionsMap.set(msg.taskId, new Set<WSWebSocket>());
-          }
-          taskConnectionsMap.get(msg.taskId)!.add(ws);
-        } else if (msg.type === "new-comment") {
-          // Use saveAndBroadcastComment for real-time chat
-          await saveAndBroadcastComment({
-            message: msg.message,
-            memberId: msg.memberId,
-            taskId: msg.taskId,
-          });
+  ws.on("message", async (data: string) => {
+    try {
+      const msg: IncomingMsg = JSON.parse(data.toString());
+      if (msg.type === "join-comment-section") {
+        // Add ws to the set for this taskId
+        joinedTaskId = msg.taskId;
+        if (!taskConnectionsMap.has(msg.taskId)) {
+          taskConnectionsMap.set(msg.taskId, new Set<WSWebSocket>());
         }
-      } catch (err) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message: "Invalid message or server error.",
-          })
-        );
+        taskConnectionsMap.get(msg.taskId)!.add(ws);
+      } else if (msg.type === "new-comment") {
+        // Use saveAndBroadcastComment for real-time chat
+        await saveAndBroadcastComment({
+          message: msg.message,
+          memberId: msg.memberId,
+          taskId: msg.taskId,
+        });
       }
-    });
+    } catch (err) {
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Invalid message or server error.",
+        })
+      );
+    }
+  });
 
-    ws.on("close", () => {
-      // Remove ws from the set for the joined taskId
-      if (joinedTaskId !== null) {
-        const set = taskConnectionsMap.get(joinedTaskId);
-        if (set) {
-          set.delete(ws);
-          if (set.size === 0) {
-            taskConnectionsMap.delete(joinedTaskId);
-          }
+  ws.on("close", () => {
+    // Remove ws from the set for the joined taskId
+    if (joinedTaskId !== null) {
+      const set = taskConnectionsMap.get(joinedTaskId);
+      if (set) {
+        set.delete(ws);
+        if (set.size === 0) {
+          taskConnectionsMap.delete(joinedTaskId);
         }
       }
-    });
+    }
   });
 }
-
-// Initialize the WebSocket handler
-setupCommentWebSocketHandler();
 
 //###############################################################
 // --- REST API Controller for Comments ---

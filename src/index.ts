@@ -10,6 +10,7 @@ import errorHandler from './middlewares/errorHandler';
 import { startCronJobs } from './services/cronService';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket as WSWebSocket } from 'ws';
+import { handleCommentWSConnection } from './controllers/commentController';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,8 @@ export const taskConnectionsMap: Map<number, Set<WSWebSocket>> = new Map();
 
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', handleCommentWSConnection);
 
 server.on('upgrade', (request, socket, head) => {
 	// Only handle websocket upgrades for /comments
