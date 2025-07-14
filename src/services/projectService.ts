@@ -26,9 +26,6 @@ class ProjectService {
 			
 		try {
 
-			if (!projectId) throw new AppError(`No such project with an id - ${projectId}`);
-			if (!userId) throw new AppError('User ID is required');
-
 			const projectMember = await models.ProjectMember.findOne({
 				where: { projectId, userId },
 				attributes: ['id', 'roleId', 'position'],
@@ -73,7 +70,9 @@ class ProjectService {
 			GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
 				admin.user.email,
 				[project.title, userRole, position]
-			);
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 		} catch (error) {
 
@@ -217,7 +216,9 @@ class ProjectService {
 					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
 						receiverEmail,
 						[fullProdInvite!.project.title, roleOffered, positionOffered]
-					);
+					).catch(err => {
+						console.error('Failed to send email', err);
+					});
 
 					return { 
                         invite:{
@@ -319,7 +320,9 @@ class ProjectService {
 				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_ACCEPT).sendGmail(
 					invite.inviter.email,
 					[project!.title, roleOffered, positionOffered, projectId]
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
 				return {
 
@@ -333,10 +336,12 @@ class ProjectService {
 
 				await transaction.commit();
 
-					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
+				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
 					invite.inviter.email,
 					[project!.title, roleOffered, positionOffered, projectId]
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
 				return {
 
@@ -521,7 +526,9 @@ class ProjectService {
 			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
 				email,
 				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
-			);
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 			return updatedTask;
 			
@@ -806,6 +813,16 @@ class ProjectService {
 
     	const transaction = await sequelize.transaction();
 
+		const deadline: Date = new Date(task.deadline);
+
+		if (Number.isNaN(deadline.getTime())) {
+			throw new AppError('Invalid deadline format', 400);
+		}
+
+		if (deadline.getTime() < Date.now()) {
+			throw new AppError('Deadline cannot be in the past', 400);
+		}
+
 		try {
 
             const assignedBy = await models.ProjectMember.findOne({
@@ -861,7 +878,9 @@ class ProjectService {
 			GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
 				assignedTo.user.email,
 				[project!.title, newTask.title, projectId]
-			);
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 			const formattedNewTask = {
 				deadline: newTask.deadline,
@@ -949,7 +968,9 @@ class ProjectService {
 				GmailSenderFactory.sendGmail(GmailType.PROMOTE_DEMOTE_MEMBER).sendGmail(
 					member!.user.email,
 					[project!.title as string, newRole, projectId]
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
 				const projectMember = {
 					id: memberId,
@@ -1027,7 +1048,9 @@ class ProjectService {
 			GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
 				userToRemove.user.email,
 				[projectTitle]
-			);
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 		} catch (error) {
 
@@ -1192,7 +1215,9 @@ class ProjectService {
 				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
 					task.assignedToMember.user.email,
 					[task.project.title, task.title, projectId],
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
@@ -1208,7 +1233,9 @@ class ProjectService {
 				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
 					task.assignedToMember.user.email,
 					[task.project.title, task.title, projectId]
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
             } else { 
                 await createNotification(
@@ -1222,7 +1249,9 @@ class ProjectService {
 				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
 					task.assignedToMember.user.email,
 					[task.project.title, task.title, projectId]
-				);
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
             }
 

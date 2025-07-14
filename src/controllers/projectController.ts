@@ -424,7 +424,7 @@ async function createTask(
         if (!hasOnlyKeysOfB(task, models.Task)){ 
             throw new AppError('Invalid fields in request body')
         }
-		
+
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
 			const nTask = await projectService.createTask(task as Task, userId, projectId);
@@ -438,7 +438,7 @@ async function createTask(
 
 		next(error);
 
-        }
+    }
 }
 
 async function deleteTask(

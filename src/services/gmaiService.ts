@@ -341,7 +341,7 @@ class NewTask extends Gmail<NewTaskGmailParam> {
 				taskTitle,
 				buttonText: 'View notification in the app',
 				buttonColor: 'rgb(21, 211, 21)',
-				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/assigned-tasks`
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/my-tasks`
 			})
 		});
     }
