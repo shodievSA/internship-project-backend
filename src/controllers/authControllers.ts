@@ -5,8 +5,7 @@ const passportAuth = passport.authenticate('google', {
 
 	scope: [
 		'profile', 
-		'email', 
-		'https://www.googleapis.com/auth/calendar',
+		'email',
 		'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/contacts.readonly'
 	]
