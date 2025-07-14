@@ -10,4 +10,5 @@ export const transporter = mailer.createTransport({
   maxConnections: 5,
   maxMessages: 100,
   rateDelta: 1000,
+  rateLimit: 5,
 });
