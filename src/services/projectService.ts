@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import { Transaction } from 'sequelize';
+import {Transaction} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -14,6 +14,7 @@ import ProjectMember from '@/models/projectMember';
 import Task, { TaskAttributes } from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
+import { MemberProductivity } from '@/types'; 
 import Project from '@/models/project';
 import { transporter } from '@/config/email';
 import { createNotification } from './notificationService';
@@ -1179,6 +1180,124 @@ class ProjectService {
             throw error
         }      
         
+    }
+
+    async getMemberProductivity(projectId: number, memberId: number): Promise<MemberProductivity | null> {
+
+        try {
+
+            const member = await models.ProjectMember.findOne({
+                where: { 
+                    id: memberId,
+                    projectId: projectId,
+                },
+                include: [{
+                    model: models.User,
+                    as : "user",
+                    attributes: ["fullName"]
+                }],
+            })
+
+            if (!member ) { 
+                throw new AppError("No such member in this project")
+            }
+
+            let memberOngoingTasksCount = 0 ; 
+            let memberCompletedTasksCount = 0 ; 
+            let memberRejectedTasksCount = 0 ; 
+            let memberUnderReviewTasksCount = 0 ; 
+            let memberOverdueTasksCount = 0 ; 
+
+            const memberTotalTasks = await models.Task.findAndCountAll({
+                where: { 
+                    projectId: projectId, 
+                    assignedTo: member?.id,
+                },
+                order: [["created_at", "DESC"]],
+            }) 
+            if (!memberTotalTasks) { 
+                throw new AppError("not tasks")
+            }
+            
+            let totalTime: number = 0; 
+
+            if (memberTotalTasks.count !== 0){
+
+                for (const task of memberTotalTasks.rows) { 
+
+                    totalTime += (new Date(task.updatedAt).getTime() - new Date(task.createdAt).getTime())/ (3_600_000); // (updateAt-createdAt) in hours
+                    
+                    switch (task.status) { 
+                        case 'ongoing':
+                            memberOngoingTasksCount+=1 ;
+                            break;
+                        case 'closed':
+                            memberCompletedTasksCount+=1;
+                            break
+                        case 'rejected':
+                            memberRejectedTasksCount+=1 ;
+                            break ;
+                        case 'under review':
+                            memberUnderReviewTasksCount+=1 ;
+                            break;
+                        case'overdue':
+                            memberOverdueTasksCount+=1 ;
+                            break;      
+                    }
+                }
+            }else { return null }
+
+            const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
+
+            const completionRate: number = memberTotalTasks.count>0 ? memberCompletedTasksCount / memberTotalTasks.count : 0
+
+            const productivityScore = Math.round(completionRate * 60 +
+            (1-(avgCompletionTimeInHours/8)) * 20 + 
+            (1-((memberOverdueTasksCount + memberRejectedTasksCount)/memberTotalTasks.count)) * 20) || 0
+
+            const recentActivityRaw = await models.Task.findAll({
+                where: { 
+                    projectId: projectId, 
+                    assignedTo: member?.id,
+                },
+                attributes : ["title", "status", "updatedAt"],
+                order: [["updated_at", "DESC"]],
+                limit: 5,
+            })
+            let result: MemberProductivity = { 
+                 member: { 
+                    fullName:  member?.user.fullName as string,
+                    position: member?.position as string,
+                    role: member?.role as string,
+                },
+                productivityScore: productivityScore,
+                tasksCompleted: memberCompletedTasksCount,
+                completionRate: completionRate,
+                avgTimeForTask: avgCompletionTimeInHours,
+                taskDistribution: { 
+                    inProgress: memberOngoingTasksCount,
+                    completed: memberCompletedTasksCount,
+                    rejected: memberRejectedTasksCount,
+                    underReview: memberUnderReviewTasksCount,
+                    overdue: memberOverdueTasksCount,
+                },
+                recentActivity: []
+
+            }
+            for (const task of recentActivityRaw) { 
+                const hoursSinceUpdate = Number(((Date.now() - new Date(task.updatedAt).getTime())/3_600_000).toFixed(1))
+                result.recentActivity.push({
+                    title:task.title,
+                    status: task.status,
+                    time: hoursSinceUpdate
+                })
+            }
+            return result
+        }
+        catch(err) { 
+            throw err
+        }
+    
     }
 }
 

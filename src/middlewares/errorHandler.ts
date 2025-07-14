@@ -16,7 +16,7 @@ const errorHandler : ErrorRequestHandler = function(
 	}
 
 	res.status(500).json({ 
-		message: "Something went wrong " + err.errors[0].message.split('.')[1] 
+		message: "Something went wrong " + err.message || err.errors[0].message.split('.')[1] 
 	});
 
 }

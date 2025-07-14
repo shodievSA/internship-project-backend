@@ -5,11 +5,13 @@ import { getMemberPermissions } from "../../../../middlewares/getMemberPermissio
 const {
 	changeTeamMemberRole,
 	leaveProject,
-	removeTeamMember
+	removeTeamMember,
+    getMemberProductivity,
 } = projectController;
 
 const router = Router({ mergeParams: true });
 
+router.get('/:memberId', getMemberPermissions,getMemberProductivity as RequestHandler);
 router.patch('/:memberId', getMemberPermissions, changeTeamMemberRole as RequestHandler);
 router.delete('/me', getMemberPermissions, leaveProject as RequestHandler);
 router.delete('/:memberId', getMemberPermissions, removeTeamMember as RequestHandler);
