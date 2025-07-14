@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { models } from '../models';
 import crypto from 'crypto';
 import { Profile } from 'passport';
-import { RegisteredUserCreationAttributes, UserAttributes } from '@/models/user';
+import { UserAttributes } from '@/models/user';
 
 const encryptToken = (token: string): string => {
 

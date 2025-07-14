@@ -70,7 +70,7 @@ class ProjectService {
 
 			await transaction.commit();
 
-			await GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
+			GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
 				admin.user.email,
 				[project.title, userRole, position]
 			);
@@ -214,7 +214,7 @@ class ProjectService {
 
 					await transaction.commit();
 
-					await GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
+					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
 						receiverEmail,
 						[fullProdInvite!.project.title, roleOffered, positionOffered]
 					);
@@ -255,6 +255,7 @@ class ProjectService {
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
+
 			const [count] = await models.Invite.update(
 
 				{ status: inviteStatus },
@@ -270,15 +271,22 @@ class ProjectService {
 				throw new AppError('Project invitation not found');
 			}
 
-			const invite = await models.Invite.findByPk(inviteId, { transaction });
+			const invite = await models.Invite.findByPk(inviteId, { include: { model: models.User, as: 'inviter', attributes: ['email']}, transaction });
 
 			if (!invite) {
 
 				throw new AppError('Project invitation not found after update');
 
-			}
+			}			
 
 			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
+
+			const [ user, project ] = await Promise.all(
+				[
+					models.User.findByPk(invitedUserId, { transaction }),
+					models.Project.findByPk(projectId, { attributes: ['title'], transaction })
+				]
+			);
 
 			const roleId = roleOffered === 'manager' ? 2 : 3;
 
@@ -298,7 +306,20 @@ class ProjectService {
 
 				);
 
+				await models.Notification.create({
+
+					title: 'Project invitation accepted',
+					message: `${user!.fullName} has joined the project!`,
+					userId: invite.invitedBy
+
+				}, { transaction });
+
 				await transaction.commit();
+
+				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_ACCEPT).sendGmail(
+					invite.inviter.email,
+					[project!.title, roleOffered, positionOffered, projectId]
+				);
 
 				return {
 
@@ -312,6 +333,11 @@ class ProjectService {
 
 				await transaction.commit();
 
+					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
+					invite.inviter.email,
+					[project!.title, roleOffered, positionOffered, projectId]
+				);
+
 				return {
 
 					invitation: invite.toJSON(),
@@ -323,7 +349,7 @@ class ProjectService {
 
 		} catch (error) {
 
-			await transaction.rollback();
+			if (!(transaction as any).finished) await transaction.rollback();
 			throw error;
 
 		}
@@ -492,7 +518,7 @@ class ProjectService {
 
 			await transaction.commit();	
 
-			await GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
+			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
 				email,
 				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
 			);
@@ -832,7 +858,7 @@ class ProjectService {
 
 			await transaction.commit();
 
-			await GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
+			GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
 				assignedTo.user.email,
 				[project!.title, newTask.title, projectId]
 			);
@@ -897,16 +923,33 @@ class ProjectService {
 		
 			if (count === 0) throw new Error("failed to update team member role");
 
+			const project = await models.Project.findByPk(projectId, {
+				attributes: ['title']
+			});
+
 			try {
 
 				const member = await models.ProjectMember.findByPk(memberId, {
 					attributes: ["roleId", "position"],
-					include: [{
-						model: models.User,
-						as: "user",
-						attributes: ["fullName", "email", "avatarUrl"]
-					}]
+					include: [
+						{
+							model: models.User,
+							as: "user",
+							attributes: ["id", "fullName", "email", "avatarUrl"]
+						}
+					]
 				});
+
+				await models.Notification.create({
+					title: 'Team member role updated',
+					message: `Your role in the project has been updated to ${newRole}.`,
+					userId: member!.user.id,
+				});
+
+				GmailSenderFactory.sendGmail(GmailType.PROMOTE_DEMOTE_MEMBER).sendGmail(
+					member!.user.email,
+					[project!.title as string, newRole, projectId]
+				);
 
 				const projectMember = {
 					id: memberId,
@@ -981,7 +1024,7 @@ class ProjectService {
 
 			await transaction.commit();
 
-			await GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
+			GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
 				userToRemove.user.email,
 				[projectTitle]
 			);
@@ -1146,9 +1189,9 @@ class ProjectService {
                     'reassignTask'
                 );
 
-				await GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
+				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
 					task.assignedToMember.user.email,
-					[task.project.title, task.title]
+					[task.project.title, task.title, projectId],
 				);
 
                 //change receiver
@@ -1161,7 +1204,13 @@ class ProjectService {
                     transaction,
                     'newTask'
                 )
-            }else { 
+
+				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title, projectId]
+				);
+
+            } else { 
                 await createNotification(
                     task.assignedToMember.user.id,
                     projectId,
@@ -1170,16 +1219,16 @@ class ProjectService {
                     'updatedTask',
                 )
 
+				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title, projectId]
+				);
+
             }
 
             await task.update(updatedTaskProps as Task, {transaction});
 
             await transaction.commit();
-
-			await GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
-				task.assignedToMember.user.email,
-				[task.project.title, task.title]
-			);
 
             return { 
                 id: task.id,

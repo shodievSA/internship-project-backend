@@ -9,6 +9,9 @@ export enum GmailType {
 	NEW_TASK = 'NEW_TASK',
 	REASSIGN_TASK = 'REASSIGN_TASK',
 	UPDATED_TASK = 'UPDATED_TASK',
+	PROJECT_INVITE_ACCEPT = 'PROJECT_INVITE_ACCEPT',
+	PROJECT_INVITE_REJECT = 'PROJECT_INVITE_REJECT',
+	PROMOTE_DEMOTE_MEMBER = 'PROMOTE_DEMOTE_MEMBER',
 }
 
 type GmailMap = {
@@ -19,12 +22,35 @@ type GmailMap = {
 	[GmailType.NEW_TASK]: NewTaskGmailParam;
 	[GmailType.REASSIGN_TASK]: ReassignTaskGmailParam;
 	[GmailType.UPDATED_TASK]: UpdatedTaskGmailParam;
+	[GmailType.PROJECT_INVITE_ACCEPT]: InviteAcceptGmailParam;
+	[GmailType.PROJECT_INVITE_REJECT]: InviteRejectGmailParam;
+	[GmailType.PROMOTE_DEMOTE_MEMBER]: PromoteDemoteMemberGmailParam;
 };
 
 type InviteGmailParam = readonly [
     projectTitle: string,
     roleOffered: string,
     positionOffered: string,
+]
+
+type InviteAcceptGmailParam = readonly [
+    projectTitle: string,
+    userRole: string,
+    userPosition: string,
+	projectId: number,
+]
+
+type InviteRejectGmailParam = readonly [
+    projectTitle: string,
+    roleOffered: string,
+    positionOffered: string,
+	projectId: number,
+]
+
+type PromoteDemoteMemberGmailParam = readonly [
+    projectTitle: string,
+    userRole: string,
+	projectId: number,
 ]
 
 type LeaveGmailParam = readonly [
@@ -56,11 +82,13 @@ type NewTaskGmailParam = readonly [
 type ReassignTaskGmailParam = readonly [
 	projectTitle: string,
 	taskTitle: string,
+	projectId: number,
 ]
 
 type UpdatedTaskGmailParam = readonly [
 	projectTitle: string,
 	taskTitle: string,
+	projectId: number,
 ]
 
 function buildEmailHTML({
@@ -129,7 +157,7 @@ class ProjectInvite extends Gmail<InviteGmailParam> {
 						
 			to: receiverEmail,
 			from: process.env.EMAIL,
-			subject: '📬 Project invitation',
+			subject: '📬 Project Invitation',
 			html: buildEmailHTML({
 				headerColor: '#007BFF',
 				title: 'You have been invited to a project!',
@@ -139,6 +167,77 @@ class ProjectInvite extends Gmail<InviteGmailParam> {
 				buttonText: 'Accept Invitation',
 				buttonColor: '#007BFF',
 				buttonLink: `${process.env.FRONTEND_URL}/invites`
+			})
+		});
+    }
+}
+
+class ProjectInviteAccept extends Gmail<InviteAcceptGmailParam> {
+    async sendGmail(receiverEmail: string, params: InviteAcceptGmailParam) {
+
+        const [projectTitle, userRole, userPosition, projectId] = params;
+
+        await transporter.sendMail({
+						
+			to: receiverEmail,
+			from: process.env.EMAIL,
+			subject: '📬 Project Invitation Acceptance',
+			html: buildEmailHTML({
+				headerColor: 'rgb(21, 211, 21)',
+				title: 'Your project invitation has been accepted!',
+				projectTitle,
+				role: userRole,
+				position: userPosition,
+				buttonText: 'View notification in the app',
+				buttonColor: 'rgb(21, 211, 21)',
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/team`
+			})
+		});
+    }
+}
+
+class ProjectInviteReject extends Gmail<InviteRejectGmailParam> {
+    async sendGmail(receiverEmail: string, params: InviteRejectGmailParam) {
+
+        const [projectTitle, roleOffered, positionOffered, projectId] = params;
+
+        await transporter.sendMail({
+						
+			to: receiverEmail,
+			from: process.env.EMAIL,
+			subject: '📬 Project Invitation Rejection',
+			html: buildEmailHTML({
+				headerColor: 'rgb(255, 0, 0)',
+				title: 'Your project invitation has been rejected!',
+				projectTitle,
+				role: roleOffered,
+				position: positionOffered,
+				buttonText: 'View notification in the app',
+				buttonColor: 'rgb(255, 0, 0)',
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/invites`
+			})
+		});
+    }
+}
+
+class PromoteDemoteMember extends Gmail<PromoteDemoteMemberGmailParam> {
+    async sendGmail(receiverEmail: string, params: PromoteDemoteMemberGmailParam) {
+
+        const [projectTitle, userRole, projectId] = params;
+
+        await transporter.sendMail({
+						
+			to: receiverEmail,
+			from: process.env.EMAIL,
+			subject: '📬 Role Update',
+			html: buildEmailHTML({
+				headerColor: 'rgb(87, 103, 192)',
+				title: 'Your role in the project has been updated!',
+				projectTitle,
+				role: `Your new role is: ${userRole}`,
+				buttonText: 'View in the app',
+				buttonColor: 'rgb(87, 103, 192)',
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/team`
 			})
 		});
     }
@@ -251,7 +350,7 @@ class NewTask extends Gmail<NewTaskGmailParam> {
 class ReassignTask extends Gmail<ReassignTaskGmailParam> {
     async sendGmail(receiverEmail: string, params: ReassignTaskGmailParam) {
 
-        const [projectTitle, taskTitle] = params;
+        const [projectTitle, taskTitle, projectId] = params;
 
         await transporter.sendMail({
 						
@@ -265,7 +364,7 @@ class ReassignTask extends Gmail<ReassignTaskGmailParam> {
 				taskTitle,
 				buttonText: 'View notification in the app',
 				buttonColor: 'rgb(224, 128, 18)',
-				buttonLink: `${process.env.FRONTEND_URL}/notifications`
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/my-tasks`
 			})
 		});
     }
@@ -274,7 +373,7 @@ class ReassignTask extends Gmail<ReassignTaskGmailParam> {
 class UpdatedTask extends Gmail<UpdatedTaskGmailParam> {
     async sendGmail(receiverEmail: string, params: UpdatedTaskGmailParam) {
 
-        const [projectTitle, taskTitle] = params;
+        const [projectTitle, taskTitle, projectId] = params;
 
         await transporter.sendMail({
 						
@@ -288,39 +387,71 @@ class UpdatedTask extends Gmail<UpdatedTaskGmailParam> {
 				taskTitle,
 				buttonText: 'View notification in the app',
 				buttonColor: 'rgb(87, 103, 192)',
-				buttonLink: `${process.env.FRONTEND_URL}/notifications`
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/my-tasks`
 			})
 		});
     }
 }
 
 export class GmailSenderFactory {
+
+	private static instanceMap: Partial<Record<GmailType, Gmail<any>>> = {};
+
     static sendGmail<T extends GmailType>(type: T): Gmail<GmailMap[T]> {
+		if (this.instanceMap[type]) {
+			return this.instanceMap[type] as Gmail<GmailMap[T]>;
+		}
+
+		let instance: Gmail<any>;
+
         switch (type) {
             case GmailType.PROJECT_INVITE:
-                return new ProjectInvite() as Gmail<GmailMap[T]>;
-            
+                instance = new ProjectInvite() as Gmail<GmailMap[T]>;
+				break;
+
+			case GmailType.PROJECT_INVITE_ACCEPT:
+				instance = new ProjectInviteAccept() as Gmail<GmailMap[T]>;
+				break;
+
+			case GmailType.PROJECT_INVITE_REJECT:
+				instance = new ProjectInviteReject() as Gmail<GmailMap[T]>;
+				break;
+
+			case GmailType.PROMOTE_DEMOTE_MEMBER:
+				instance = new PromoteDemoteMember() as Gmail<GmailMap[T]>;
+				break;
+
             case GmailType.LEAVE_PROJECT:
-                return new LeaveProject() as Gmail<GmailMap[T]>;
+                instance = new LeaveProject() as Gmail<GmailMap[T]>;
+				break;
 
             case GmailType.CHANGE_TASK_STATUS:
-                return new ChangeTaskStatus() as Gmail<GmailMap[T]>;
+				instance = new ChangeTaskStatus() as Gmail<GmailMap[T]>;
+				break;
 
             case GmailType.REMOVE_TEAM_MEMBER:
-                return new RemoveTeamMember() as Gmail<GmailMap[T]>
+                instance = new RemoveTeamMember() as Gmail<GmailMap[T]>;
+				break;
 
 			case GmailType.NEW_TASK:
-                return new NewTask() as Gmail<GmailMap[T]>
+               	instance = new NewTask() as Gmail<GmailMap[T]>;
+				break;
 
 			case GmailType.REASSIGN_TASK:
-                return new ReassignTask() as Gmail<GmailMap[T]>
+                instance = new ReassignTask() as Gmail<GmailMap[T]>;
+				break;
 
 			case GmailType.UPDATED_TASK:
-                return new UpdatedTask() as Gmail<GmailMap[T]>
+                instance = new UpdatedTask() as Gmail<GmailMap[T]>;
+				break;
 
             default:
                 const _exhaustiveCheck: never = type;
                 throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
         }
+
+		this.instanceMap[type] = instance;
+		return instance as Gmail<GmailMap[T]>;
+
     }
 }
