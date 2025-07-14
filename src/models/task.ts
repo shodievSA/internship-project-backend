@@ -64,8 +64,7 @@ Task.init(
 		},
 		title: {
 			type: DataTypes.STRING(50),
-			allowNull: false,
-			defaultValue: 'Untitled Task'
+			allowNull: false
 		},
 		description: {
 			type: DataTypes.TEXT,

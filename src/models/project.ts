@@ -12,7 +12,7 @@ import Task from './task';
 import User from './user';
 
 export interface ProjectAssociations {
-	projectMembers: ProjectMember[];
+	projectMember: ProjectMember[];
 	invites: Invite[];
 	tasks: Task[];
 	users: User[];
@@ -28,7 +28,7 @@ class Project extends Model<
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
     
-	declare projectMembers: ProjectMember[];
+	declare projectMember: ProjectMember[];
 	declare invites: Invite[];
 	declare tasks: Task[];
 	declare users: User[];

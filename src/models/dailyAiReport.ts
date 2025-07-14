@@ -1,4 +1,6 @@
 import sequelize from '../clients/sequelize';
+import User from './user';
+import { DailyReport } from '@/types/dailyReport';
 import {
 	DataTypes,
 	Model,
@@ -6,7 +8,6 @@ import {
 	InferCreationAttributes,
 	CreationOptional,
 } from 'sequelize';
-import User from './user';
 
 export interface DailyAiReportAssociations {
   	user: User;
@@ -17,7 +18,7 @@ class DailyAiReport extends Model<
 	InferCreationAttributes<DailyAiReport, { omit: keyof DailyAiReportAssociations }>
 > {
 	declare id: CreationOptional<number>;
-	declare report: string;
+	declare report: DailyReport;
 	declare userId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
@@ -33,8 +34,25 @@ DailyAiReport.init(
 			autoIncrement: true
 		},
 		report: {
-			type: DataTypes.TEXT,
-			allowNull: false
+			type: DataTypes.JSON,
+			allowNull: false,
+			get() {
+
+				const value = this.getDataValue("report");
+
+				if (typeof value === "string") {
+
+					try {
+						return JSON.parse(value);
+					} catch (error) {
+						return value;
+					}
+
+				}
+
+				return value;
+
+			}
 		},
 		userId: {
 			type: DataTypes.INTEGER,

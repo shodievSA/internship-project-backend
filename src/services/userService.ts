@@ -6,7 +6,10 @@ import Project from '@/models/project';
 import User from '@/models/user';
 import { auth, people } from 'googleapis/build/src/apis/people';
 import sequelize from '@/clients/sequelize';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
+import { DateTime } from 'luxon';
+import DailyAiReport from '@/models/dailyAiReport';
+import { DailyReport } from '@/types/dailyReport';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -184,7 +187,10 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
 
 }
 
-async function deleteNotification( userId: number, notificationIds: number[]): Promise<string>{ 
+async function deleteNotification( 
+	userId: number, 
+	notificationIds: number[]
+): Promise<string>{ 
     
     const transaction: Transaction = await sequelize.transaction();
 
@@ -274,13 +280,35 @@ async function updateNotification(
     
 }
 
-const UserService = { 
+async function getDailyReport(userId: number) {
+
+	const localDate = DateTime.local().setZone("Asia/Tashkent");
+	const startOfDay = localDate.startOf("day").toJSDate();
+	const endOfDay = localDate.endOf("day").toJSDate();
+
+	const dailyReport = await DailyAiReport.findOne({
+		where: {
+			userId: userId,
+			createdAt: {
+				[Op.between]: [startOfDay, endOfDay]
+			}
+		}
+	});
+
+	if (!dailyReport) throw new AppError("No such report found!", 500);
+
+	return dailyReport;
+
+}
+
+const userService = { 
     getUserData,
     getContacts,
 	getUserNotifications,
     getInvites,
     deleteNotification,
     updateNotification,
+	getDailyReport
 }
 
-export default UserService;
+export default userService;

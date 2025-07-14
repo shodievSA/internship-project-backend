@@ -10,7 +10,7 @@ const {
     getInvites,
     deleteNotification,
     updateNotification    
-} = userService
+} = userService;
 
 async function getMe(
 	req: AuthenticatedRequest, 
@@ -34,45 +34,45 @@ async function getMe(
 }
 
 async function getMailContacts(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ): Promise<void> {
 
-  try {
+	try {
 
-    const connections = await getContacts(req.user.id);
-    res.status(200).json({ contacts: connections });
-    return;
+		const connections = await getContacts(req.user.id);
+		res.status(200).json({ contacts: connections });
+		return;
 
-  } catch (error) {
+	} catch (error) {
 
-    next(error);
+		next(error);
 
-  }
+	}
 
 }
 
 async function fetchUserNotifications(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ): Promise<void> {
 
-  const userId: number = req.user.id;
+	const userId: number = req.user.id;
 
-  try {
+	try {
 
-    const notifications = await getUserNotifications(userId);
-    res.status(200).json({ message: 'Notifications fetched successfully', notifications });
+		const notifications = await getUserNotifications(userId);
+		res.status(200).json({ message: 'Notifications fetched successfully', notifications });
 
-    return;
+		return;
 
-  } catch (error) {
+	} catch (error) {
 
-    next(error);
+		next(error);
 
-  }
+	}
 
 }
 
@@ -96,10 +96,11 @@ async function getInvitations(
 }
 
 async function deleteNotifications(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ): Promise<void> {
+
     try {
 
         const notificationsToDelete = req.body.notificationsToDelete as { notificationIds: number[]}
@@ -113,17 +114,18 @@ async function deleteNotifications(
     	next(error);
 
   	}
+
 }
 
 async function updateNotifications(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ): Promise<void> {
-        try {
+
+	try {
 
         const notificationViewUpdates = req.body.notificationViewUpdates as { notificationIds: number[], isViewed:boolean}
-
         const newRecords = await updateNotification(req.user.id, notificationViewUpdates)
 
         res.status(200).json({ updatedNotifications: newRecords });
@@ -133,6 +135,28 @@ async function updateNotifications(
     	next(error);
 
   	}
+
+}
+
+async function getDailyReport(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const userId = req.user.id;
+		const report = await userService.getDailyReport(userId);
+
+		res.status(200).json({ report: report });
+
+	} catch(err) {
+
+		next(err);
+
+	}
+
 }
 
 const userController = {
@@ -141,7 +165,8 @@ const userController = {
     fetchUserNotifications,
     getInvitations,
     deleteNotifications,
-    updateNotifications
+    updateNotifications,
+	getDailyReport
 }
 
 export default userController;

@@ -61,6 +61,11 @@ export function initAssociations() {
 		otherKey: 'user_id'
 	});
 
+	User.hasMany(ProjectMember, {
+		foreignKey: "user_id",
+		as: "projectMembers"
+	});
+
 	ProjectMember.belongsTo(User, {
 		foreignKey: 'user_id',
         as: 'user'
@@ -79,7 +84,8 @@ export function initAssociations() {
 	User.hasMany(Notification, {
 		foreignKey: 'user_id',
 		onDelete: 'CASCADE',
-		hooks: true
+		hooks: true,
+		as: "notifications"
 	});
 
 	Notification.belongsTo(User, {
