@@ -19,14 +19,15 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
-    "nodemailer": "^7.0.3",
     "googleapis": "^150.0.1",
     "node-cron": "^4.1.1",
+    "nodemailer": "^7.0.3",
     "openai": "^5.1.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.0",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.6",
@@ -37,10 +38,11 @@
     "@types/node": "^22.15.29",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
+    "@types/ws": "^8.18.1",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.3"
   }
 }
