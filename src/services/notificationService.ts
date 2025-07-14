@@ -23,7 +23,7 @@ export async function createNotification(
             await models.Notification.create(
 				{
 					title: "New Task",
-					message: `Project: ${project?.title}\nAssigned new task!`,
+					message: `Project: ${project?.title} Assigned new task!`,
 					userId: userId
             	},
 				{ transaction }

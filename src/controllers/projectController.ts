@@ -122,13 +122,9 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { invite, project } = await projectService.inviteToProject(
+			const { invite } = await projectService.inviteToProject(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
-
-			const title = project.title as string;
-
-			await projectService.sendEmail(receiverEmail, positionOffered, roleOffered, title);
 
 			res.status(201).json({
                 message: 'Project invitation sent successfully',
@@ -277,6 +273,7 @@ async function changeTaskStatus(
 ): Promise<void> {
 
 	const taskId: number = parseInt(req.params.taskId);
+	const projectId: number = parseInt(req.params.projectId);
 	
 	const { updatedTaskStatus, comment }: {
 		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
@@ -299,22 +296,14 @@ async function changeTaskStatus(
 
 	}
 
-	if (!req.memberPermissions?.includes('editTasks')) {
+	try {
 
-		res.sendStatus(403);
+		const updatedTask = await projectService.changeTaskStatus(projectId, taskId, updatedTaskStatus, comment, fullname);
+		res.status(200).json({ message: 'Task status changed successfully', updatedTask });
 
-	} else {
+	} catch (error) {
 
-		try {
-
-			const updatedTask = await projectService.changeTaskStatus(taskId, updatedTaskStatus, comment, fullname);
-			res.status(200).json({ message: 'Task status changed successfully', updatedTask });
-
-		} catch (error) {
-
-			next(error);
-
-		}
+		next(error);
 
 	}
 
@@ -429,7 +418,7 @@ async function createTask(
     const task = req.body.task;
 	const userId = req.user.id;
 
-    task.projectId = parseInt(req.params.projectId);
+    const projectId: number = task.projectId = parseInt(req.params.projectId);
 
 	try { 
         if (!hasOnlyKeysOfB(task, models.Task)){ 
@@ -438,7 +427,7 @@ async function createTask(
 		
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const nTask = await projectService.createTask(task as Task, userId);
+			const nTask = await projectService.createTask(task as Task, userId, projectId);
 			return res.status(201).json(nTask);
 
 		}

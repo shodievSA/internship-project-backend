@@ -15,8 +15,8 @@ import Task, { TaskAttributes } from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import Project from '@/models/project';
-import { transporter } from '@/config/email';
 import { createNotification } from './notificationService';
+import { GmailSenderFactory, GmailType } from '../services/gmaiService';
 
 class ProjectService {
 
@@ -31,6 +31,7 @@ class ProjectService {
 
 			const projectMember = await models.ProjectMember.findOne({
 				where: { projectId, userId },
+				attributes: ['id', 'roleId', 'position'],
 				transaction,
 			});
 
@@ -49,11 +50,15 @@ class ProjectService {
 					projectId: projectId,
 					roleId: 1,
 				},
+				include: [{ model: models.User, as: 'user', attributes: ['email'] }],
 				attributes: ['userId'],
 				transaction,
 			});
 
 			if (!admin) throw new AppError(`No other admin to notify`);
+
+			const userRole: string = projectMember.roleId === 2 ? 'manager' : 'member';
+			const position: string = projectMember.position;
 
 			await projectMember.destroy({ transaction });
 
@@ -64,6 +69,11 @@ class ProjectService {
 			}, { transaction });
 
 			await transaction.commit();
+
+			await GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
+				admin.user.email,
+				[project.title, userRole, position]
+			);
 
 		} catch (error) {
 
@@ -204,6 +214,11 @@ class ProjectService {
 
 					await transaction.commit();
 
+					await GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
+						receiverEmail,
+						[fullProdInvite!.project.title, roleOffered, positionOffered]
+					);
+
 					return { 
                         invite:{
                             id : fullProdInvite?.id as number,
@@ -214,9 +229,6 @@ class ProjectService {
                             positionOffered : fullProdInvite?.positionOffered as string,
                             roleOffered : fullProdInvite?.roleOffered,
                             createdAt : fullProdInvite?.createdAt as Date,
-                        },
-                        project : { 
-                            title : fullProdInvite?.project.title
                         }
                     };
 
@@ -235,51 +247,6 @@ class ProjectService {
             throw error;
 
 		}
-
-	}
-
-	async sendEmail(
-		receiverEmail: string,
-		positionOffered: string,
-		roleOffered: 'manager' | 'member',
-		projectTitle: string
-	): Promise<void> {
-
-		await transporter.sendMail({
-						
-			to: receiverEmail,
-			from: process.env.EMAIL,
-			subject: '📬 Project invitation',
-			html: `
-				<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
-				<h1 style="color: #007BFF;">You've been invited to a project!</h1>
-
-				<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-					${projectTitle}
-				</h2>
-
-				<p style="font-size: 16px;">
-					<strong>Role:</strong> ${roleOffered}<br>
-					<strong>Position:</strong> ${positionOffered}
-				</p>
-
-				<a href="${process.env.FRONTEND_URL}/projects" style="
-					display: inline-block;
-					margin-top: 20px;
-					padding: 10px 20px;
-					background-color: #007BFF;
-					color: white;
-					text-decoration: none;
-					border-radius: 5px;
-					font-weight: bold;
-				">
-					Accept Invitation
-				</a>
-
-				</div>
-			`
-			
-		});
 
 	}
 
@@ -364,6 +331,7 @@ class ProjectService {
 	}
 
 	async changeTaskStatus(
+		projectId: number,
 		taskId: number,
 		updatedTaskStatus: 'under review' | 'rejected' | 'closed',
 		comment: string,
@@ -408,13 +376,15 @@ class ProjectService {
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
-						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+						attributes: ['roleId', 'position'],
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+						attributes: ['roleId', 'position'],
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 					{
 						model: models.TaskHistory,
@@ -462,19 +432,41 @@ class ProjectService {
 
 			};
 
-			let message: string;
+			let message, email, emailTitle, role, position, tasksType: string;
+			let notificationReceiverId: number;
 
 			switch (updatedTaskStatus) {
-				case 'under review':
+				case 'under review': 
 					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
+					email = task.assignedByMember.user.email;
+					emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
+					notificationReceiverId = task.assignedByMember.user.id;
+					role =
+						task.assignedToMember.roleId === 2 ? 'manager' :
+						task.assignedToMember.roleId === 3 ? 'member' :
+						'admin';
+					position = task.assignedToMember.position;
+					tasksType = 'review-tasks';
 					break;
 				
 				case 'rejected':
 					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					email = task.assignedToMember.user.email;
+					emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
+					notificationReceiverId = task.assignedToMember.user.id;
+					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+					position = task.assignedByMember.position;
+					tasksType = 'my-tasks';
 					break;
 
 				case 'closed':
 					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					email = task.assignedToMember.user.email;
+					emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
+					notificationReceiverId = task.assignedToMember.user.id;
+					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+					position = task.assignedByMember.position;
+					tasksType = 'my-tasks';
 					break;
 			
 				default:
@@ -484,9 +476,9 @@ class ProjectService {
 
 			await models.Notification.create({ 
 
-				title: 'Task submitted for review',
+				title: emailTitle,
 				message: message,
-				userId: task.assignedByMember.user.id
+				userId: notificationReceiverId
 
 			}, { transaction });
 
@@ -498,7 +490,12 @@ class ProjectService {
 
 			}, { transaction });
 
-			await transaction.commit();
+			await transaction.commit();	
+
+			await GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
+				email,
+				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
+			);
 
 			return updatedTask;
 			
@@ -779,7 +776,7 @@ class ProjectService {
 
 	}
 
-	async createTask(task: Task, userId: number,): Promise<object> {
+	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
 
     	const transaction = await sequelize.transaction();
 
@@ -800,7 +797,7 @@ class ProjectService {
                 include: [{
                     model: models.User,
                     as: 'user'
-                }],
+				}],
                 transaction
             })
 
@@ -812,6 +809,9 @@ class ProjectService {
 				{ transaction },
 			);
 
+			const project = await models.Project.findByPk(task.projectId, {
+				attributes: ['title']
+			});
 			const history = await models.TaskHistory.create(
 				{
 					taskId: newTask.id,
@@ -828,9 +828,14 @@ class ProjectService {
                 task.title,
                 transaction,
                 'newTask'
-            )
+            );
 
 			await transaction.commit();
+
+			await GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
+				assignedTo.user.email,
+				[project!.title, newTask.title, projectId]
+			);
 
 			const formattedNewTask = {
 				deadline: newTask.deadline,
@@ -952,7 +957,7 @@ class ProjectService {
 				where: { id: memberId },
 				include: [{
 					model: models.User,
-					attributes: ["id"],
+					attributes: ["id", "email"],
 					as: "user"
 				}],
 				transaction
@@ -960,6 +965,8 @@ class ProjectService {
 
 			if (!userToRemove) throw new Error("User not found");
 			if (!project) throw new AppError(`Project with id - ${projectId} does not exist`);
+
+			const projectTitle: string = project.title;
 			
 			await models.ProjectMember.destroy({
 				where: { id: memberId, projectId: projectId },
@@ -973,6 +980,11 @@ class ProjectService {
 			}, { transaction });
 
 			await transaction.commit();
+
+			await GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
+				userToRemove.user.email,
+				[projectTitle]
+			);
 
 		} catch (error) {
 
@@ -1031,6 +1043,11 @@ class ProjectService {
                     projectId: projectId,
                 },
                 include: [
+					{
+						model: models.Project, 
+						as: 'project',
+						attributes: ['title']
+					},
                     {
                         model: models.ProjectMember,
                         as: 'assignedByMember',
@@ -1047,7 +1064,7 @@ class ProjectService {
                         include: [{ 
                             model: models.User, 
                             as: 'user',
-                            attributes: ['fullName', 'avatarUrl', 'id'] 
+                            attributes: ['fullName', 'avatarUrl', 'id', 'email'] 
                         }],
                         attributes: ['id']
                     },
@@ -1127,7 +1144,13 @@ class ProjectService {
                     task.title,
                     transaction,
                     'reassignTask'
-                )
+                );
+
+				await GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title]
+				);
+
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
 
@@ -1152,6 +1175,11 @@ class ProjectService {
             await task.update(updatedTaskProps as Task, {transaction});
 
             await transaction.commit();
+
+			await GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
+				task.assignedToMember.user.email,
+				[task.project.title, task.title]
+			);
 
             return { 
                 id: task.id,

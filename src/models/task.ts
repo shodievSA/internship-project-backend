@@ -85,7 +85,8 @@ Task.init(
 			references: {
 				model: 'project_members',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
 		assignedTo: {
 			type: DataTypes.INTEGER,
@@ -94,7 +95,7 @@ Task.init(
 				model: 'project_members',
 				key: 'id'
 			},
-            onDelete: "SET NULL"
+			onDelete: 'CASCADE'
 		},
 		status: {
 			type: DataTypes.ENUM(
