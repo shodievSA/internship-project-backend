@@ -11,7 +11,7 @@ async function leaveProject(
 	res: Response,
 	next: NextFunction
 ) {
-	
+
 	try {
 
 		const projectId: number = parseInt(req.params.projectId);
@@ -33,9 +33,9 @@ async function leaveProject(
 		} else {
 
 			res.sendStatus(403);
-			
+
 		}
-		
+
 	} catch (error) {
 
 		next(error);
@@ -71,8 +71,8 @@ async function createProject(
 }
 
 async function inviteToProject(
-	req: AuthenticatedRequest, 
-	res: Response, 
+	req: AuthenticatedRequest,
+	res: Response,
 	next: NextFunction
 ): Promise<void> {
 
@@ -83,11 +83,11 @@ async function inviteToProject(
 	};
 
 	const projectId: number = parseInt(req.params.projectId);
-	
+
 	try {
 
 		if (!receiverEmail || !positionOffered || !roleOffered) {
-			
+
 			res.status(400).json({
 				error: 'receiverEmail, positionOffered, and roleOffered are required',
 			});
@@ -115,14 +115,14 @@ async function inviteToProject(
 			await projectService.sendEmail(receiverEmail, positionOffered, roleOffered, title);
 
 			res.status(201).json({
-                message: 'Project invitation sent successfully',
-                invite: invite,
-            });
+				message: 'Project invitation sent successfully',
+				invite: invite,
+			});
 
 		} else {
 
 			res.sendStatus(403);
-			
+
 		}
 
 
@@ -142,12 +142,12 @@ async function invitationStatus(
 
 	const inviteStatus: 'accepted' | 'rejected' = req.body.status;
 	const inviteId: number = parseInt(req.params.inviteId);
-	
+
 	try {
-		
+
 		if (!inviteStatus) {
-			
-			res.status(400).json({ 
+
+			res.status(400).json({
 				error: 'inviteStatus is missing'
 			});
 
@@ -155,7 +155,7 @@ async function invitationStatus(
 
 		} else if (!inviteId) {
 
-			res.status(400).json({ 
+			res.status(400).json({
 				error: 'inviteId is missing'
 			});
 
@@ -164,11 +164,11 @@ async function invitationStatus(
 		} else {
 			const invitationStatus = await projectService.invitationStatus(inviteStatus, inviteId);
 
-			res.status(200).json({ message: 'Project invitation status changed successfully', invitationStatus});
+			res.status(200).json({ message: 'Project invitation status changed successfully', invitationStatus });
 		}
 
 	} catch (error) {
-		
+
 		next(error);
 
 	}
@@ -192,7 +192,7 @@ async function updateProject(
 		const title = updatedProjectProps.title;
 		const status = updatedProjectProps.status;
 
-		const updatedFields: Partial<{ title: string; status: Status }> = {title, status};
+		const updatedFields: Partial<{ title: string; status: Status }> = { title, status };
 
 		if (Object.keys(updatedFields).length === 0) {
 
@@ -200,7 +200,7 @@ async function updateProject(
 			return;
 
 		}
-	
+
 		if (req.memberPermissions?.includes('editProject')) {
 
 			const updatedProject = await projectService.updateProject(projectId, updatedFields);
@@ -261,7 +261,7 @@ async function changeTaskStatus(
 ): Promise<void> {
 
 	const taskId: number = parseInt(req.params.taskId);
-	
+
 	const { updatedTaskStatus, comment }: {
 		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
 		comment: string;
@@ -270,14 +270,14 @@ async function changeTaskStatus(
 	const fullname = req.user.fullName as string;
 
 	if (!taskId) {
-		
+
 		res.status(400).json({ error: 'Task Id is missing' });
 		return;
 
 	}
 
 	if (!updatedTaskStatus) {
-		
+
 		res.status(400).json({ error: 'Missing updatedTaskStatus' });
 		return;
 
@@ -371,7 +371,7 @@ async function getProjectDetails(
 			projectId
 		);
 
-		res.status(200).json({ projectDetails: projectDetails});
+		res.status(200).json({ projectDetails: projectDetails });
 
 	} catch (error) {
 
@@ -403,95 +403,94 @@ async function deleteProject(
 
 }
 
-async function createTask( 
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction
+async function createTask(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ): Promise<any> {
 
-    const task = req.body.task;
+	const task = req.body.task;
 	const userId = req.user.id;
 
-    task.projectId = parseInt(req.params.projectId);
+	task.projectId = parseInt(req.params.projectId);
 
-	try { 
-        if (!hasOnlyKeysOfB(task, models.Task)){ 
-            throw new AppError('Invalid fields in request body')
-        }
-		
-		if (req.memberPermissions?.includes('assignTasks')) { 
+	try {
+		if (!hasOnlyKeysOfB(task, models.Task)) {
+			throw new AppError('Invalid fields in request body')
+		}
+
+		if (req.memberPermissions?.includes('assignTasks')) {
 
 			const nTask = await projectService.createTask(task as Task, userId);
 			return res.status(201).json(nTask);
 
 		}
 
-		return res.status(403).json({ message: 'Permission required'});
+		return res.status(403).json({ message: 'Permission required' });
 
-	} catch (error) { 
+	} catch (error) {
 
 		next(error);
 
-        }
+	}
 }
 
 async function deleteTask(
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ) {
-    try {   
-        const projectId = parseInt(req.params.projectId)
-        const taskId = parseInt(req.params.taskId)
+	try {
+		const projectId = parseInt(req.params.projectId)
+		const taskId = parseInt(req.params.taskId)
 
-        if (req.memberPermissions?.includes('deleteTasks')){
-            
-            await projectService.deleteTask( req.user.id, projectId, taskId )
-            res.sendStatus(204)
-            return
-        }
-        throw new AppError('No permission', 403)
-    }
-    catch(error){ 
+		if (req.memberPermissions?.includes('deleteTasks')) {
 
-        next(error);
-    }    
+			await projectService.deleteTask(req.user.id, projectId, taskId)
+			res.sendStatus(204)
+			return
+		}
+		throw new AppError('No permission', 403)
+	}
+	catch (error) {
+
+		next(error);
+	}
 }
 
 async function updateTask(
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ) {
-    const projectId = parseInt(req.params.projectId)
-    const taskId = parseInt(req.params.taskId)
+	const projectId = parseInt(req.params.projectId)
+	const taskId = parseInt(req.params.taskId)
 
-    const updatedTaskProps = req.body.updatedTaskProps
-    if (!updateProject || !projectId || !taskId) { 
-        throw new AppError('Empty input')
-    }
-    if(!hasOnlyKeysOfB(updatedTaskProps, models.Task)){
-        throw new AppError('Invalid fields forbidden')
-    }
+	const updatedTaskProps = req.body.updatedTaskProps
+	if (!updateProject || !projectId || !taskId) {
+		throw new AppError('Empty input')
+	}
+	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) {
+		throw new AppError('Invalid fields forbidden')
+	}
 
-    try {
+	try {
 
-        if ( req.memberPermissions?.includes('editTasks')){
-    
-            const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
-            return res.status(200).json({ updatedTask: result })
-        }
-        else{
-            throw new AppError('No permission to edit task')
-        }
+		if (req.memberPermissions?.includes('editTasks')) {
+
+			const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
+			return res.status(200).json({ updatedTask: result })
+		}
+		else {
+			throw new AppError('No permission to edit task')
+		}
 
 
-}
-catch(error) { 
-    next (error)
-}
+	}
+	catch (error) {
+		next(error)
+	}
 
-    
 }
 
 
@@ -507,9 +506,9 @@ const projectController = {
 	getProjects,
 	getProjectDetails,
 	deleteProject,
-    createTask,
-    deleteTask,
-    updateTask,
+	createTask,
+	deleteTask,
+	updateTask,
 };
 
 export default projectController;
