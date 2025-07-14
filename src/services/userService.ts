@@ -295,7 +295,11 @@ async function getDailyReport(userId: number) {
 		}
 	});
 
-	if (!dailyReport) throw new AppError("No such report found!", 500);
+	if (!dailyReport) {
+
+		return null;
+
+	}
 
 	return dailyReport;
 
