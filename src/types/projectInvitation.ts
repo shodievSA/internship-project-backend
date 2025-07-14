@@ -9,10 +9,6 @@ export interface InviteType {
 		roleOffered: "manager" | "member" | undefined,
 		createdAt: Date,
     };
-
-    project: {
-        title: string | undefined,
-    }
 }
 
 export interface FrontInvite { 

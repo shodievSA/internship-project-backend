@@ -16,8 +16,8 @@ import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
 import Project from '@/models/project';
-import { transporter } from '@/config/email';
 import { createNotification } from './notificationService';
+import { GmailSenderFactory, GmailType } from '../services/gmaiService';
 
 class ProjectService {
 
@@ -27,11 +27,9 @@ class ProjectService {
 			
 		try {
 
-			if (!projectId) throw new AppError(`No such project with an id - ${projectId}`);
-			if (!userId) throw new AppError('User ID is required');
-
 			const projectMember = await models.ProjectMember.findOne({
 				where: { projectId, userId },
+				attributes: ['id', 'roleId', 'position'],
 				transaction,
 			});
 
@@ -50,11 +48,15 @@ class ProjectService {
 					projectId: projectId,
 					roleId: 1,
 				},
+				include: [{ model: models.User, as: 'user', attributes: ['email'] }],
 				attributes: ['userId'],
 				transaction,
 			});
 
 			if (!admin) throw new AppError(`No other admin to notify`);
+
+			const userRole: string = projectMember.roleId === 2 ? 'manager' : 'member';
+			const position: string = projectMember.position;
 
 			await projectMember.destroy({ transaction });
 
@@ -65,6 +67,13 @@ class ProjectService {
 			}, { transaction });
 
 			await transaction.commit();
+
+			GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
+				admin.user.email,
+				[project.title, userRole, position]
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 		} catch (error) {
 
@@ -205,6 +214,13 @@ class ProjectService {
 
 					await transaction.commit();
 
+					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
+						receiverEmail,
+						[fullProdInvite!.project.title, roleOffered, positionOffered]
+					).catch(err => {
+						console.error('Failed to send email', err);
+					});
+
 					return { 
                         invite:{
                             id : fullProdInvite?.id as number,
@@ -215,9 +231,6 @@ class ProjectService {
                             positionOffered : fullProdInvite?.positionOffered as string,
                             roleOffered : fullProdInvite?.roleOffered,
                             createdAt : fullProdInvite?.createdAt as Date,
-                        },
-                        project : { 
-                            title : fullProdInvite?.project.title
                         }
                     };
 
@@ -239,56 +252,12 @@ class ProjectService {
 
 	}
 
-	async sendEmail(
-		receiverEmail: string,
-		positionOffered: string,
-		roleOffered: 'manager' | 'member',
-		projectTitle: string
-	): Promise<void> {
-
-		await transporter.sendMail({
-						
-			to: receiverEmail,
-			from: process.env.EMAIL,
-			subject: '📬 Project invitation',
-			html: `
-				<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; color: #333;">
-				<h1 style="color: #007BFF;">You've been invited to a project!</h1>
-
-				<h2 style="color: #333; font-size: 22px; margin-top: 20px;">
-					${projectTitle}
-				</h2>
-
-				<p style="font-size: 16px;">
-					<strong>Role:</strong> ${roleOffered}<br>
-					<strong>Position:</strong> ${positionOffered}
-				</p>
-
-				<a href="${process.env.FRONTEND_URL}/projects" style="
-					display: inline-block;
-					margin-top: 20px;
-					padding: 10px 20px;
-					background-color: #007BFF;
-					color: white;
-					text-decoration: none;
-					border-radius: 5px;
-					font-weight: bold;
-				">
-					Accept Invitation
-				</a>
-
-				</div>
-			`
-			
-		});
-
-	}
-
 	async invitationStatus(inviteStatus: 'accepted' | 'rejected', inviteId: number): Promise<object> {
 		
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
+
 			const [count] = await models.Invite.update(
 
 				{ status: inviteStatus },
@@ -304,15 +273,22 @@ class ProjectService {
 				throw new AppError('Project invitation not found');
 			}
 
-			const invite = await models.Invite.findByPk(inviteId, { transaction });
+			const invite = await models.Invite.findByPk(inviteId, { include: { model: models.User, as: 'inviter', attributes: ['email']}, transaction });
 
 			if (!invite) {
 
 				throw new AppError('Project invitation not found after update');
 
-			}
+			}			
 
 			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
+
+			const [ user, project ] = await Promise.all(
+				[
+					models.User.findByPk(invitedUserId, { transaction }),
+					models.Project.findByPk(projectId, { attributes: ['title'], transaction })
+				]
+			);
 
 			const roleId = roleOffered === 'manager' ? 2 : 3;
 
@@ -332,7 +308,22 @@ class ProjectService {
 
 				);
 
+				await models.Notification.create({
+
+					title: 'Project invitation accepted',
+					message: `${user!.fullName} has joined the project!`,
+					userId: invite.invitedBy
+
+				}, { transaction });
+
 				await transaction.commit();
+
+				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_ACCEPT).sendGmail(
+					invite.inviter.email,
+					[project!.title, roleOffered, positionOffered, projectId]
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
 				return {
 
@@ -346,6 +337,13 @@ class ProjectService {
 
 				await transaction.commit();
 
+				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
+					invite.inviter.email,
+					[project!.title, roleOffered, positionOffered, projectId]
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
+
 				return {
 
 					invitation: invite.toJSON(),
@@ -357,7 +355,7 @@ class ProjectService {
 
 		} catch (error) {
 
-			await transaction.rollback();
+			if (!(transaction as any).finished) await transaction.rollback();
 			throw error;
 
 		}
@@ -365,6 +363,7 @@ class ProjectService {
 	}
 
 	async changeTaskStatus(
+		projectId: number,
 		taskId: number,
 		updatedTaskStatus: 'under review' | 'rejected' | 'closed',
 		comment: string,
@@ -409,13 +408,15 @@ class ProjectService {
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
-						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+						attributes: ['roleId', 'position'],
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl'] }]
+						attributes: ['roleId', 'position'],
+						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 					{
 						model: models.TaskHistory,
@@ -463,19 +464,41 @@ class ProjectService {
 
 			};
 
-			let message: string;
+			let message, email, emailTitle, role, position, tasksType: string;
+			let notificationReceiverId: number;
 
 			switch (updatedTaskStatus) {
-				case 'under review':
+				case 'under review': 
 					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
+					email = task.assignedByMember.user.email;
+					emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
+					notificationReceiverId = task.assignedByMember.user.id;
+					role =
+						task.assignedToMember.roleId === 2 ? 'manager' :
+						task.assignedToMember.roleId === 3 ? 'member' :
+						'admin';
+					position = task.assignedToMember.position;
+					tasksType = 'review-tasks';
 					break;
 				
 				case 'rejected':
 					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					email = task.assignedToMember.user.email;
+					emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
+					notificationReceiverId = task.assignedToMember.user.id;
+					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+					position = task.assignedByMember.position;
+					tasksType = 'my-tasks';
 					break;
 
 				case 'closed':
 					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+					email = task.assignedToMember.user.email;
+					emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
+					notificationReceiverId = task.assignedToMember.user.id;
+					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+					position = task.assignedByMember.position;
+					tasksType = 'my-tasks';
 					break;
 			
 				default:
@@ -485,9 +508,9 @@ class ProjectService {
 
 			await models.Notification.create({ 
 
-				title: 'Task submitted for review',
+				title: emailTitle,
 				message: message,
-				userId: task.assignedByMember.user.id
+				userId: notificationReceiverId
 
 			}, { transaction });
 
@@ -499,7 +522,14 @@ class ProjectService {
 
 			}, { transaction });
 
-			await transaction.commit();
+			await transaction.commit();	
+
+			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
+				email,
+				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 			return updatedTask;
 			
@@ -780,9 +810,19 @@ class ProjectService {
 
 	}
 
-	async createTask(task: Task, userId: number,): Promise<object> {
+	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
 
     	const transaction = await sequelize.transaction();
+
+		const deadline: Date = new Date(task.deadline);
+
+		if (Number.isNaN(deadline.getTime())) {
+			throw new AppError('Invalid deadline format', 400);
+		}
+
+		if (deadline.getTime() < Date.now()) {
+			throw new AppError('Deadline cannot be in the past', 400);
+		}
 
 		try {
 
@@ -801,7 +841,7 @@ class ProjectService {
                 include: [{
                     model: models.User,
                     as: 'user'
-                }],
+				}],
                 transaction
             })
 
@@ -813,6 +853,9 @@ class ProjectService {
 				{ transaction },
 			);
 
+			const project = await models.Project.findByPk(task.projectId, {
+				attributes: ['title']
+			});
 			const history = await models.TaskHistory.create(
 				{
 					taskId: newTask.id,
@@ -829,9 +872,16 @@ class ProjectService {
                 task.title,
                 transaction,
                 'newTask'
-            )
+            );
 
 			await transaction.commit();
+
+			GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
+				assignedTo.user.email,
+				[project!.title, newTask.title, projectId]
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 			const formattedNewTask = {
 				deadline: newTask.deadline,
@@ -893,15 +943,34 @@ class ProjectService {
 		
 			if (count === 0) throw new Error("failed to update team member role");
 
+			const project = await models.Project.findByPk(projectId, {
+				attributes: ['title']
+			});
+
 			try {
 
 				const member = await models.ProjectMember.findByPk(memberId, {
 					attributes: ["roleId", "position"],
-					include: [{
-						model: models.User,
-						as: "user",
-						attributes: ["fullName", "email", "avatarUrl"]
-					}]
+					include: [
+						{
+							model: models.User,
+							as: "user",
+							attributes: ["id", "fullName", "email", "avatarUrl"]
+						}
+					]
+				});
+
+				await models.Notification.create({
+					title: 'Team member role updated',
+					message: `Your role in the project has been updated to ${newRole}.`,
+					userId: member!.user.id,
+				});
+
+				GmailSenderFactory.sendGmail(GmailType.PROMOTE_DEMOTE_MEMBER).sendGmail(
+					member!.user.email,
+					[project!.title as string, newRole, projectId]
+				).catch(err => {
+					console.error('Failed to send email', err);
 				});
 
 				const projectMember = {
@@ -953,7 +1022,7 @@ class ProjectService {
 				where: { id: memberId },
 				include: [{
 					model: models.User,
-					attributes: ["id"],
+					attributes: ["id", "email"],
 					as: "user"
 				}],
 				transaction
@@ -961,6 +1030,8 @@ class ProjectService {
 
 			if (!userToRemove) throw new Error("User not found");
 			if (!project) throw new AppError(`Project with id - ${projectId} does not exist`);
+
+			const projectTitle: string = project.title;
 			
 			await models.ProjectMember.destroy({
 				where: { id: memberId, projectId: projectId },
@@ -974,6 +1045,13 @@ class ProjectService {
 			}, { transaction });
 
 			await transaction.commit();
+
+			GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
+				userToRemove.user.email,
+				[projectTitle]
+			).catch(err => {
+				console.error('Failed to send email', err);
+			});
 
 		} catch (error) {
 
@@ -1032,6 +1110,11 @@ class ProjectService {
                     projectId: projectId,
                 },
                 include: [
+					{
+						model: models.Project, 
+						as: 'project',
+						attributes: ['title']
+					},
                     {
                         model: models.ProjectMember,
                         as: 'assignedByMember',
@@ -1048,7 +1131,7 @@ class ProjectService {
                         include: [{ 
                             model: models.User, 
                             as: 'user',
-                            attributes: ['fullName', 'avatarUrl', 'id'] 
+                            attributes: ['fullName', 'avatarUrl', 'id', 'email'] 
                         }],
                         attributes: ['id']
                     },
@@ -1128,7 +1211,15 @@ class ProjectService {
                     task.title,
                     transaction,
                     'reassignTask'
-                )
+                );
+
+				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title, projectId],
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
+
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
 
@@ -1139,7 +1230,15 @@ class ProjectService {
                     transaction,
                     'newTask'
                 )
-            }else { 
+
+				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title, projectId]
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
+
+            } else { 
                 await createNotification(
                     task.assignedToMember.user.id,
                     projectId,
@@ -1147,6 +1246,13 @@ class ProjectService {
                     transaction,
                     'updatedTask',
                 )
+
+				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
+					task.assignedToMember.user.email,
+					[task.project.title, task.title, projectId]
+				).catch(err => {
+					console.error('Failed to send email', err);
+				});
 
             }
 

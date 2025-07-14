@@ -10,7 +10,7 @@ function isAuthenticated(
 		return next();
 	}
 
-	res.status(401).json({ message: 'Unauthorized. Please log in.' });
+	res.redirect(`${process.env.FRONTEND_URL}/sign-in`);
 
 };
 
