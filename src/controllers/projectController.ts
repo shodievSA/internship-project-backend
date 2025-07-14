@@ -506,10 +506,38 @@ async function updateTask(
 }
 catch(error) { 
     next (error)
-}
+}}
 
+
+async function getMemberProductivity(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+
+    const projectId = parseInt(req.params.projectId)
+    const memberId = parseInt(req.params.memberId)
+
+    if (!projectId || !memberId) { 
+        throw new AppError('Empty input')
+    }
+
+    try {
+
+        if ( req.memberPermissions?.includes('viewMemberProductivity')){
     
+            const result = await projectService.getMemberProductivity(projectId, memberId);
+            return res.status(200).json({productivityData : result})
+        }
+        else{
+            throw new AppError('No permission to edit task')
+        }
+
+
 }
+catch(error) { 
+    next (error)
+}}
 
 
 const projectController = {
@@ -527,6 +555,7 @@ const projectController = {
     createTask,
     deleteTask,
     updateTask,
+    getMemberProductivity,
 };
 
 export default projectController;
