@@ -17,22 +17,27 @@ async function leaveProject(
 		const projectId: number = parseInt(req.params.projectId);
 		const userId: number = req.user.id;
 
-		if (req.memberPermissions?.includes('leaveProject')) {
+		if (!req.memberPermissions?.includes("leaveProject")) {
 
-			try {
+			throw new AppError("As admin, you can't leave your own project", 403);
 
-				await projectService.leaveProject(projectId, userId);
-				res.status(200).json({ message: 'User left project' });
+		}
 
-			} catch (error) {
+		try {
 
-				return next(error);
+			await projectService.leaveProject(projectId, userId);
 
-			}
+			res.sendStatus(204);
 
-		} else {
+		} catch (err) {
 
-			res.sendStatus(403);
+			console.log(
+				"The following error occurred in leaveProject function: " + (err as Error).message
+			);
+
+			throw new AppError(
+				"Unexpected error occurred on our side while trying to make you leave the project. Please, try again later."
+			);
 
 		}
 
@@ -55,12 +60,23 @@ async function createProject(
 		userPosition: string;
 	};
 
+
 	try {
 
-		const userId: number = req.user.id;
-		const project = await projectService.createProject(userId, title, userPosition);
+		try {
+			const userId: number = req.user.id;
+			const project = await projectService.createProject(userId, title, userPosition);
 
-		res.status(201).json({ project });
+			res.status(201).json({ project });
+		} catch (err) {
+			console.error(
+				"Error occurred in createProject function: " + (err as AppError).message
+			);
+
+			throw new AppError(
+				`Unexpected error occurred ${err} . Please, try again later.`
+			);
+		}
 
 	} catch (error) {
 
@@ -242,9 +258,9 @@ async function changeTeamMemberRole(
 			return;
 		}
 
-		const updatedTeamMemberRole = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
+		const updatedTeamMember = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
 
-		res.status(200).json({ message: 'Team member role updated successfully', updatedTeamMemberRole });
+		res.status(200).json({ updatedTeamMember });
 
 	} catch (error) {
 
@@ -323,7 +339,8 @@ async function removeTeamMember(
 		try {
 
 			await projectService.removeTeamMember(projectId, memberId, userId);
-			res.status(200).json({ message: 'User removed from the project successfully' });
+
+			res.sendStatus(204);
 
 		} catch (error) {
 
