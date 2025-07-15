@@ -29,7 +29,7 @@ export async function saveAndBroadcastComment({ message, memberId, taskId }: New
         comment: {
             id: comment.id,
             message: comment.message,
-            memberId: comment.projectMemberId,
+            projectMemberId: comment.projectMemberId,
             taskId: comment.taskId,
             createdAt: comment.createdAt,
         },
