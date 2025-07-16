@@ -8,8 +8,23 @@ interface NewComment {
     taskId: number;
 }
 
-export async function saveAndBroadcastComment({ message, memberId, taskId }: NewComment) {
-    // Save the comment in the database
+interface UpdatedComment {
+	commentId: number;
+	updatedComment: string;
+	taskId: number;
+}
+
+interface commentToDelete {
+	commentId: number;
+	taskId: number;
+}
+
+export async function saveAndBroadcastComment({ 
+	message, 
+	memberId, 
+	taskId 
+}: NewComment) {
+
     const comment = await models.Comment.create({
         message,
         projectMemberId: memberId,
@@ -18,6 +33,7 @@ export async function saveAndBroadcastComment({ message, memberId, taskId }: New
 
     // Fetch the task to get assignee and assigner
     const task = await models.Task.findByPk(taskId);
+
     if (!task) throw new Error('Task not found');
 
     // Only broadcast to assigner and assignee
@@ -35,44 +51,120 @@ export async function saveAndBroadcastComment({ message, memberId, taskId }: New
         },
     });
 
-    // Broadcast to all connections in the room for this task
-    const connections = taskConnectionsMap.get(taskId) as Set<WSWebSocket> | undefined;
-    if (connections) {
-        for (const ws of connections) {
-            // Optionally, you could check if the ws belongs to allowedMemberIds
-            ws.send(payload);
-        }
-    }
+    broadcastComment(taskId, payload);
 
     return comment;
+
+}
+
+export async function updateAndBroadcastComment({
+	commentId,
+	updatedComment,
+	taskId
+} : UpdatedComment) {
+
+	const comment = await commentService.update(taskId, commentId, updatedComment);
+
+	if (!comment) throw new Error("Failed to update comment");
+
+	const payload = JSON.stringify({
+		type: 'updated-comment',
+		updatedComment: {
+			id: comment.id,
+			message: comment.message,
+			projectMemberId: comment.projectMemberId,
+			taskId: comment.taskId,
+			createdAt: comment.createdAt
+		}
+	});
+
+	broadcastComment(taskId, payload);
+
+	return comment;
+
+};
+
+export async function deleteAndBroadcastComment({
+	commentId,
+	taskId
+} : commentToDelete) {
+
+	const isDeleted = await commentService.remove(taskId, commentId);
+
+	if (isDeleted) {
+
+		const payload = JSON.stringify({
+			type: "deleted-comment",
+			deletedCommentId: commentId
+		});
+
+		broadcastComment(taskId, payload);
+
+	}
+
+}
+ 
+function broadcastComment(taskId: number, payload: string) {
+
+	const connections = taskConnectionsMap.get(taskId) as Set<WSWebSocket> | undefined;
+
+    if (connections) {
+
+        for (const ws of connections) {
+            
+            ws.send(payload);
+        }
+
+    }
+
 }
 
 // REST API service functions
 export const commentService = {
+
     async getAll(taskId: number) {
+
         return models.Comment.findAll({
             where: { taskId },
             order: [['createdAt', 'ASC']],
         });
+
     },
+
     async create(taskId: number, message: string, memberId: number) {
+
         return models.Comment.create({
             message,
             projectMemberId: memberId,
             taskId,
         });
+
     },
+
     async update(taskId: number, commentId: number, message: string) {
+
         const comment = await models.Comment.findOne({ where: { id: commentId, taskId } });
+
         if (!comment) return null;
+
         comment.message = message;
+
         await comment.save();
+
         return comment;
+
     },
+
     async remove(taskId: number, commentId: number) {
+
         const comment = await models.Comment.findOne({ where: { id: commentId, taskId } });
+
         if (!comment) return false;
+
         await comment.destroy();
+
         return true;
+
     },
+
 };

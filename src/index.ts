@@ -36,14 +36,20 @@ const wss = new WebSocketServer({ noServer: true });
 wss.on('connection', handleCommentWSConnection);
 
 server.on('upgrade', (request, socket, head) => {
+	
 	// Only handle websocket upgrades for /comments
 	if (request.url && request.url.startsWith('/comments')) {
+
 		wss.handleUpgrade(request, socket, head, (ws) => {
 			wss.emit('connection', ws, request);
 		});
+
 	} else {
+
 		socket.destroy();
+
 	}
+
 });
 
 async function main() {
