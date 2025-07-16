@@ -31,12 +31,14 @@ export interface ProjectTask {
     assignedBy: {
         name: string,
         avatarUrl: string | null,
-		id: number
+		id: number,
+		position: string
     };
     assignedTo: {
         name: string,
         avatarUrl: string | null,
-		id: number
+		id: number,
+		position: string
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];

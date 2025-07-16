@@ -703,22 +703,22 @@ class ProjectService {
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
+						attributes: ['id', 'position'],
 						include: [{ 
 							model: models.User, 
                             as: 'user',
 							attributes: ['fullName', 'avatarUrl'] 
 						}],
-						attributes: ['id']
 					},
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
+						attributes: ['id', 'position'],
 						include: [{ 
 							model: models.User, 
                             as: 'user',
 							attributes: ['fullName', 'avatarUrl'] 
 						}],
-						attributes: ['id']
 					},
                     {
                         model: models.TaskHistory,
@@ -734,6 +734,8 @@ class ProjectService {
 
 			for (const task of projectTasks) {
 
+				console.log(task.assignedByMember.position)
+
                 tasks.push({
                     id: task.id as number,
                     title: task.title,
@@ -743,12 +745,14 @@ class ProjectService {
                     assignedBy: {
                         name: task.assignedByMember.user.fullName as string,
                         avatarUrl: task.assignedByMember.user.avatarUrl,
-						id: task.assignedByMember.id
+						id: task.assignedByMember.id,
+						position: task.assignedByMember.position
                     },
                     assignedTo: {
                         name: task.assignedToMember.user.fullName as string,
                         avatarUrl: task.assignedToMember.user.avatarUrl,
-						id: task.assignedToMember.id
+						id: task.assignedToMember.id,
+						position: task.assignedToMember.position
                     },
                     status: task.status,
                     history : task.history,
@@ -828,7 +832,7 @@ class ProjectService {
 
             const assignedBy = await models.ProjectMember.findOne({
                 where: { userId: userId },
-                attributes: ['id'],
+                attributes: ['id', 'position'],
                 include: [{
                     model: models.User,
                     as: 'user'
@@ -838,6 +842,7 @@ class ProjectService {
 
             const assignedTo = await models.ProjectMember.findOne({
                 where: { id: task.assignedTo },
+				attributes: ['position'],
                 include: [{
                     model: models.User,
                     as: 'user'
@@ -894,12 +899,14 @@ class ProjectService {
 				assignedBy: {
 					id: assignedBy?.id,
 					name: assignedBy?.user.fullName,
-					avatarUrl: assignedBy?.user.avatarUrl
+					avatarUrl: assignedBy?.user.avatarUrl,
+					position: assignedBy.position
 				},
 				assignedTo: {
 					id: assignedTo?.id,
 					name: assignedTo?.user.fullName,
-					avatarUrl: assignedTo?.user.avatarUrl
+					avatarUrl: assignedTo?.user.avatarUrl,
+					position: assignedTo.position
 				},
 				history: newTaskHistory,
 			} as ProjectTask;
