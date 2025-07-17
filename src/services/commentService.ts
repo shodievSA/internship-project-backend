@@ -25,11 +25,7 @@ export async function saveAndBroadcastComment({
 	taskId 
 }: NewComment) {
 
-    const comment = await models.Comment.create({
-        message,
-        projectMemberId: memberId,
-        taskId,
-    });
+    const comment = await commentService.create(taskId, message, memberId);
 
     // Fetch the task to get assignee and assigner
     const task = await models.Task.findByPk(taskId);
