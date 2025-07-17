@@ -1,3 +1,4 @@
+import { AppError } from '@/types';
 import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
@@ -21,7 +22,25 @@ const enhanceTextFunction = {
     required: ['enhancedText'],
   },
 };
-const sysPrompt = `You are a professional technical writer and task clarity expert.
+
+const createTitleFunction = {
+  name: 'generate_task_title',
+  description:
+    'Generates a concise and meaningful title based on the provided task description.',
+  parameters: {
+    type: 'object',
+    properties: {
+      title: {
+        type: 'string',
+        description:
+          'The generated task title.',
+      },
+    },
+    required: ['title'],
+  },
+};
+
+const enhanceDescriptionPrompt = `You are a professional technical writer and task clarity expert.
 Your job is to rewrite the following text to make it:
 -Easy to understand for anyone, even WITHOUT a technical background
 -Clear, concise, and well-structured
@@ -32,6 +51,19 @@ Preserve all original intent and instructions, but express them in a more access
 Return only the improved version. Do not include explanations.
 **Do not add any markdown into your response such as asterisk!. Return plain text only!**`;
 
+const createTitlePrompt = `You are a professional technical writer and task clarity expert.
+Your job is to read a task description and generate a short, clear, and specific title for it.
+The title should accurately reflect the main goal or action of the task, using simple and professional language.
+It should be concise (ideally under 10 words) and meaningful to both technical and non-technical team members.
+Follow these guidelines:
+-Focus on the core objective or deliverable of the task
+-Avoid vague words like “stuff,” “things,” or “update” unless contextually necessary
+-Use verbs when appropriate (e.g., “Fix login bug” or “Design homepage layout”)
+-Do not copy long phrases directly from the description
+-Ensure the title stands alone without needing extra explanation
+Return only the title. Do not include explanations.
+**Do not add any markdown into your response such as asterisk!. Return plain text only!**`;
+
 class aiService {
   public async Enhance(text: string) {
     if (text.length < 100) {
@@ -40,7 +72,7 @@ class aiService {
     const result = await openai.chat.completions.create({
       model: 'anthropic/claude-sonnet-4',
       messages: [
-        { role: 'system', content: sysPrompt },
+        { role: 'system', content: enhanceDescriptionPrompt },
         { role: 'user', content: text },
       ],
       temperature: 0.7,
@@ -55,13 +87,54 @@ class aiService {
         function: { name: 'enhanceText' },
       },
     });
-    const parsed = JSON.parse(
-      //@ts-ignore
-      result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments
-    );
-    console.log(parsed);
-    //@ts-ignore
+    const args = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) {
+
+        throw new AppError('AI tool did not return expected result');
+    }
+
+    const parsed = JSON.parse(args);
+
     return parsed.enhancedText;
+  }
+
+  public async CreateTitle (description: string) {
+
+    if (description.length < 20) {
+
+      throw new Error('Not enough content provided');
+
+    }
+
+    const result = await openai.chat.completions.create({
+      model: 'anthropic/claude-sonnet-4',
+      messages: [
+        { role: 'system', content: createTitlePrompt },
+        { role: 'user', content: description },
+      ],
+      temperature: 0.7,
+      tools: [
+        {
+          type: 'function',
+          function: createTitleFunction,
+        },
+      ],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'generate_task_title' },
+      },
+    });
+
+    const args = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) {
+
+        throw new AppError('AI tool did not return expected result');
+
+    }
+
+    const parsed = JSON.parse(args);
+
+    return parsed.title;
   }
 }
 

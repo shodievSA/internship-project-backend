@@ -243,11 +243,16 @@ async function changeTeamMemberRole(
 		const projectId: number = parseInt(req.params.projectId);
 		const memberId: number = parseInt(req.params.memberId);
 		const newRole = req.body.newRole;
+        
+        if (!req.memberPermissions?.includes('promoteMembers') || !req.memberPermissions?.includes("demoteMembers")) {
 
-		if (!projectId || !memberId) {
-			res.status(400).json({ error: 'Project ID and Member ID are required' });
-			return;
-		}
+            throw new AppError(`No permission to assign member <${newRole}> role`);
+        }
+
+        if (!projectId || !memberId) {
+            res.status(400).json({ error: 'Project ID and Member ID are required' });
+            return;
+        }
 
 		if (!newRole) {
 			res.status(400).json({ error: 'New role does not exist' });
@@ -257,6 +262,7 @@ async function changeTeamMemberRole(
 		const updatedTeamMember = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
 
 		res.status(200).json({ updatedTeamMember });
+
 
 	} catch (error) {
 
@@ -319,9 +325,9 @@ async function removeTeamMember(
 	const memberId: number = parseInt(req.params.memberId);
 	const userId: number = req.user.id;
 
-	if (!req.memberPermissions?.includes('kickOutTeamMembers')) {
+	if (!req.memberPermissions?.includes('kickOutTeamMembers')) { // issue
 
-		res.sendStatus(403);
+		throw new AppError("You do not have rights to remove team member")
 
 	} else {
 
