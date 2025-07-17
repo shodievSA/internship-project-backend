@@ -1,20 +1,20 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction} from 'sequelize';
-import { 
-	FormattedProject, 
-	ProjectDetails, 
-	InviteType, 
-	ProjectTask, 
-	ProjectInvite, 
-	AppError, 
+import { Transaction } from 'sequelize';
+import {
+	FormattedProject,
+	ProjectDetails,
+	InviteType,
+	ProjectTask,
+	ProjectInvite,
+	AppError,
 	TeamMember
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task, { TaskAttributes } from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
-import { MemberProductivity } from '@/types'; 
+import { MemberProductivity } from '@/types';
 import Project from '@/models/project';
 import { createNotification } from './notificationService';
 import { GmailSenderFactory, GmailType } from '../services/gmaiService';
@@ -23,8 +23,8 @@ class ProjectService {
 
 	async leaveProject(projectId: number, userId: number): Promise<void> {
 
-		const transaction: Transaction = await sequelize.transaction(); 
-			
+		const transaction: Transaction = await sequelize.transaction();
+
 		try {
 
 			const projectMember = await models.ProjectMember.findOne({
@@ -78,18 +78,18 @@ class ProjectService {
 		} catch (error) {
 
 			await transaction.rollback();
-            throw error;
+			throw error;
 
 		}
 
 	}
 
 	async createProject(userId: number, title: string, position: string): Promise<object> {
-            
-        if ( !title || !position ) { 
-            
-            throw new AppError("Title and Position fields can not be empty")
-        }
+
+		if (!title || !position) {
+
+			throw new AppError("Title and Position fields can not be empty")
+		}
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -97,10 +97,10 @@ class ProjectService {
 
 			const project = await models.Project.create({ title }, { transaction });
 
-            if (!project) { 
-                throw new AppError('Failed creating project')
-            }
-		
+			if (!project) {
+				throw new AppError('Failed creating project')
+			}
+
 			await models.ProjectMember.create(
 				{
 					userId: userId,
@@ -110,15 +110,15 @@ class ProjectService {
 				},
 				{ transaction }
 			);
-		
+
 			await transaction.commit();
 
 			return project;
 
 		} catch (error) {
 
-            await transaction.rollback();
-            throw error;
+			await transaction.rollback();
+			throw error;
 
 		}
 
@@ -135,7 +135,7 @@ class ProjectService {
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
-			
+
 			const userExists = await models.User.findOne({
 				where: { email: receiverEmail }
 			});
@@ -168,11 +168,11 @@ class ProjectService {
 			}
 
 			async function createInvite(userId: number, invitedBy: number): Promise<InviteType> {
-				
+
 				try {
 
-					const [_, isCreated] = await models.Invite.findOrCreate({ 
-						where: { 
+					const [_, isCreated] = await models.Invite.findOrCreate({
+						where: {
 							invitedUserId: userId,
 							projectId: projectId,
 							status: "pending"
@@ -187,27 +187,27 @@ class ProjectService {
 						transaction
 					});
 
-                    if (!isCreated) { 
-                        throw new AppError('The invite has already been send')
-                    }
+					if (!isCreated) {
+						throw new AppError('The invite has already been send')
+					}
 
 					const fullProdInvite = await models.Invite.findOne({
-						where: { 
-                            projectId: projectId,
-                            invitedUserId : userId,
+						where: {
+							projectId: projectId,
+							invitedUserId: userId,
 							status: "pending"
-                         },
+						},
 						include: [
 							{
 								model: models.Project,
 								as: 'project',
-                                attributes: ['title'],
-							}, 
+								attributes: ['title'],
+							},
 
-                            {
-                                model : models.User,
-                                as : 'user'
-                            }
+							{
+								model: models.User,
+								as: 'user'
+							}
 						],
 						transaction
 					});
@@ -221,39 +221,39 @@ class ProjectService {
 						console.error('Failed to send email', err);
 					});
 
-					return { 
-                        invite:{
-                            id : fullProdInvite?.id as number,
-                            status : fullProdInvite?.status,
-                            receiverName : fullProdInvite?.user.fullName,
-                            receiverEmail: fullProdInvite?.user.email as string,
-                            receiverAvatarUrl : fullProdInvite?.user.avatarUrl,
-                            positionOffered : fullProdInvite?.positionOffered as string,
-                            roleOffered : fullProdInvite?.roleOffered,
-                            createdAt : fullProdInvite?.createdAt as Date,
-                        }
-                    };
+					return {
+						invite: {
+							id: fullProdInvite?.id as number,
+							status: fullProdInvite?.status,
+							receiverName: fullProdInvite?.user.fullName,
+							receiverEmail: fullProdInvite?.user.email as string,
+							receiverAvatarUrl: fullProdInvite?.user.avatarUrl,
+							positionOffered: fullProdInvite?.positionOffered as string,
+							roleOffered: fullProdInvite?.roleOffered,
+							createdAt: fullProdInvite?.createdAt as Date,
+						}
+					};
 
 				} catch (error) {
 
-                    await transaction.rollback();
-                    throw error;
-					
+					await transaction.rollback();
+					throw error;
+
 				}
 
 			}
 
 		} catch (error) {
 
-            await transaction.rollback();
-            throw error;
+			await transaction.rollback();
+			throw error;
 
 		}
 
 	}
 
 	async invitationStatus(inviteStatus: 'accepted' | 'rejected', inviteId: number): Promise<object> {
-		
+
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
@@ -266,24 +266,24 @@ class ProjectService {
 					where: { id: inviteId },
 					transaction,
 				}
-				
+
 			);
 
 			if (count === 0) {
 				throw new AppError('Project invitation not found');
 			}
 
-			const invite = await models.Invite.findByPk(inviteId, { include: { model: models.User, as: 'inviter', attributes: ['email']}, transaction });
+			const invite = await models.Invite.findByPk(inviteId, { include: { model: models.User, as: 'inviter', attributes: ['email'] }, transaction });
 
 			if (!invite) {
 
 				throw new AppError('Project invitation not found after update');
 
-			}			
+			}
 
 			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
 
-			const [ user, project ] = await Promise.all(
+			const [user, project] = await Promise.all(
 				[
 					models.User.findByPk(invitedUserId, { transaction }),
 					models.Project.findByPk(projectId, { attributes: ['title'], transaction })
@@ -365,7 +365,7 @@ class ProjectService {
 	async changeTaskStatus(
 		projectId: number,
 		taskId: number,
-		updatedTaskStatus: 'under review' | 'rejected' | 'closed',
+		updatedTaskStatus: 'under review' | 'rejected' | 'closed' | 'ongoing',
 		comment: string,
 		fullname: string,
 	): Promise<object> {
@@ -373,45 +373,36 @@ class ProjectService {
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
+			console.log('[changeTaskStatus] Called with:', { projectId, taskId, updatedTaskStatus, comment, fullname });
 
 			const [affectedRows] = await models.Task.update(
-
 				{ status: updatedTaskStatus },
-
 				{
-
 					where: { id: taskId },
 					transaction,
-
 				}
-
 			);
+			console.log('[changeTaskStatus] Task.update affectedRows:', affectedRows);
 
 			if (affectedRows === 0) {
-
+				console.error('[changeTaskStatus] No task found to update');
 				throw new AppError("Task not found");
-				
 			}
 
 			const task = await models.Task.findOne({
-
 				where: { id: taskId },
-
 				include: [
-					
 					{
 						model: models.Project,
 						as: 'project',
 						attributes: ['title']
 					},
-
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
 						attributes: ['roleId', 'position'],
 						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
-
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
@@ -421,28 +412,19 @@ class ProjectService {
 					{
 						model: models.TaskHistory,
 						as: 'history',
-						attributes: {
-
-							exclude: ['task_id']
-							
-						}
+						attributes: { exclude: ['task_id'] }
 					}
-
 				],
-
 				transaction
-
 			}) as Task & {
-
 				assignedByMember: ProjectMember & { user: User };
 				assignedToMember: ProjectMember & { user: User };
 				project: Project;
 				history: TaskHistory[];
-
 			};
+			console.log('[changeTaskStatus] Fetched task:', task ? task.id : null);
 
 			const updatedTask = {
-
 				id: task.id,
 				title: task.title,
 				description: task.description,
@@ -461,26 +443,26 @@ class ProjectService {
 				},
 				status: task.status,
 				history: task.history
-
 			};
+			console.log('[changeTaskStatus] updatedTask object:', updatedTask);
 
 			let message, email, emailTitle, role, position, tasksType: string;
 			let notificationReceiverId: number;
 
 			switch (updatedTaskStatus) {
-				case 'under review': 
+				case 'under review':
 					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
 					email = task.assignedByMember.user.email;
 					emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
 					notificationReceiverId = task.assignedByMember.user.id;
 					role =
 						task.assignedToMember.roleId === 2 ? 'manager' :
-						task.assignedToMember.roleId === 3 ? 'member' :
-						'admin';
+							task.assignedToMember.roleId === 3 ? 'member' :
+								'admin';
 					position = task.assignedToMember.position;
 					tasksType = 'review-tasks';
 					break;
-				
+
 				case 'rejected':
 					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
 					email = task.assignedToMember.user.email;
@@ -500,29 +482,44 @@ class ProjectService {
 					position = task.assignedByMember.position;
 					tasksType = 'my-tasks';
 					break;
-			
+
+				case 'ongoing':
+					message = `${fullname} has moved the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" back to ongoing.`;
+					email = task.assignedToMember.user.email;
+					emailTitle = `${task.assignedByMember.user.fullName} has moved your task back to ongoing!`;
+					notificationReceiverId = task.assignedToMember.user.id;
+					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin';
+					position = task.assignedByMember.position;
+					tasksType = 'my-tasks';
+					break;
+
 				default:
 					const _exhaustiveCheck: never = updatedTaskStatus;
+					console.error('[changeTaskStatus] Unhandled status:', updatedTaskStatus);
 					throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
 			}
 
-			await models.Notification.create({ 
+			if (emailTitle && emailTitle.length > 50) {
+				emailTitle = emailTitle.slice(0, 50);
+			}
 
+			console.log('[changeTaskStatus] Notification data:', { title: emailTitle, message, userId: notificationReceiverId });
+			await models.Notification.create({
 				title: emailTitle,
 				message: message,
 				userId: notificationReceiverId
-
 			}, { transaction });
+			console.log('[changeTaskStatus] Notification created');
 
-			await models.TaskHistory.create({ 
-
+			await models.TaskHistory.create({
 				taskId: taskId,
 				status: updatedTaskStatus,
 				comment,
-
 			}, { transaction });
+			console.log('[changeTaskStatus] TaskHistory created');
 
-			await transaction.commit();	
+			await transaction.commit();
+			console.log('[changeTaskStatus] Transaction committed');
 
 			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
 				email,
@@ -532,9 +529,9 @@ class ProjectService {
 			});
 
 			return updatedTask;
-			
-		} catch (error) {
 
+		} catch (error) {
+			console.error('[changeTaskStatus] Error:', error);
 			await transaction.rollback();
 			throw error;
 
@@ -545,11 +542,11 @@ class ProjectService {
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
 		const user = await models.User.findByPk(userId, {
-			include: [{ 
+			include: [{
 				model: models.Project,
 				as: 'projects'
 			}],
-			order: [[ 'createdAt', 'DESC' ]]
+			order: [['createdAt', 'DESC']]
 		});
 
 		if (!user) {
@@ -568,7 +565,7 @@ class ProjectService {
 				projects.map(async (project: Project) => {
 
 					const projectId = project.id;
-		
+
 					const [members, tasks, completedTasks, isAdmin] = await Promise.all([
 						models.ProjectMember.count({ where: { projectId } }),
 						models.Task.count({ where: { projectId } }),
@@ -585,7 +582,7 @@ class ProjectService {
 							raw: true,
 						}).then((member) => !!member),
 					]);
-	
+
 					return {
 						id: project.id,
 						title: project.title,
@@ -612,25 +609,25 @@ class ProjectService {
 	}>): Promise<object> {
 
 		try {
-		
+
 			const [count, affectedRows] = await models.Project.update(updatedFields, {
 
 				where: { id: projectId },
 				returning: true,
 
 			});
-		
+
 			if (count === 0 || affectedRows.length === 0) {
 
 				throw new AppError('Project not found');
-				
+
 			}
-		
+
 			return affectedRows[0].toJSON();
 
 		} catch (error) {
 
-            throw error;
+			throw error;
 
 		}
 
@@ -643,7 +640,7 @@ class ProjectService {
 			const deletedProjectCount = await models.Project.destroy({
 				where: { id: projectId }
 			});
-		
+
 			if (deletedProjectCount === 0) {
 				throw new AppError('Project not found');
 			}
@@ -656,7 +653,7 @@ class ProjectService {
 
 	}
 
-	async getProjectDetails(userId: number, projectId: number): Promise<ProjectDetails> { 
+	async getProjectDetails(userId: number, projectId: number): Promise<ProjectDetails> {
 
 		try {
 
@@ -670,9 +667,9 @@ class ProjectService {
 						as: 'projectMember',
 						attributes: ['id', 'userId', 'position', 'roleId'],
 					},
-                }]
+				}]
 			});
-            
+
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 
 			const metaData = {
@@ -681,7 +678,7 @@ class ProjectService {
 				status: project.status,
 				createdAt: project.createdAt
 			};
-	
+
 			const team = project.users.map((pm: User) => {
 
 				const projectMember = pm.projectMember;
@@ -690,80 +687,80 @@ class ProjectService {
 					id: projectMember.id as number,
 					name: pm.fullName,
 					email: pm.email,
-                    avatarUrl: pm.avatarUrl,
+					avatarUrl: pm.avatarUrl,
 					position: projectMember.position,
 					role: projectMember.role as string
 				}
 
 			});
-		
+
 			const projectTasks = await models.Task.findAll({
 				where: { projectId: projectId },
 				include: [
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+						include: [{
+							model: models.User,
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl']
 						}],
 						attributes: ['id']
 					},
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+						include: [{
+							model: models.User,
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl']
 						}],
 						attributes: ['id']
 					},
-                    {
-                        model: models.TaskHistory,
-                        as: 'history',
-                        separate: true,
-                        order: [['created_at', 'DESC']]
-                    }
+					{
+						model: models.TaskHistory,
+						as: 'history',
+						separate: true,
+						order: [['created_at', 'DESC']]
+					}
 				],
-                order: [['created_at', 'DESC']]
+				order: [['created_at', 'DESC']]
 			});
 
 			const tasks: ProjectTask[] = [];
 
 			for (const task of projectTasks) {
 
-                tasks.push({
-                    id: task.id as number,
-                    title: task.title,
-                    description: task.description as string,
-                    priority: task.priority,
-                    deadline: task.deadline,
-                    assignedBy: {
-                        name: task.assignedByMember.user.fullName as string,
-                        avatarUrl: task.assignedByMember.user.avatarUrl,
+				tasks.push({
+					id: task.id as number,
+					title: task.title,
+					description: task.description as string,
+					priority: task.priority,
+					deadline: task.deadline,
+					assignedBy: {
+						name: task.assignedByMember.user.fullName as string,
+						avatarUrl: task.assignedByMember.user.avatarUrl,
 						id: task.assignedByMember.id
-                    },
-                    assignedTo: {
-                        name: task.assignedToMember.user.fullName as string,
-                        avatarUrl: task.assignedToMember.user.avatarUrl,
+					},
+					assignedTo: {
+						name: task.assignedToMember.user.fullName as string,
+						avatarUrl: task.assignedToMember.user.avatarUrl,
 						id: task.assignedToMember.id
-                    },
-                    status: task.status,
-                    history : task.history,
-                    createdAt: task.createdAt
-                });
+					},
+					status: task.status,
+					history: task.history,
+					createdAt: task.createdAt
+				});
 
 			};
-		
+
 			const projectInvites = await models.Invite.findAll({
 				where: { projectId },
 				include: [{
 					model: models.User,
 					as: 'user'
 				}],
-                order: [['created_at', 'DESC']]
+				order: [['created_at', 'DESC']]
 			});
 
 			const invites: ProjectInvite[] = [];
@@ -784,15 +781,15 @@ class ProjectService {
 			}
 
 			const currentMember = await models.ProjectMember.findOne({
-                where: { 
-					userId: userId, 
-					projectId: projectId 
+				where: {
+					userId: userId,
+					projectId: projectId
 				},
-                attributes: ['id', 'roleId']
-            });
+				attributes: ['id', 'roleId']
+			});
 
-            if (!currentMember) throw new AppError(`Project member doesn't exist`);
-	
+			if (!currentMember) throw new AppError(`Project member doesn't exist`);
+
 			return {
 				metaData: metaData,
 				team: team,
@@ -802,9 +799,9 @@ class ProjectService {
 				currentMemberRole: currentMember.role
 			} as ProjectDetails;
 
-		} catch(err) {  
+		} catch (err) {
 
-            throw err;
+			throw err;
 
 		}
 
@@ -812,7 +809,7 @@ class ProjectService {
 
 	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
 
-    	const transaction = await sequelize.transaction();
+		const transaction = await sequelize.transaction();
 
 		const deadline: Date = new Date(task.deadline);
 
@@ -826,30 +823,30 @@ class ProjectService {
 
 		try {
 
-            const assignedBy = await models.ProjectMember.findOne({
-                where: { userId: userId },
-                attributes: ['id'],
-                include: [{
-                    model: models.User,
-                    as: 'user'
-                }],
-                transaction
-            });
-
-            const assignedTo = await models.ProjectMember.findOne({
-                where: { id: task.assignedTo },
-                include: [{
-                    model: models.User,
-                    as: 'user'
+			const assignedBy = await models.ProjectMember.findOne({
+				where: { userId: userId },
+				attributes: ['id'],
+				include: [{
+					model: models.User,
+					as: 'user'
 				}],
-                transaction
-            })
+				transaction
+			});
 
-            if (!assignedBy || !assignedTo) { 
-                throw new AppError('No such users in project')
-            }
+			const assignedTo = await models.ProjectMember.findOne({
+				where: { id: task.assignedTo },
+				include: [{
+					model: models.User,
+					as: 'user'
+				}],
+				transaction
+			})
 
-			const newTask = await models.Task.create(task, 
+			if (!assignedBy || !assignedTo) {
+				throw new AppError('No such users in project')
+			}
+
+			const newTask = await models.Task.create(task,
 				{ transaction },
 			);
 
@@ -860,19 +857,19 @@ class ProjectService {
 				{
 					taskId: newTask.id,
 					status: newTask.status,
-            	}, 
+				},
 				{ transaction }
 			);
 
 			let newTaskHistory = [history];
-            
-            await createNotification(
-                assignedTo.user.id,
-                task.projectId,
-                task.title,
-                transaction,
-                'newTask'
-            );
+
+			await createNotification(
+				assignedTo.user.id,
+				task.projectId,
+				task.title,
+				transaction,
+				'newTask'
+			);
 
 			await transaction.commit();
 
@@ -913,11 +910,11 @@ class ProjectService {
 
 		}
 
-  	}
+	}
 
 	async updateTeamMemberRole(
-		projectId: number, 
-		memberId: number, 
+		projectId: number,
+		memberId: number,
 		newRole: string
 	): Promise<TeamMember> {
 
@@ -925,22 +922,22 @@ class ProjectService {
 
 			if (!projectId) throw new AppError("project id is required");
 			if (!memberId) throw new AppError("member id is required");
-		
-			const role = await models.Role.findOne({ where: { name: newRole }});
+
+			const role = await models.Role.findOne({ where: { name: newRole } });
 
 			if (!role) throw new AppError("invalid role");
-		
+
 			const [count] = await models.ProjectMember.update(
-				{ roleId:  role.id },
-				{ 
-					where: { 
-						id: memberId, 
+				{ roleId: role.id },
+				{
+					where: {
+						id: memberId,
 						projectId: projectId
 					},
 					returning: true
 				}
 			);
-		
+
 			if (count === 0) throw new Error("failed to update team member role");
 
 			const project = await models.Project.findByPk(projectId, {
@@ -981,10 +978,10 @@ class ProjectService {
 					position: member?.position,
 					role: member?.role
 				} as TeamMember;
-				
+
 				return projectMember;
 
-			} catch(err) {
+			} catch (err) {
 
 				console.log(err);
 				throw new AppError("");
@@ -993,15 +990,15 @@ class ProjectService {
 
 		} catch (error) {
 
-            throw error;
+			throw error;
 
 		}
 
 	}
 
 	async removeTeamMember(
-		projectId: number, 
-		memberId: number, 
+		projectId: number,
+		memberId: number,
 		userId: number
 	): Promise<void> {
 
@@ -1032,7 +1029,7 @@ class ProjectService {
 			if (!project) throw new AppError(`Project with id - ${projectId} does not exist`);
 
 			const projectTitle: string = project.title;
-			
+
 			await models.ProjectMember.destroy({
 				where: { id: memberId, projectId: projectId },
 				transaction,
@@ -1057,14 +1054,14 @@ class ProjectService {
 
 			await transaction.rollback();
 			throw error;
-			
+
 		}
 
 	}
 
-    async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
+	async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
 
-        try {
+		try {
 
 			const assignedBy = await models.ProjectMember.findOne({
 				where: { userId: userId },
@@ -1073,145 +1070,145 @@ class ProjectService {
 
 			if (!assignedBy) throw new Error("");
 
-            const isDeleted = await models.Task.destroy({
-                where : { 
-                    id: taskId,
-                    projectId: projectId,
-                    assignedBy: assignedBy.id
-                },
-                force: true,
-            });
-    
-            if (!isDeleted) { 
-                throw new AppError('Failed to delete or no such task');
-            }
+			const isDeleted = await models.Task.destroy({
+				where: {
+					id: taskId,
+					projectId: projectId,
+					assignedBy: assignedBy.id
+				},
+				force: true,
+			});
 
-        } catch(error) {
+			if (!isDeleted) {
+				throw new AppError('Failed to delete or no such task');
+			}
 
-            throw error;
+		} catch (error) {
 
-        }
+			throw error;
 
-    }
+		}
 
-    async updateTask(
+	}
+
+	async updateTask(
 		projectId: number,
 		taskId: number,
 		updatedTaskProps: TaskAttributes
-    ) : Promise<ProjectTask> {
+	): Promise<ProjectTask> {
 
-        const transaction: Transaction = await sequelize.transaction();
-        
-         try {
+		const transaction: Transaction = await sequelize.transaction();
 
-             const task = await models.Task.findOne({
-                where: { 
-                    id: taskId, 
-                    projectId: projectId,
-                },
-                include: [
+		try {
+
+			const task = await models.Task.findOne({
+				where: {
+					id: taskId,
+					projectId: projectId,
+				},
+				include: [
 					{
-						model: models.Project, 
+						model: models.Project,
 						as: 'project',
 						attributes: ['title']
 					},
-                    {
-                        model: models.ProjectMember,
-                        as: 'assignedByMember',
-                        include: [{ 
-                            model: models.User, 
-                            as: 'user',
-                            attributes: ['fullName', 'avatarUrl', 'id'] 
-                        }],
-                        attributes: ['id']
-                    },
-                    {
-                        model: models.ProjectMember,
-                        as: 'assignedToMember',
-                        include: [{ 
-                            model: models.User, 
-                            as: 'user',
-                            attributes: ['fullName', 'avatarUrl', 'id', 'email'] 
-                        }],
-                        attributes: ['id']
-                    },
-                    {
-                        model: models.TaskHistory,
-                        as: 'history',
-                        separate: true,
-                        order: [['created_at', 'DESC']]
-                    }
-				], 
-                    
-                transaction,
-                    
-            });
-                    
-            if (!task) throw new AppError('Invalid task or project');
+					{
+						model: models.ProjectMember,
+						as: 'assignedByMember',
+						include: [{
+							model: models.User,
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'id']
+						}],
+						attributes: ['id']
+					},
+					{
+						model: models.ProjectMember,
+						as: 'assignedToMember',
+						include: [{
+							model: models.User,
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'id', 'email']
+						}],
+						attributes: ['id']
+					},
+					{
+						model: models.TaskHistory,
+						as: 'history',
+						separate: true,
+						order: [['created_at', 'DESC']]
+					}
+				],
 
-            if (updatedTaskProps.deadline) { 
-                        
-                const newDeadline = new Date(updatedTaskProps.deadline);
-                        
+				transaction,
+
+			});
+
+			if (!task) throw new AppError('Invalid task or project');
+
+			if (updatedTaskProps.deadline) {
+
+				const newDeadline = new Date(updatedTaskProps.deadline);
+
 				if (new Date(Date.now()) > newDeadline) {
 					throw new AppError('Cannot assign past date!');
 				}
 
 				task.deadline = newDeadline;
 
-            }
+			}
 
-            if (
-				updatedTaskProps.assignedBy 
-				&& 
+			if (
+				updatedTaskProps.assignedBy
+				&&
 				task.assignedBy !== updatedTaskProps.assignedBy
-			) { 
-                throw new AppError('Cannot change property assignedBy');
-            }
+			) {
+				throw new AppError('Cannot change property assignedBy');
+			}
 
-            if (
-				updatedTaskProps.status 
-				&& 
-				(task.status !== updatedTaskProps.status || updatedTaskProps.projectId) 
-				&& 
+			if (
+				updatedTaskProps.status
+				&&
+				(task.status !== updatedTaskProps.status || updatedTaskProps.projectId)
+				&&
 				task.projectId !== updatedTaskProps.projectId
-			)  { 
-                throw new AppError('Cannot change status of task or projectId');
-            }
+			) {
+				throw new AppError('Cannot change status of task or projectId');
+			}
 
-            let newAssignedUser: ProjectMember | null = null
+			let newAssignedUser: ProjectMember | null = null
 
-            if (
-				updatedTaskProps.assignedTo 
-				&& 
+			if (
+				updatedTaskProps.assignedTo
+				&&
 				task.assignedTo !== updatedTaskProps.assignedTo
-			)  {
+			) {
 
-                newAssignedUser = await models.ProjectMember.findOne({
-                    where: {
-                        id: updatedTaskProps.assignedTo,
-                        projectId: projectId,
-                    },
-                    include : [{ 
-                        model: models.User,
-                        as: 'user',
-                        attributes: ['id', 'fullName', 'email', 'avatarUrl']
+				newAssignedUser = await models.ProjectMember.findOne({
+					where: {
+						id: updatedTaskProps.assignedTo,
+						projectId: projectId,
+					},
+					include: [{
+						model: models.User,
+						as: 'user',
+						attributes: ['id', 'fullName', 'email', 'avatarUrl']
 
-                    }],
-                    transaction
-                });
+					}],
+					transaction
+				});
 
-                if (!newAssignedUser) { 
-                    throw new AppError ('No such user to assign task');
-                }
+				if (!newAssignedUser) {
+					throw new AppError('No such user to assign task');
+				}
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'reassignTask'
-                );
+				await createNotification(
+					task.assignedToMember.user.id,
+					projectId,
+					task.title,
+					transaction,
+					'reassignTask'
+				);
 
 				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
 					task.assignedToMember.user.email,
@@ -1220,16 +1217,16 @@ class ProjectService {
 					console.error('Failed to send email', err);
 				});
 
-                //change receiver
-                task.assignedToMember.user = newAssignedUser.user
+				//change receiver
+				task.assignedToMember.user = newAssignedUser.user
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'newTask'
-                )
+				await createNotification(
+					task.assignedToMember.user.id,
+					projectId,
+					task.title,
+					transaction,
+					'newTask'
+				)
 
 				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
 					task.assignedToMember.user.email,
@@ -1238,14 +1235,14 @@ class ProjectService {
 					console.error('Failed to send email', err);
 				});
 
-            } else { 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'updatedTask',
-                )
+			} else {
+				await createNotification(
+					task.assignedToMember.user.id,
+					projectId,
+					task.title,
+					transaction,
+					'updatedTask',
+				)
 
 				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
 					task.assignedToMember.user.email,
@@ -1254,157 +1251,157 @@ class ProjectService {
 					console.error('Failed to send email', err);
 				});
 
-            }
+			}
 
-            await task.update(updatedTaskProps as Task, {transaction});
+			await task.update(updatedTaskProps as Task, { transaction });
 
-            await transaction.commit();
+			await transaction.commit();
 
-            return { 
-                id: task.id,
-                title: updatedTaskProps.title || task.title,
-                description: updatedTaskProps.description || task.description,
-                priority: updatedTaskProps.priority || task.priority,
-                deadline: task.deadline,
-                assignedBy: {
-                    id: task.assignedByMember.id,
-                    name: task.assignedByMember.user.fullName,
-                    avatarUrl: task.assignedByMember.user.avatarUrl
-                },
-                assignedTo: { 
-                    id: task.assignedToMember.id,
-                    name: task.assignedToMember.user.fullName,
-                    avatarUrl: task.assignedToMember.user.avatarUrl,
-                },
-                status: task.status,
-                history: task.history,
-                createdAt: task.createdAt 
-            } as ProjectTask;
+			return {
+				id: task.id,
+				title: updatedTaskProps.title || task.title,
+				description: updatedTaskProps.description || task.description,
+				priority: updatedTaskProps.priority || task.priority,
+				deadline: task.deadline,
+				assignedBy: {
+					id: task.assignedByMember.id,
+					name: task.assignedByMember.user.fullName,
+					avatarUrl: task.assignedByMember.user.avatarUrl
+				},
+				assignedTo: {
+					id: task.assignedToMember.id,
+					name: task.assignedToMember.user.fullName,
+					avatarUrl: task.assignedToMember.user.avatarUrl,
+				},
+				status: task.status,
+				history: task.history,
+				createdAt: task.createdAt
+			} as ProjectTask;
 
-        } catch(error) {
-            await transaction.rollback()
-            throw error
-        }      
-        
-    }
+		} catch (error) {
+			await transaction.rollback()
+			throw error
+		}
 
-    async getMemberProductivity(projectId: number, memberId: number): Promise<MemberProductivity | null> {
+	}
 
-        try {
+	async getMemberProductivity(projectId: number, memberId: number): Promise<MemberProductivity | null> {
 
-            const member = await models.ProjectMember.findOne({
-                where: { 
-                    id: memberId,
-                    projectId: projectId,
-                },
-                include: [{
-                    model: models.User,
-                    as : "user",
-                    attributes: ["fullName"]
-                }],
-            })
+		try {
 
-            if (!member ) { 
-                throw new AppError("No such member in this project")
-            }
+			const member = await models.ProjectMember.findOne({
+				where: {
+					id: memberId,
+					projectId: projectId,
+				},
+				include: [{
+					model: models.User,
+					as: "user",
+					attributes: ["fullName"]
+				}],
+			})
 
-            let memberOngoingTasksCount = 0 ; 
-            let memberCompletedTasksCount = 0 ; 
-            let memberRejectedTasksCount = 0 ; 
-            let memberUnderReviewTasksCount = 0 ; 
-            let memberOverdueTasksCount = 0 ; 
+			if (!member) {
+				throw new AppError("No such member in this project")
+			}
 
-            const memberTotalTasks = await models.Task.findAndCountAll({
-                where: { 
-                    projectId: projectId, 
-                    assignedTo: member?.id,
-                },
-                order: [["created_at", "DESC"]],
-            }) 
-            if (!memberTotalTasks) { 
-                throw new AppError("not tasks")
-            }
-            
-            let totalTime: number = 0; 
+			let memberOngoingTasksCount = 0;
+			let memberCompletedTasksCount = 0;
+			let memberRejectedTasksCount = 0;
+			let memberUnderReviewTasksCount = 0;
+			let memberOverdueTasksCount = 0;
 
-            if (memberTotalTasks.count !== 0){
+			const memberTotalTasks = await models.Task.findAndCountAll({
+				where: {
+					projectId: projectId,
+					assignedTo: member?.id,
+				},
+				order: [["created_at", "DESC"]],
+			})
+			if (!memberTotalTasks) {
+				throw new AppError("not tasks")
+			}
 
-                for (const task of memberTotalTasks.rows) { 
+			let totalTime: number = 0;
 
-                    totalTime += (new Date(task.updatedAt).getTime() - new Date(task.createdAt).getTime())/ (3_600_000); // (updateAt-createdAt) in hours
-                    
-                    switch (task.status) { 
-                        case 'ongoing':
-                            memberOngoingTasksCount+=1 ;
-                            break;
-                        case 'closed':
-                            memberCompletedTasksCount+=1;
-                            break
-                        case 'rejected':
-                            memberRejectedTasksCount+=1 ;
-                            break ;
-                        case 'under review':
-                            memberUnderReviewTasksCount+=1 ;
-                            break;
-                        case'overdue':
-                            memberOverdueTasksCount+=1 ;
-                            break;      
-                    }
-                }
-            }else { return null }
+			if (memberTotalTasks.count !== 0) {
 
-            const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
+				for (const task of memberTotalTasks.rows) {
 
-            const completionRate: number = memberTotalTasks.count>0 ? memberCompletedTasksCount / memberTotalTasks.count : 0
+					totalTime += (new Date(task.updatedAt).getTime() - new Date(task.createdAt).getTime()) / (3_600_000); // (updateAt-createdAt) in hours
 
-            const productivityScore = Math.round(completionRate * 60 +
-            (1-(avgCompletionTimeInHours/8)) * 20 + 
-            (1-((memberOverdueTasksCount + memberRejectedTasksCount)/memberTotalTasks.count)) * 20) || 0
+					switch (task.status) {
+						case 'ongoing':
+							memberOngoingTasksCount += 1;
+							break;
+						case 'closed':
+							memberCompletedTasksCount += 1;
+							break
+						case 'rejected':
+							memberRejectedTasksCount += 1;
+							break;
+						case 'under review':
+							memberUnderReviewTasksCount += 1;
+							break;
+						case 'overdue':
+							memberOverdueTasksCount += 1;
+							break;
+					}
+				}
+			} else { return null }
 
-            const recentActivityRaw = await models.Task.findAll({
-                where: { 
-                    projectId: projectId, 
-                    assignedTo: member?.id,
-                },
-                attributes : ["title", "status", "updatedAt"],
-                order: [["updated_at", "DESC"]],
-                limit: 5,
-            })
-            let result: MemberProductivity = { 
-                 member: { 
-                    fullName:  member?.user.fullName as string,
-                    position: member?.position as string,
-                    role: member?.role as string,
-                },
-                productivityScore: productivityScore,
-                tasksCompleted: memberCompletedTasksCount,
-                completionRate: completionRate,
-                avgTimeForTask: avgCompletionTimeInHours,
-                taskDistribution: { 
-                    inProgress: memberOngoingTasksCount,
-                    completed: memberCompletedTasksCount,
-                    rejected: memberRejectedTasksCount,
-                    underReview: memberUnderReviewTasksCount,
-                    overdue: memberOverdueTasksCount,
-                },
-                recentActivity: []
+			const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
 
-            }
-            for (const task of recentActivityRaw) { 
-                const hoursSinceUpdate = Number(((Date.now() - new Date(task.updatedAt).getTime())/3_600_000).toFixed(1))
-                result.recentActivity.push({
-                    title:task.title,
-                    status: task.status,
-                    time: hoursSinceUpdate
-                })
-            }
-            return result
-        }
-        catch(err) { 
-            throw err
-        }
-    
-    }
+			const completionRate: number = memberTotalTasks.count > 0 ? memberCompletedTasksCount / memberTotalTasks.count : 0
+
+			const productivityScore = Math.round(completionRate * 60 +
+				(1 - (avgCompletionTimeInHours / 8)) * 20 +
+				(1 - ((memberOverdueTasksCount + memberRejectedTasksCount) / memberTotalTasks.count)) * 20) || 0
+
+			const recentActivityRaw = await models.Task.findAll({
+				where: {
+					projectId: projectId,
+					assignedTo: member?.id,
+				},
+				attributes: ["title", "status", "updatedAt"],
+				order: [["updated_at", "DESC"]],
+				limit: 5,
+			})
+			let result: MemberProductivity = {
+				member: {
+					fullName: member?.user.fullName as string,
+					position: member?.position as string,
+					role: member?.role as string,
+				},
+				productivityScore: productivityScore,
+				tasksCompleted: memberCompletedTasksCount,
+				completionRate: completionRate,
+				avgTimeForTask: avgCompletionTimeInHours,
+				taskDistribution: {
+					inProgress: memberOngoingTasksCount,
+					completed: memberCompletedTasksCount,
+					rejected: memberRejectedTasksCount,
+					underReview: memberUnderReviewTasksCount,
+					overdue: memberOverdueTasksCount,
+				},
+				recentActivity: []
+
+			}
+			for (const task of recentActivityRaw) {
+				const hoursSinceUpdate = Number(((Date.now() - new Date(task.updatedAt).getTime()) / 3_600_000).toFixed(1))
+				result.recentActivity.push({
+					title: task.title,
+					status: task.status,
+					time: hoursSinceUpdate
+				})
+			}
+			return result
+		}
+		catch (err) {
+			throw err
+		}
+
+	}
 }
 
 export default new ProjectService();

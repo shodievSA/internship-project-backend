@@ -274,13 +274,16 @@ async function changeTaskStatus(
 
 	const taskId: number = parseInt(req.params.taskId);
 	const projectId: number = parseInt(req.params.projectId);
-	
+
 	const { updatedTaskStatus, comment }: {
-		updatedTaskStatus: 'under review' | 'rejected' | 'closed';
+		updatedTaskStatus: 'under review' | 'rejected' | 'closed' | 'ongoing';
 		comment: string;
 	} = req.body;
 
 	const fullname = req.user.fullName as string;
+
+	// Log the status change attempt
+	console.log(`User '${updatedTaskStatus}'.`);
 
 	if (!taskId) {
 
@@ -418,14 +421,14 @@ async function createTask(
 	const task = req.body.task;
 	const userId = req.user.id;
 
-    const projectId: number = task.projectId = parseInt(req.params.projectId);
+	const projectId: number = task.projectId = parseInt(req.params.projectId);
 
-	try { 
-        if (!hasOnlyKeysOfB(task, models.Task)){ 
-            throw new AppError('Invalid fields in request body')
-        }
+	try {
+		if (!hasOnlyKeysOfB(task, models.Task)) {
+			throw new AppError('Invalid fields in request body')
+		}
 
-		if (req.memberPermissions?.includes('assignTasks')) { 
+		if (req.memberPermissions?.includes('assignTasks')) {
 
 			const nTask = await projectService.createTask(task as Task, userId, projectId);
 			return res.status(201).json(nTask);
@@ -438,7 +441,7 @@ async function createTask(
 
 		next(error);
 
-    }
+	}
 }
 
 async function deleteTask(
@@ -492,41 +495,43 @@ async function updateTask(
 		}
 
 
+	}
+	catch (error) {
+		next(error)
+	}
 }
-catch(error) { 
-    next (error)
-}}
 
 
 async function getMemberProductivity(
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
 ) {
 
-    const projectId = parseInt(req.params.projectId)
-    const memberId = parseInt(req.params.memberId)
+	const projectId = parseInt(req.params.projectId)
+	const memberId = parseInt(req.params.memberId)
 
-    if (!projectId || !memberId) { 
-        throw new AppError('Empty input')
-    }
+	if (!projectId || !memberId) {
+		throw new AppError('Empty input')
+	}
 
-    try {
+	try {
 
-        if ( req.memberPermissions?.includes('viewMemberProductivity')){
-    
-            const result = await projectService.getMemberProductivity(projectId, memberId);
-            return res.status(200).json({productivityData : result})
-        }
-        else{
-            throw new AppError('No permission to edit task')
-        }
+		if (req.memberPermissions?.includes('viewMemberProductivity')) {
+
+			const result = await projectService.getMemberProductivity(projectId, memberId);
+			return res.status(200).json({ productivityData: result })
+		}
+		else {
+			throw new AppError('No permission to edit task')
+		}
 
 
+	}
+	catch (error) {
+		next(error)
+	}
 }
-catch(error) { 
-    next (error)
-}}
 
 
 const projectController = {
@@ -541,10 +546,10 @@ const projectController = {
 	getProjects,
 	getProjectDetails,
 	deleteProject,
-    createTask,
-    deleteTask,
-    updateTask,
-    getMemberProductivity,
+	createTask,
+	deleteTask,
+	updateTask,
+	getMemberProductivity,
 };
 
 export default projectController;

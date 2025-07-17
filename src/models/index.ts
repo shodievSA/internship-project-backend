@@ -1,4 +1,4 @@
-import User from './user'; 
+import User from './user';
 import Project from './project';
 import ProjectMember from './projectMember';
 import Permission from './permission';
@@ -27,7 +27,7 @@ export interface Models {
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
-    TaskHistory : typeof TaskHistory
+	TaskHistory: typeof TaskHistory;
 };
 
 export const models: Models = {
@@ -42,7 +42,7 @@ export const models: Models = {
 	DailyAiReport,
 	Comment,
 	Notification,
-    TaskHistory,
+	TaskHistory,
 };
 
 export function initAssociations() {
@@ -191,17 +191,17 @@ export function initAssociations() {
 		foreignKey: 'task_id'
 	});
 
-    Task.hasMany(TaskHistory, {
-        foreignKey : 'task_id',
-        as : 'history',
-        onDelete: 'CASCADE',
-        hooks : true,
-    });
+	Task.hasMany(TaskHistory, {
+		foreignKey: 'task_id',
+		as: 'history',
+		onDelete: 'CASCADE',
+		hooks: true,
+	});
 
-    TaskHistory.belongsTo(Task, { 
-        foreignKey : 'task_id',
-        as : 'history',
-    });
+	TaskHistory.belongsTo(Task, {
+		foreignKey: 'task_id',
+		as: 'history',
+	});
 
 };
 

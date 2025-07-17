@@ -16,10 +16,10 @@ export interface TaskAssociations {
 	assignedByMember: ProjectMember;
 	assignedToMember: ProjectMember;
 	comments: Comment[];
-    history: TaskHistory[];
-} 
+	history: TaskHistory[];
+}
 
-export interface TaskAttributes { 
+export interface TaskAttributes {
 	title: string;
 	description: string;
 	priority: 'low' | 'middle' | 'high';
@@ -28,8 +28,8 @@ export interface TaskAttributes {
 	assignedTo: number;
 	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
 	projectId: number;
-    updatedAt: Date | string;
-    createdAt: Date | string;
+	updatedAt: Date | string;
+	createdAt: Date | string;
 }
 
 class Task extends Model<
@@ -52,7 +52,7 @@ class Task extends Model<
 	declare assignedByMember: ProjectMember;
 	declare assignedToMember: ProjectMember;
 	declare comments: Comment[];
-    declare history: TaskHistory[];
+	declare history: TaskHistory[];
 }
 
 Task.init(
