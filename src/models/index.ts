@@ -14,6 +14,7 @@ import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
 import Invite from './invites';
+import TaskFiles from './taskFiles';
 
 export interface Models {
 	User: typeof User;
@@ -203,6 +204,16 @@ export function initAssociations() {
         as : 'history',
     });
 
+	Task.hasMany(TaskFiles, {
+		foreignKey: 'taskId',
+		as: 'taskFiles',
+		onDelete: 'CASCADE',
+	});
+
+	TaskFiles.belongsTo(Task, {
+		foreignKey: 'taskId',
+		as: 'task',
+	});
 };
 
 export default async function initDB() {

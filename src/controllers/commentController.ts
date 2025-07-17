@@ -5,50 +5,66 @@ import type { WebSocket as WSWebSocket } from "ws";
 import { saveAndBroadcastComment } from "../services/commentService";
 
 interface JoinCommentSectionMsg {
-  type: "join-comment-section";
-  taskId: number;
+	type: "join-comment-section";
+	taskId: number;
 }
 
 interface NewCommentMsg {
-  type: "new-comment";
-  message: string;
-  memberId: number;
-  taskId: number;
+	type: "new-comment";
+	message: string;
+	memberId: number;
+	taskId: number;
 }
 
 type IncomingMsg = JoinCommentSectionMsg | NewCommentMsg;
 
 // --- WebSocket Handler for Real-Time Comments ---
 export function handleCommentWSConnection(ws: WSWebSocket) {
-  let joinedTaskId: number | null = null;
 
-  ws.on("message", async (data: string) => {
-    try {
-      const msg: IncomingMsg = JSON.parse(data.toString());
-      if (msg.type === "join-comment-section") {
-        // Add ws to the set for this taskId
-        joinedTaskId = msg.taskId;
-        if (!taskConnectionsMap.has(msg.taskId)) {
-          taskConnectionsMap.set(msg.taskId, new Set<WSWebSocket>());
-        }
-        taskConnectionsMap.get(msg.taskId)!.add(ws);
-      } else if (msg.type === "new-comment") {
-        // Use saveAndBroadcastComment for real-time chat
-        await saveAndBroadcastComment({
-          message: msg.message,
-          memberId: msg.memberId,
-          taskId: msg.taskId,
-        });
-      }
-    } catch (err) {
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: "Invalid message or server error.",
-        })
-      );
-    }
-  });
+	let joinedTaskId: number | null = null;
+
+	ws.on("message", async (data: string) => {
+
+		try {
+
+			const msg: IncomingMsg = JSON.parse(data);
+
+			if (msg.type === "join-comment-section") {
+
+				// Add ws to the set for this taskId
+				joinedTaskId = msg.taskId;
+
+				if (!taskConnectionsMap.has(msg.taskId)) {
+
+					taskConnectionsMap.set(msg.taskId, new Set<WSWebSocket>());
+
+				}
+
+				taskConnectionsMap.get(msg.taskId)!.add(ws);
+
+			} else if (msg.type === "new-comment") {
+
+				// Use saveAndBroadcastComment for real-time chat
+				await saveAndBroadcastComment({
+					message: msg.message,
+					memberId: msg.memberId,
+					taskId: msg.taskId,
+				});
+
+			}
+
+		} catch (err) {
+
+			ws.send(
+				JSON.stringify({
+					type: "error",
+					message: "Invalid message or server error.",
+				})
+			);
+
+		}
+
+	});
 
   ws.on("close", () => {
     // Remove ws from the set for the joined taskId
@@ -67,15 +83,23 @@ export function handleCommentWSConnection(ws: WSWebSocket) {
 //###############################################################
 // --- REST API Controller for Comments ---
 export const commentController = {
-  async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { taskId } = req.params;
-      const comments = await commentService.getAll(Number(taskId));
-      res.json(comments);
-    } catch (err) {
-      next(err);
-    }
-  },
+
+	async getAll(req: Request, res: Response, next: NextFunction) {
+
+		try {
+
+			const { taskId } = req.params;
+			const comments = await commentService.getAll(Number(taskId));
+
+			res.json({ comments });
+
+		} catch (err) {
+
+			next(err);
+
+		}
+
+	},
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
