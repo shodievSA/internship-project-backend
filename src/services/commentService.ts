@@ -1,6 +1,8 @@
 import { models } from '../models';
 import { taskConnectionsMap } from '../index';
 import type { WebSocket as WSWebSocket } from 'ws';
+import { GmailSenderFactory, GmailType } from './gmaiService';
+import { AppError } from '@/types';
 
 interface NewComment {
     message: string;
@@ -28,7 +30,12 @@ export async function saveAndBroadcastComment({
     const comment = await commentService.create(taskId, message, memberId);
 
     // Fetch the task to get assignee and assigner
-    const task = await models.Task.findByPk(taskId);
+    const task = await models.Task.findByPk(taskId, {
+        include: [
+            { model: models.ProjectMember, as: 'assignedToMember', include: [{ model: models.User, as: 'user', attributes: ['id', 'email'] }] },
+            { model: models.ProjectMember, as: 'assignedByMember', include: [{ model: models.User, as: 'user', attributes: ['id', 'email'] }] }
+        ]
+    });
 
     if (!task) throw new Error('Task not found');
 
@@ -48,6 +55,39 @@ export async function saveAndBroadcastComment({
     });
 
     broadcastComment(taskId, payload);
+
+    const [ projectMember, project ] = await Promise.all([
+        models.ProjectMember.findByPk(memberId, {include: [{ model: models.User, as: 'user' }]}),
+        models.Project.findByPk(task.projectId)
+    ]);
+
+    const userRole: 'member' | 'manager' | 'admin' =
+        projectMember!.roleId === 2 ? 'manager' :
+        projectMember!.roleId === 3 ? 'member' :
+        'admin';
+
+    let notifyTarget = null;
+
+    if (task.assignedToMember.user.id !== projectMember!.user.id) {
+        notifyTarget = task.assignedToMember.user;
+    } else if (task.assignedByMember.user.id !== projectMember!.user.id) {
+        notifyTarget = task.assignedByMember.user;
+    }
+
+    if (notifyTarget) {
+        await models.Notification.create({
+            title: 'New Comment',
+            message: message,
+            userId: notifyTarget.id,
+        });
+
+        GmailSenderFactory.sendGmail(GmailType.TASK_COMMENT).sendGmail(
+            notifyTarget.email,
+            [project!.title, task.title, projectMember!.projectId, taskId, userRole, projectMember!.position]
+        ).catch(err => {
+            console.error('Failed to send email', err);
+        });
+    }
 
     return comment;
 

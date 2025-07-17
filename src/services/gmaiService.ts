@@ -12,6 +12,7 @@ export enum GmailType {
 	PROJECT_INVITE_ACCEPT = 'PROJECT_INVITE_ACCEPT',
 	PROJECT_INVITE_REJECT = 'PROJECT_INVITE_REJECT',
 	PROMOTE_DEMOTE_MEMBER = 'PROMOTE_DEMOTE_MEMBER',
+	TASK_COMMENT = 'TASK_COMMENT',
 }
 
 type GmailMap = {
@@ -25,6 +26,7 @@ type GmailMap = {
 	[GmailType.PROJECT_INVITE_ACCEPT]: InviteAcceptGmailParam;
 	[GmailType.PROJECT_INVITE_REJECT]: InviteRejectGmailParam;
 	[GmailType.PROMOTE_DEMOTE_MEMBER]: PromoteDemoteMemberGmailParam;
+	[GmailType.TASK_COMMENT]: TaskCommentGmailParam;
 };
 
 type InviteGmailParam = readonly [
@@ -89,6 +91,15 @@ type UpdatedTaskGmailParam = readonly [
 	projectTitle: string,
 	taskTitle: string,
 	projectId: number,
+]
+
+type TaskCommentGmailParam = readonly [
+	projectTitle: string,
+	taskTitle: string,
+	projectId: number,
+	taskId: number,
+	userRole: string,
+	userPosition: string,
 ]
 
 function buildEmailHTML({
@@ -393,6 +404,31 @@ class UpdatedTask extends Gmail<UpdatedTaskGmailParam> {
     }
 }
 
+class taskComment extends Gmail<TaskCommentGmailParam> {
+    async sendGmail(receiverEmail: string, params: TaskCommentGmailParam) {
+
+        const [projectTitle, taskTitle, projectId, taskId, userRole, userPosition] = params;
+
+        await transporter.sendMail({
+						
+			to: receiverEmail,
+			from: process.env.EMAIL,
+			subject: '📬 New Comment',
+			html: buildEmailHTML({
+				headerColor: 'rgba(207, 127, 61, 0.83)',
+				title: 'New comment on your task',
+				projectTitle,
+				taskTitle,
+				role: userRole,
+				position: userPosition,
+				buttonText: 'View notification in the app',
+				buttonColor: 'rgba(207, 127, 61, 0.83)',
+				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/my-tasks/${taskId}/comments`
+			})
+		});
+    }
+}
+
 export class GmailSenderFactory {
 
 	private static instanceMap: Partial<Record<GmailType, Gmail<any>>> = {};
@@ -443,6 +479,10 @@ export class GmailSenderFactory {
 
 			case GmailType.UPDATED_TASK:
                 instance = new UpdatedTask() as Gmail<GmailMap[T]>;
+				break;
+
+			case GmailType.TASK_COMMENT:
+                instance = new taskComment() as Gmail<GmailMap[T]>;
 				break;
 
             default:

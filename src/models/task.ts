@@ -10,6 +10,7 @@ import Project from './project';
 import ProjectMember from './projectMember';
 import Comment from './comment';
 import TaskHistory from './taskHistory';
+import TaskFiles from './taskFiles';
 
 export interface TaskAssociations {
 	project: Project;
@@ -17,6 +18,7 @@ export interface TaskAssociations {
 	assignedToMember: ProjectMember;
 	comments: Comment[];
     history: TaskHistory[];
+	taskFiles: TaskFiles[];
 } 
 
 export interface TaskAttributes { 
@@ -53,6 +55,7 @@ class Task extends Model<
 	declare assignedToMember: ProjectMember;
 	declare comments: Comment[];
     declare history: TaskHistory[];
+	declare taskFiles: TaskFiles[];
 }
 
 Task.init(
