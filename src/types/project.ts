@@ -45,6 +45,7 @@ export interface ProjectTask {
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
     createdAt: Date;
+	updatedAt: Date;
 }
 
 export interface TeamMember {

@@ -757,7 +757,8 @@ class ProjectService {
                     },
                     status: task.status,
                     history : task.history,
-                    createdAt: task.createdAt
+                    createdAt: task.createdAt,
+					updatedAt: task.updatedAt
                 });
 
 			};
