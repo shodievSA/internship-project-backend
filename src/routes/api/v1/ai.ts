@@ -9,6 +9,6 @@ const {
 const router = Router();
 
 router.post('/enhance', enhanceText as RequestHandler);
-router.post('/generate-tasks-title', createTitle as RequestHandler)
+router.post('/generate-task-title', createTitle as RequestHandler)
 
 export default router;

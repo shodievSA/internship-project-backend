@@ -36,7 +36,7 @@ async function createTitle(
             throw new AppError("Something went wrong")
         }
 
-        return res.status(200).json({taskTitle: result})
+        return res.status(200).json({ generatedTaskTitle: result })
     })
     .catch((err) => {
 		return next(err);
