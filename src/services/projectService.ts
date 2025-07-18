@@ -734,8 +734,6 @@ class ProjectService {
 
 			for (const task of projectTasks) {
 
-				console.log(task.assignedByMember.position)
-
                 tasks.push({
                     id: task.id as number,
                     title: task.title,
