@@ -16,4 +16,7 @@ router.post('/:taskId/comments', commentController.create as RequestHandler);
 router.put('/:taskId/comments/:commentId', commentController.update as RequestHandler);
 router.delete('/:taskId/comments/:commentId', commentController.remove as RequestHandler);
 
+// File upload endpoints
+
+
 export default router;

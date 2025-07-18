@@ -4,10 +4,11 @@ export class AppError extends Error {
 
     constructor (message: string , statusCode = 500 ) { 
 
-        super(message),
-        this.statusCode = statusCode
+        super(message);
+        this.statusCode = statusCode;
 
-        Error.captureStackTrace(this, this.constructor)
+        Error.captureStackTrace(this, this.constructor);
+        
     }
 	
 }

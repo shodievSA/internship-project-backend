@@ -1,6 +1,5 @@
 import { Router, RequestHandler } from "express";
 import projectController from "../../../../controllers/projectController";
-import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 
 const {
 	changeTeamMemberRole,
@@ -11,9 +10,9 @@ const {
 
 const router = Router({ mergeParams: true });
 
-router.get('/:memberId', getMemberPermissions,getMemberProductivity as RequestHandler);
-router.patch('/:memberId', getMemberPermissions, changeTeamMemberRole as RequestHandler);
-router.delete('/me', getMemberPermissions, leaveProject as RequestHandler);
-router.delete('/:memberId', getMemberPermissions, removeTeamMember as RequestHandler);
+router.get('/:memberId', getMemberProductivity as RequestHandler);
+router.patch('/:memberId', changeTeamMemberRole as RequestHandler);
+router.delete('/me', leaveProject as RequestHandler);
+router.delete('/:memberId', removeTeamMember as RequestHandler);
 
 export default router;
