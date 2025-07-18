@@ -708,7 +708,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+							attributes: ['fullName', 'avatarUrl', 'email'] 
 						}],
 					},
 					{
@@ -718,7 +718,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+							attributes: ['fullName', 'avatarUrl', 'email'] 
 						}],
 					},
                     {
@@ -745,13 +745,15 @@ class ProjectService {
                         name: task.assignedByMember.user.fullName as string,
                         avatarUrl: task.assignedByMember.user.avatarUrl,
 						id: task.assignedByMember.id,
-						position: task.assignedByMember.position
+						position: task.assignedByMember.position,
+						email: task.assignedByMember.user.email
                     },
                     assignedTo: {
                         name: task.assignedToMember.user.fullName as string,
                         avatarUrl: task.assignedToMember.user.avatarUrl,
 						id: task.assignedToMember.id,
-						position: task.assignedToMember.position
+						position: task.assignedToMember.position,
+						email: task.assignedToMember.user.email
                     },
                     status: task.status,
                     history : task.history,

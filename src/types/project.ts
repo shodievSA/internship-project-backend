@@ -32,13 +32,15 @@ export interface ProjectTask {
         name: string,
         avatarUrl: string | null,
 		id: number,
-		position: string
+		position: string,
+		email: string
     };
     assignedTo: {
         name: string,
         avatarUrl: string | null,
 		id: number,
-		position: string
+		position: string,
+		email: string
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
