@@ -1,5 +1,4 @@
 import projectController from "../../../../controllers/projectController";
-import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 import { RequestHandler, Router } from "express";
 import { commentController } from '../../../../controllers/commentController';
 
@@ -15,8 +14,5 @@ router.get('/:taskId/comments', commentController.getAll as RequestHandler);
 router.post('/:taskId/comments', commentController.create as RequestHandler);
 router.put('/:taskId/comments/:commentId', commentController.update as RequestHandler);
 router.delete('/:taskId/comments/:commentId', commentController.remove as RequestHandler);
-
-// File upload endpoints
-
 
 export default router;
