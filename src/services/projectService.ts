@@ -16,9 +16,7 @@ import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
 import Project from '@/models/project';
-import { createNotification } from './notificationService';
 import { GmailSenderFactory, GmailType } from '../services/gmaiService';
-import { DateTime } from 'luxon';
 
 class ProjectService {
 
@@ -868,13 +866,12 @@ class ProjectService {
 
 			let newTaskHistory = [history];
             
-            await createNotification(
-                assignedTo.user.id,
-                task.projectId,
-                task.title,
-                transaction,
-                'newTask'
-            );
+            await models.Notification.create({
+                title: "New Task",
+                message: `Project: ${project?.title}.
+                Assigned new task: ${task.title}`,
+                userId: assignedTo.user.id,
+            },{transaction})
 
 			await transaction.commit();
 
@@ -1207,13 +1204,14 @@ class ProjectService {
                     throw new AppError ('No such user to assign task');
                 }
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'reassignTask'
-                );
+                await models.Notification.create({
+                    
+                    title: "Task reassigned",
+                    message: `Your task: ${task.title} was removed from your tasks by authority`,
+                    userId: task.assignedToMember.user.id,
+                    },
+                    {transaction}
+                )
 
 				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
 					task.assignedToMember.user.email,
@@ -1225,12 +1223,14 @@ class ProjectService {
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'newTask'
+                await models.Notification.create({
+
+                    title: "New Task",
+                    userId: task.assignedToMember.user.id,
+                    message: `Project: ${task.project.title}.
+                    Assigned new task: "${task.title}"`,
+                    },
+                    {transaction}
                 )
 
 				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
@@ -1241,12 +1241,14 @@ class ProjectService {
 				});
 
             } else { 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'updatedTask',
+
+                await models.Notification.create({ 
+                    title: "Task updated",
+                    userId: task.assignedToMember.user.id,
+                    message:`Project: ${task.project.title}.
+                    Your task: ${task.title} was updated by authority`
+                },
+                    {transaction}
                 )
 
 				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
