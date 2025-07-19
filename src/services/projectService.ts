@@ -114,7 +114,16 @@ class ProjectService {
 		
 			await transaction.commit();
 
-			return project;
+			return {
+				id: project.id,
+				title: project.title,
+				status: project.status,
+				createdAt: project.createdAt,
+				members: 1,
+				totalTasks: 0,
+				totalTasksCompleted: 0,
+				isAdmin: true
+			};
 
 		} catch (error) {
 

@@ -60,15 +60,17 @@ async function createProject(
 		userPosition: string;
 	};
 
-
 	try {
 
 		try {
+
 			const userId: number = req.user.id;
 			const project = await projectService.createProject(userId, title, userPosition);
 
 			res.status(201).json({ project });
+
 		} catch (err) {
+
 			console.error(
 				"Error occurred in createProject function: " + (err as AppError).message
 			);
@@ -76,6 +78,7 @@ async function createProject(
 			throw new AppError(
 				`Unexpected error occurred ${err} . Please, try again later.`
 			);
+			
 		}
 
 	} catch (error) {
