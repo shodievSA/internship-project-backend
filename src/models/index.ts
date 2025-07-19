@@ -15,7 +15,6 @@ import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
 import Invite from './invites';
 import TaskFiles from './taskFiles';
-import AiUsage from './aiUsage';
 
 interface Models {
 	User: typeof User;
@@ -30,7 +29,6 @@ interface Models {
 	Comment: typeof Comment;
 	Notification: typeof Notification;
     TaskHistory : typeof TaskHistory;
-    AiUsage: typeof AiUsage;
 };
 
 export const models: Models = {
@@ -46,7 +44,6 @@ export const models: Models = {
 	Comment,
 	Notification,
     TaskHistory,
-    AiUsage,
 };
 
 export function initAssociations() {
@@ -217,16 +214,6 @@ export function initAssociations() {
 		foreignKey: 'taskId',
 		as: 'task',
 	});
-    User.hasOne(AiUsage, { 
-        foreignKey: 'user_id',
-        as: 'user',
-        onDelete: 'CASCADE', 
-        hooks: true,
-    })
-    AiUsage.belongsTo(User , {
-        foreignKey: 'user_id',
-        as: "user",
-    })
 
 };
 
@@ -244,7 +231,6 @@ export default async function initDB() {
 
 	} catch (error) {
 
-		console.error('Error synchronizing the database:', error);
 
 	}
 
