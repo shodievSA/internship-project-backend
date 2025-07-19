@@ -79,7 +79,7 @@ Notification.init(
 
                     const payload = JSON.stringify ({
                         type: "new-notification",
-                        notification: record,
+                        newNotification: record,
                     })
 
                     userWs.send(payload);

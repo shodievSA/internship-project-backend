@@ -116,7 +116,7 @@ Invite.init(
         
                             const payload = JSON.stringify ({
                                 type: "new-invite",
-                                invite: { 
+                                newInvite: { 
                                     id: recordWithUserAndProject.id,
 				                    projectId: recordWithUserAndProject.projectId,
 				                    project: { 
