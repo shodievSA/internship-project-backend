@@ -660,16 +660,7 @@ class ProjectService {
 		try {
 
 			const project = await models.Project.findByPk(projectId, {
-				attributes: ['id', 'title', 'status', 'createdAt'],
-				include: [{
-					model: models.User,
-					as: 'users',
-					attributes: ['fullName', 'email', 'avatarUrl'],
-					through: {
-						as: 'projectMember',
-						attributes: ['id', 'userId', 'position', 'roleId'],
-					},
-                }]
+				attributes: ['id', 'title', 'status', 'createdAt']
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
@@ -680,21 +671,6 @@ class ProjectService {
 				status: project.status,
 				createdAt: project.createdAt
 			};
-	
-			const team = project.users.map((pm: User) => {
-
-				const projectMember = pm.projectMember;
-
-				return {
-					id: projectMember.id as number,
-					name: pm.fullName,
-					email: pm.email,
-                    avatarUrl: pm.avatarUrl,
-					position: projectMember.position,
-					role: projectMember.role as string
-				}
-
-			});
 		
 			const projectTasks = await models.Task.findAll({
 				where: { projectId: projectId },
@@ -755,32 +731,6 @@ class ProjectService {
                 });
 
 			};
-		
-			const projectInvites = await models.Invite.findAll({
-				where: { projectId },
-				include: [{
-					model: models.User,
-					as: 'user'
-				}],
-                order: [['created_at', 'DESC']]
-			});
-
-			const invites: ProjectInvite[] = [];
-
-			for (const invite of projectInvites) {
-
-				invites.push({
-					id: invite.id as number,
-					status: invite.status,
-					receiverEmail: invite.user.email,
-					receiverName: invite.user.fullName,
-					receiverAvatarUrl: invite.user.avatarUrl,
-					createdAt: invite.createdAt as Date,
-					positionOffered: invite.positionOffered as string,
-					roleOffered: invite.roleOffered,
-				});
-
-			}
 
 			const currentMember = await models.ProjectMember.findOne({
                 where: { 
@@ -794,12 +744,10 @@ class ProjectService {
 	
 			return {
 				metaData: metaData,
-				team: team,
 				tasks: tasks,
-				invites: invites,
 				currentMemberId: currentMember.id,
-				currentMemberRole: currentMember.role
-			} as ProjectDetails;
+				currentMemberRole: currentMember.role as "admin" | "manager" | "member"
+			};
 
 		} catch(err) {  
 
@@ -810,7 +758,6 @@ class ProjectService {
 	}
 
 	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
-        // change to uzbekistan time
 
     	const transaction = await sequelize.transaction();
 
@@ -1408,6 +1355,68 @@ class ProjectService {
             throw err
         }
     
+    }
+
+    async getProjectInvites(projectId: number): Promise<ProjectInvite[]> {
+        
+        const projectInvites = await models.Invite.findAll({
+            where: { projectId },
+            include: [{
+                model: models.User,
+                as: 'user'
+            }],
+            order: [['created_at', 'DESC']]
+		});
+
+		const invites: ProjectInvite[] = [];
+
+        for (const invite of projectInvites) {
+
+            invites.push({
+                id: invite.id as number,
+                status: invite.status,
+                receiverEmail: invite.user.email,
+                receiverName: invite.user.fullName,
+                receiverAvatarUrl: invite.user.avatarUrl,
+                createdAt: invite.createdAt as Date,
+                positionOffered: invite.positionOffered as string,
+                roleOffered: invite.roleOffered,
+            });
+
+        }
+
+        return invites
+    }
+
+    async getTeamOfProject(projectId:number): Promise<TeamMember[]> {
+
+        const project = await models.Project.findByPk(projectId, {
+            include: [{
+                model: models.User,
+                as: 'users',
+                attributes: ['fullName', 'email', 'avatarUrl'],
+                through: {
+                    as: 'projectMember',
+                    attributes: ['id', 'userId', 'position', 'roleId'],
+                },
+            }]
+        });
+
+        if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+
+            const team = project.users.map((projectN: User) => {
+
+                return {
+                    id: projectN.projectMember.id as number,
+                    name: projectN.fullName,
+                    email: projectN.email,
+                    avatarUrl: projectN.avatarUrl,
+                    position: projectN.projectMember.position,
+                    role: projectN.projectMember.role as string
+                }
+            });
+
+        return team
     }
 }
 

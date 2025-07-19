@@ -19,6 +19,7 @@ const rolePermissionPairs = [
       'editAnotherTasks',
       'deleteAnotherTasks',
       'makeComments',
+      'getProjectInvites'
     ],
   },
 

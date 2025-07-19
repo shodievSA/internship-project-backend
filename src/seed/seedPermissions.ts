@@ -15,6 +15,7 @@ const permissionEnum = [
   'deleteAnotherTasks',
   'makeComments',
   'leaveProject',
+  'getProjectInvites'
 ];
 
 export default async function seedPermissions() {

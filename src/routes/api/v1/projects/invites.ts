@@ -5,10 +5,12 @@ import projectController from "@/controllers/projectController";
 const {
 	inviteToProject,
     invitationStatus,
+    getProjectInvites,
 } = projectController;
 
 const router = Router({ mergeParams: true });
 
+router.get('/', getMemberPermissions, getProjectInvites as RequestHandler)
 router.post('/', getMemberPermissions, inviteToProject as RequestHandler);
 router.patch('/:inviteId', invitationStatus as RequestHandler);
 

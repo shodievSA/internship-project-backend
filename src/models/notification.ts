@@ -77,7 +77,7 @@ Notification.init(
                 if (userWs) {
 
                     const payload = JSON.stringify ({
-                        type: "notification",
+                        type: "new-notification",
                         notification: record,
                     })
 
