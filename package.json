@@ -15,7 +15,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
-    "@types/nodemailer": "^6.4.17",
     "amqplib": "^0.10.8",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
@@ -44,6 +43,7 @@
     "@types/luxon": "^3.6.2",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.15.29",
+    "@types/nodemailer": "^6.4.17",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/ws": "^8.18.1",
