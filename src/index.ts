@@ -28,10 +28,7 @@ app.use(passport.session());
 app.use('/api/v1', v1Router);
 app.use(errorHandler);
 
-// Map<taskId, Set<WSWebSocket>>
 export const taskConnectionsMap: Map<number, Set<WSWebSocket>> = new Map();
-
-//Map<userId, Set<WSWebSocket>>
 export const notificationConnectionsMap: Map<number, WSWebSocket> = new Map();
 
 const server = createServer(app);
@@ -43,17 +40,20 @@ notificationWSS.on('connection', handleNotificationWSConnection)
 
 server.on('upgrade', (request, socket, head) => {
 	
-	// Only handle websocket upgrades for /comments
 	if (request.url && request.url.startsWith('/comments')) {
 
 		wss.handleUpgrade(request, socket, head, (ws) => {
 			wss.emit('connection', ws, request);
 		});
-	} else if ( request.url && request.url.startsWith('/notifications')){
+
+	} else if (request.url && request.url.startsWith('/notifications')) {
+
         notificationWSS.handleUpgrade(request, socket, head, (ws) => { 
             notificationWSS.emit('connection', ws, request)
         });
-    }else {
+
+    } else {
+
 		socket.destroy();
 
 	}

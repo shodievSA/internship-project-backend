@@ -70,24 +70,27 @@ Notification.init(
 	},
 	{   
         hooks: { 
+
             afterCreate: async (record, options) => { 
-                //send via websocket connection to receiver user              
+                              
                 const userWs = notificationConnectionsMap.get(record.userId);
                 
                 if (userWs) {
 
-                    const payload = JSON.stringify ({
+                    const payload = JSON.stringify({
                         type: "notification",
-                        notification: record,
+                        notification: record
                     })
 
                     userWs.send(payload);
-                }
-            }
-        },
 
+                }
+
+            }
+
+        },
 		sequelize,
-		underscored: true,
+		underscored: true
 	}
 );
 
