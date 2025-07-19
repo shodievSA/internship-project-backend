@@ -16,6 +16,7 @@
     "@aws-sdk/client-s3": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@types/nodemailer": "^6.4.17",
+    "amqplib": "^0.10.8",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -34,6 +35,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.7",
     "@types/body-parser": "^1.19.6",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.18",

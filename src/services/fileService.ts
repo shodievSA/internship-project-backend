@@ -15,7 +15,7 @@ enum FileAction {
 class FileHandler {
     constructor(
         private readonly s3: S3Client = s3,
-        private readonly bucket: string = process.env.S3_BUCKET!
+        private readonly bucket: string = process.env.AWS_S3_BUCKET!
     ) {}
 
     async uploadfile(key: string, file: Readable, contentType: string) {
@@ -92,5 +92,6 @@ class FileHandler {
         }
     }
 }
+const fileHandler = new FileHandler();
 
-export default FileHandler;
+export default fileHandler;
