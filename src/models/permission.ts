@@ -22,7 +22,8 @@ const permissionEnum = [
 	'editAnotherTasks',
 	'deleteAnotherTasks',
 	'makeComments',
-	'leaveProject'
+	'leaveProject',
+    'getProjectInvites',
 ];
 
 export interface PermissionAssociations {

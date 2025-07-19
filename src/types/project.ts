@@ -66,9 +66,7 @@ export interface ProjectMetaData {
 
 export interface ProjectDetails {
 	metaData: ProjectMetaData;
-	team: TeamMember[];
     tasks: ProjectTask[];
-    invites: ProjectInvite[];
 	currentMemberId: number;
     currentMemberRole : "admin" | "manager" | "member"
 }
