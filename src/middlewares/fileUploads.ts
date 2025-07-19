@@ -19,11 +19,11 @@ const uploadFolder = path.join(__dirname, '../taskFileUploads');
 })();
 
 const storage: StorageEngine = multer.diskStorage({
-  destination: (_, __, cb) => {
+  destination: (_req, _file, cb) => {
     cb(null, uploadFolder);
   },
 
-  filename: (_, file, cb) => {
+  filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const originalName = path.basename(file.originalname).replace(/[^\w.-]/g, '_');
     const fileName = `${file.fieldname}-${uniqueSuffix}${path.extname(originalName)}`;
