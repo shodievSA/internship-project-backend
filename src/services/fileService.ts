@@ -92,6 +92,7 @@ class FileHandler {
         }
     }
 }
+
 const fileHandler = new FileHandler();
 
 export default fileHandler;

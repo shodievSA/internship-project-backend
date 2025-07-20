@@ -1,8 +1,17 @@
 import { type Channel } from 'amqplib';
 import { getQueueChannel } from "@/config/rabbitmq";
+import { GmailType } from "@/services/gmaiService";
+
+type EmailPayload = {
+
+    type: GmailType;
+    receiverEmail: string;
+    params: Record<string, any>;
+
+}
 
 export async function sendEmailToQueue(
-    payload: { to: string; subject: string; html: string }
+    payload: EmailPayload
 ): Promise<void> {
 
     const channel: Channel = await getQueueChannel("email_sender");

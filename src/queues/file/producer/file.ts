@@ -1,8 +1,17 @@
 import { type Channel } from 'amqplib';
 import { getQueueChannel } from "@/config/rabbitmq";
 
+type FileUploadPayload = {
+
+    key: string;
+    contentType: string;
+    action: 'upload' | 'edit';
+    fileBase64: string;
+
+};
+
 export async function sendFileToQueue(
-    payload: { filePath: string; taskId: string; }
+    payload: FileUploadPayload
 ): Promise<void> {
 
     const channel: Channel = await getQueueChannel("file_uploader");
