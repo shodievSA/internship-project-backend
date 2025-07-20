@@ -7,12 +7,12 @@ type FileUploadPayload = {
   key: string;
   contentType: string;
   action: 'upload' | 'edit';
-  fileBase64: string;
+  file: string;
 };
 
-export  function consumeEmailQueue(channel: Channel): void {
+export function consumeEmailQueue(channel: Channel): void {
 
-    channel.consume('file_uploader', async (msg: ConsumeMessage | null) => {
+    channel.consume('file_uploader', async (msg: ConsumeMessage | null): Promise<void> => {
 
         if (!msg) return;
 
@@ -23,11 +23,11 @@ export  function consumeEmailQueue(channel: Channel): void {
                 key,
                 contentType,
                 action,
-                fileBase64
+                file
 
             }: FileUploadPayload = JSON.parse(msg.content.toString());
 
-            const buffer = Buffer.from(fileBase64, 'base64');
+            const buffer = Buffer.from(file, 'base64');
             const stream = Readable.from(buffer);
 
             if (action === 'upload') {
@@ -48,7 +48,7 @@ export  function consumeEmailQueue(channel: Channel): void {
             
         } catch (error) {
 
-            console.error('Error processing file upload message:', error);
+            console.error('Error processing file upload:', error);
             channel.nack(msg, false, false); 
             
         }

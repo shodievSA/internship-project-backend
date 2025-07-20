@@ -6,7 +6,7 @@ type FileUploadPayload = {
     key: string;
     contentType: string;
     action: 'upload' | 'edit';
-    fileBase64: string;
+    file: string;
 
 };
 

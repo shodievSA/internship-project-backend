@@ -1,9 +1,9 @@
 import type { Channel, ConsumeMessage } from 'amqplib';
 import { GmailSenderFactory, GmailType } from '@/services/gmaiService';
 
-export  function consumerEmailQueue(channel: Channel): void {
+export function consumerEmailQueue(channel: Channel): void {
 
-    channel.consume('email_sender', async (msg: ConsumeMessage | null) => {
+    channel.consume('email_sender', async (msg: ConsumeMessage | null): Promise<void> => {
 
         if (!msg) return;
 

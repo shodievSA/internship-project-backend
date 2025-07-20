@@ -38,9 +38,9 @@ export async function getQueueChannel(queueName: string): Promise<Channel> {
     }
 }
 
-function initGracefulShutdown() {
+function initGracefulShutdown(): void {
 
-    const shutdown = async () => {
+    const shutdown = async (): Promise<void> => {
 
         try {
 
