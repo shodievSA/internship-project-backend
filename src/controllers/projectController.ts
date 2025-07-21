@@ -438,7 +438,10 @@ async function createTask(
 
 	const projectId: number = parseInt(req.params.projectId);
 	const userId = req.user.id;
+
 	const files = req.files as Express.Multer.File[] ?? [];
+	const sizes: number[] = files.map((file) => file.size);
+	const fileNames: string[] = files.map((file) => file.filename);
 
 	try { 
         if (!hasOnlyKeysOfB(task, models.Task)){ 
@@ -447,7 +450,7 @@ async function createTask(
 
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const nTask = await projectService.createTask(task, userId, projectId, files);
+			const nTask = await projectService.createTask(task, userId, projectId, fileNames, sizes, files);
 			return res.status(201).json(nTask);
 
 		}
@@ -536,17 +539,38 @@ async function getMemberProductivity(
         if ( req.memberPermissions?.includes('viewMemberProductivity')){
     
             const result = await projectService.getMemberProductivity(projectId, memberId);
-            return res.status(200).json({productivityData : result})
+            return res.status(200).json({productivityData: result})
         }
         else{
             throw new AppError('No permission to edit task')
         }
 
-
+	} catch(error) { 
+    	next (error);
+	}
 }
-catch(error) { 
-    next (error)
-}}
+
+async function getTaskFiles(
+	req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+
+	try {
+
+		const taskId: number = parseInt(req.params.taskId);
+
+		if (!taskId ) throw new AppError('taskId is missing');
+
+		const fileAttachments = await projectService.getTaskFiles(taskId);
+
+		return res.status(200).json(fileAttachments);
+	
+	} catch (error) {
+		next (error);
+	}
+	
+}
 
 
 const projectController = {
@@ -565,6 +589,7 @@ const projectController = {
     deleteTask,
     updateTask,
     getMemberProductivity,
+	getTaskFiles,
 };
 
 export default projectController;

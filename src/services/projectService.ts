@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction} from 'sequelize';
+import {Transaction, UUID} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -20,6 +20,7 @@ import { createNotification } from './notificationService';
 import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
+import fileHandler from './fileService';
 
 class ProjectService {
 
@@ -811,7 +812,7 @@ class ProjectService {
 
 	}
 
-	async createTask(task: any, userId: number, projectId: number, files?: Express.Multer.File[]): Promise<object> {
+	async createTask(task: any, userId: number, projectId: number, fileNames: string[], sizes: number[], files?: Express.Multer.File[]): Promise<object> {
 
 		const deadline: Date = new Date(task.deadline);
 		const uploadedFiles: string[] = [];
@@ -871,6 +872,34 @@ class ProjectService {
 
 			newTaskHistory = [history];
 
+			if (files && files.length > 0) {
+
+				if (files.length > 5) {
+					throw new AppError("Maximum 5 files are allowed per task", 400);
+				}
+
+				const upload = files.map(file => {
+					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+					uploadedFiles.push(key);
+
+					return sendFileToQueue({
+						key,
+						contentType: file.mimetype,
+						action: 'upload',
+						file: file.path
+					});
+				});
+
+				await Promise.all(upload);
+
+				await Promise.all(
+					uploadedFiles.map((key, i) =>
+						models.TaskFiles.create({ taskId: newTask.id, key: key, fileName: fileNames[i], size: sizes[i] }, { transaction } )
+					)
+				);
+				
+			}
+
 			await createNotification(
 				assignedTo.user.id,
 				task.projectId,
@@ -885,34 +914,6 @@ class ProjectService {
 
 			await transaction.rollback();
 			throw error;
-
-		}
-
-		try {
-
-			if (files && files.length > 0) {
-
-				const upload = files.map(file => {
-
-					const key = `tasks/${randomUUID()}-${file.filename}`;
-					uploadedFiles.push(key);
-
-					return sendFileToQueue({
-						key,
-						contentType: file.mimetype,
-						action: 'upload',
-						file: file.path
-					});
-					
-				});
-
-				await Promise.all(upload);
-
-			}
-
-		} catch (postError) {
-
-			console.error('Post-transaction error:', postError);
 
 		}
 
@@ -944,7 +945,6 @@ class ProjectService {
 				position: assignedTo.position
 			},
 			history: newTaskHistory,
-			fileAttachments: uploadedFiles,
 
 		} as ProjectTask;
 
@@ -1436,6 +1436,40 @@ class ProjectService {
         }
     
     }
+
+	async getTaskFiles(taskId: number): Promise<Array<object>> {
+
+		try {
+
+			const taskFiles = await models.TaskFiles.findAll({
+				where: { taskId: taskId },
+				attributes: ['id', 'key', 'fileName', 'size']
+			});
+
+			const urls = await Promise.all(
+				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+			);
+
+			const fileAttachments: object[] = [];
+
+			for (let i = 0; i < taskFiles.length; i++) {
+				const taskFile: object = {
+					fileName: taskFiles[i].fileName,
+					id: taskFiles[i].id,
+					url: urls[i],
+					size: taskFiles[i].size,
+				};
+
+				fileAttachments.push(taskFile);
+			}
+
+			return fileAttachments;
+			
+		} catch (error) {
+			throw error
+		}
+		
+	}
 }
 
 export default new ProjectService();

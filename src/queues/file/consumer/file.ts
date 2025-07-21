@@ -7,7 +7,7 @@ type FileUploadPayload = {
 
     key: string;
     contentType: string;
-    action: 'upload' | 'edit';
+    action: 'upload' | 'edit' | 'remove';
     file: string;
 
 };
@@ -38,6 +38,10 @@ export function consumeFileQueue(channel: Channel): void {
             } else if (action === 'edit') {
 
                 await fileHandler.editFile(key, stream, contentType);
+
+            } else if (action === 'remove') {
+
+                await fileHandler.removeFile(key);
 
             } else {
 
