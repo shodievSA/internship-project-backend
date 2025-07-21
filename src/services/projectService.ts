@@ -1457,7 +1457,7 @@ class ProjectService {
 					fileName: taskFiles[i].fileName,
 					id: taskFiles[i].id,
 					url: urls[i],
-					size: taskFiles[i].size,
+					size: Math.round((taskFiles[i].size / (1024 * 1024)) * 100) / 100,
 				};
 
 				fileAttachments.push(taskFile);

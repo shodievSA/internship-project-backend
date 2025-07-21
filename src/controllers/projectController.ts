@@ -440,10 +440,11 @@ async function createTask(
 	const userId = req.user.id;
 
 	const files = req.files as Express.Multer.File[] ?? [];
-	const sizes: number[] = files.map((file) => file.size);
+	const sizes: number[] = files.map(file => file.size);
 	const fileNames: string[] = files.map((file) => file.originalname);
 
 	try { 
+		
         if (!hasOnlyKeysOfB(task, models.Task)){ 
             throw new AppError('Invalid fields in request body')
         }
