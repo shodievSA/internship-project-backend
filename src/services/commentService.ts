@@ -1,8 +1,8 @@
 import { models } from '../models';
 import { taskConnectionsMap } from '../index';
 import type { WebSocket as WSWebSocket } from 'ws';
-import { GmailSenderFactory, GmailType } from './gmaiService';
-import { AppError } from '@/types';
+import { GmailType } from './gmaiService';
+import { sendEmailToQueue } from '@/queues';
 
 interface NewComment {
     message: string;
@@ -81,11 +81,10 @@ export async function saveAndBroadcastComment({
             userId: notifyTarget.id,
         });
 
-        GmailSenderFactory.sendGmail(GmailType.TASK_COMMENT).sendGmail(
-            notifyTarget.email,
-            [project!.title, task.title, projectMember!.projectId, taskId, userRole, projectMember!.position]
-        ).catch(err => {
-            console.error('Failed to send email', err);
+        await sendEmailToQueue({
+            type: GmailType.TASK_COMMENT,
+            receiverEmail: notifyTarget.email,
+            params: [project!.title, task.title, projectMember!.projectId, taskId, userRole, projectMember!.position]
         });
     }
 

@@ -1,16 +1,18 @@
 import type { Channel, ConsumeMessage } from 'amqplib';
 import fileHandler from '@/services/fileService';
 import { AppError } from '@/types';
-import { Readable } from 'stream';
+import fs from 'fs';
 
 type FileUploadPayload = {
-  key: string;
-  contentType: string;
-  action: 'upload' | 'edit';
-  file: string;
+
+    key: string;
+    contentType: string;
+    action: 'upload' | 'edit';
+    file: string;
+
 };
 
-export function consumeEmailQueue(channel: Channel): void {
+export function consumeFileQueue(channel: Channel): void {
 
     channel.consume('file_uploader', async (msg: ConsumeMessage | null): Promise<void> => {
 
@@ -27,11 +29,10 @@ export function consumeEmailQueue(channel: Channel): void {
 
             }: FileUploadPayload = JSON.parse(msg.content.toString());
 
-            const buffer = Buffer.from(file, 'base64');
-            const stream = Readable.from(buffer);
+            const stream = fs.createReadStream(file)
 
             if (action === 'upload') {
-
+            
                 await fileHandler.uploadfile(key, stream, contentType);
 
             } else if (action === 'edit') {

@@ -5,6 +5,7 @@ import AuthenticatedRequest from '@/types/authenticatedRequest';
 import Task, { TaskAttributes } from '@/models/task';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
+import { parse } from 'path';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -415,10 +416,29 @@ async function createTask(
 	next: NextFunction
 ): Promise<any> {
 
-	const task = req.body.task;
-	const userId = req.user.id;
+	const task: {
 
-    const projectId: number = task.projectId = parseInt(req.params.projectId);
+		title: string;
+		description: string;
+		priority: string;
+		deadline: string;
+		assignedTo: number;
+		assignedBy: number;
+
+	} = {
+
+		title: req.body.title,
+		description: req.body.description,
+		priority: req.body.priority,
+		deadline: req.body.deadline,
+		assignedTo: Number(req.body.assignedTo),
+		assignedBy: Number(req.body.assignedBy),
+
+	};
+
+	const projectId: number = parseInt(req.params.projectId);
+	const userId = req.user.id;
+	const files = req.files as Express.Multer.File[] ?? [];
 
 	try { 
         if (!hasOnlyKeysOfB(task, models.Task)){ 
@@ -427,7 +447,7 @@ async function createTask(
 
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const nTask = await projectService.createTask(task as Task, userId, projectId);
+			const nTask = await projectService.createTask(task, userId, projectId, files);
 			return res.status(201).json(nTask);
 
 		}

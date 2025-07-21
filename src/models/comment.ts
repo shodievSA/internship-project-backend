@@ -46,7 +46,8 @@ Comment.init(
 			references: {
 				model: 'tasks',
 				key: 'id'
-			}
+			},
+			onDelete: 'CASCADE'
 		},
 		projectMemberId: {
 			type: DataTypes.INTEGER,
