@@ -755,12 +755,15 @@ class ProjectService {
             });
 
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
+
+			const projectTeam = await this.getTeamOfProject(projectId);
 	
 			return {
 				metaData: metaData,
 				tasks: tasks,
 				currentMemberId: currentMember.id,
-				currentMemberRole: currentMember.role as "admin" | "manager" | "member"
+				currentMemberRole: currentMember.role as "admin" | "manager" | "member",
+				team: projectTeam
 			};
 
 		} catch(err) {  
@@ -1405,7 +1408,7 @@ class ProjectService {
         return invites
     }
 
-    async getTeamOfProject(projectId:number): Promise<TeamMember[]> {
+    async getTeamOfProject(projectId: number): Promise<TeamMember[]> {
 
         const project = await models.Project.findByPk(projectId, {
             include: [{

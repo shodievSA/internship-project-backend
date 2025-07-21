@@ -543,57 +543,54 @@ async function getProjectInvites(
     next: NextFunction
 ) {
     
-    const projectId = parseInt(req.params.projectId)
+    const projectId = parseInt(req.params.projectId);
 
-    if (!projectId) { 
-        throw new AppError('Empty input')
-    }
-
+    if (!projectId) throw new AppError('Empty input');
+    
     try {
 
-        if ( req.memberPermissions?.includes('getProjectInvites')){
+        if ( req.memberPermissions?.includes('getProjectInvites')) {
     
-            const invites = await projectService.getProjectInvites(projectId)
-            return res.status(200).json({projectInvites: invites})
-        }
-        else{
+            const invites = await projectService.getProjectInvites(projectId);
+            return res.status(200).json({ projectInvites: invites });
+
+        } else {
             
-            throw new AppError('No permission to edit task')
+            throw new AppError('No permission to edit task');
+
         }
 
-    }
-    catch(error) { 
+    } catch(error) { 
 
-    next (error)
+    	next (error);
+
     }
+
 }
 
-async function getTeamOfProject
-(
+async function getTeamOfProject(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction  
 ) {
     
-    const projectId = parseInt(req.params.projectId)
+    const projectId = parseInt(req.params.projectId);
+	const userId = req.user.id;
 
-    if (!projectId) { 
-        throw new AppError('Empty input')
-    }
+    if (!projectId) throw new AppError('Empty input');
 
     try {
         
-        const team = await projectService.getTeamOfProject(projectId)
-        return res.status(200).json({team: team})
+        const team = await projectService.getTeamOfProject(projectId);
+        return res.status(200).json({ team: team });
+
+    } catch(error) { 
+	
+		next(error);
 
     }
-    catch(error) { 
 
-    next (error)
-    }
 }
-
-
 
 const projectController = {
 	leaveProject,
