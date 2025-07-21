@@ -441,7 +441,7 @@ async function createTask(
 
 	const files = req.files as Express.Multer.File[] ?? [];
 	const sizes: number[] = files.map((file) => file.size);
-	const fileNames: string[] = files.map((file) => file.filename);
+	const fileNames: string[] = files.map((file) => file.originalname);
 
 	try { 
         if (!hasOnlyKeysOfB(task, models.Task)){ 
@@ -564,7 +564,7 @@ async function getTaskFiles(
 
 		const fileAttachments = await projectService.getTaskFiles(taskId);
 
-		return res.status(200).json(fileAttachments);
+		return res.status(200).json({ fileURLs: fileAttachments });
 	
 	} catch (error) {
 		next (error);
