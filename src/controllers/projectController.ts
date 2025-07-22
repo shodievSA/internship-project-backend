@@ -637,39 +637,38 @@ async function getTeamOfProject(
 
 }
 
-async function createSprint
-(
+async function createSprint(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction  
 ) {
     
     const projectId = parseInt(req.params.projectId);
-
     const sprintInfo = req.body.sprint;
 
-    if (!projectId) { 
-        throw new AppError('Empty input')
-    }
-
-    if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)){ 
-        throw new AppError('Invalid fields in request body')
+    if (!projectId) throw new AppError('Empty input');
+    
+    if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)) { 
+        throw new AppError('Invalid fields in request body');
     }
 
     try {
 
-        if ( req.memberPermissions?.includes('assignTasks')) {
+        if (req.memberPermissions?.includes('assignTasks')) {
 
-            const sprint = await projectService.createSprint(projectId, sprintInfo as FrontSprintAttributes)
-            return res.status(200).json({newSprint: sprint})
+            const sprint = await projectService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
+            return res.status(200).json({ newSprint: sprint });
+
         }
-    throw new AppError('No permission')
+
+    	throw new AppError('No permission');
+
+    } catch(error) { 
+
+    	next (error);
 
     }
-    catch(error) { 
 
-    next (error)
-    }
 }
 
 

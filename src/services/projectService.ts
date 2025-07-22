@@ -818,7 +818,7 @@ class ProjectService {
             if (!team) {
                 throw new AppError("Faced error while getting team")
             }
-			
+
 			return {
 				metaData: metaData,
 				tasks: tasks,
@@ -1528,6 +1528,7 @@ class ProjectService {
 
         return team
     }
+
 	async getTaskFiles(taskId: number): Promise<Array<object>> {
 
 		try {
@@ -1562,27 +1563,33 @@ class ProjectService {
 		
 	}
 
-    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ){
+    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ) {
         
-        const project = await models.Project.findByPk(projectId)
-        const startDate = new Date(sprintInfo.startDate)
-        const endDate = new Date(sprintInfo.endDate)
-        if (!project) { 
-            throw new AppError('Np such project')
+        const project = await models.Project.findByPk(projectId);
+        const startDate = new Date(sprintInfo.startDate);
+        const endDate = new Date(sprintInfo.endDate);
+
+        if (!project) throw new AppError('No such project');
+
+        if (
+			startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
+			|| 
+			endDate.getTime() < startDate.getTime()
+		) {
+            throw new AppError('Incorrect time intervals');
         }
 
-        if ( startDate.getTime() < (Date.now() - 24*60*60*1000) || endDate.getTime() < startDate.getTime() ) {
-            throw new AppError('Incorrect time intervals')
-        }
+        const sprint = await models.Sprint.create({
+			...sprintInfo,
+			projectId: projectId
+		});
 
-        const sprint = await models.Sprint.create(sprintInfo)
+        if (!sprint) throw new AppError('Problem faced while saving sprint');
 
-        if (!sprint){ 
-            throw new AppError('Problem faced while saving sprint')
-        }
+        return sprint;
 
-        return sprint
     }
+
 }
 
 export default new ProjectService();
