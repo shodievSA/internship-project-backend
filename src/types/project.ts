@@ -85,7 +85,7 @@ export interface ProjectDetails {
 	metaData: ProjectMetaData;
     tasks: ProjectTask[];
     sprints: SprintMetaData[];
-	currentMemberId: number;
+    currentMemberId: number;
     currentMemberRole : "admin" | "manager" | "member"
 	team: TeamMember[]
 }
