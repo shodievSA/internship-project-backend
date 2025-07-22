@@ -6,9 +6,9 @@ import fs from 'fs';
 type FileUploadPayload = {
 
     key: string;
-    contentType: string;
+    contentType?: string;
     action: 'upload' | 'edit' | 'remove';
-    file: string;
+    file?: string;
 
 };
 
@@ -29,15 +29,15 @@ export function consumeFileQueue(channel: Channel): void {
 
             }: FileUploadPayload = JSON.parse(msg.content.toString());
 
-            const stream = fs.createReadStream(file)
-
             if (action === 'upload') {
-            
-                await fileHandler.uploadfile(key, stream, contentType);
+
+                const stream = fs.createReadStream(file!);
+                await fileHandler.uploadfile(key, stream, contentType!);
 
             } else if (action === 'edit') {
 
-                await fileHandler.editFile(key, stream, contentType);
+                const stream = fs.createReadStream(file!);
+                await fileHandler.editFile(key, stream, contentType!);
 
             } else if (action === 'remove') {
 

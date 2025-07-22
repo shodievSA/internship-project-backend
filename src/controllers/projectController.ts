@@ -493,8 +493,12 @@ async function updateTask(
 	res: Response,
 	next: NextFunction
 ) {
-	const projectId = parseInt(req.params.projectId)
-	const taskId = parseInt(req.params.taskId)
+	const projectId = parseInt(req.params.projectId);
+	const taskId = parseInt(req.params.taskId);
+
+	const files = req.files as Express.Multer.File[] ?? [];
+	const sizes: number[] = files.map(file => file.size);
+	const fileNames: string[] = files.map((file) => file.originalname);
 
 	const updatedTaskProps = req.body.updatedTaskProps
 	if (!updateProject || !projectId || !taskId) {
@@ -508,7 +512,7 @@ async function updateTask(
 
 		if (req.memberPermissions?.includes('editTasks')) {
 
-			const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
+			const result = await projectService.updateTask(projectId, taskId, files, sizes, fileNames, updatedTaskProps as TaskAttributes)
 			return res.status(200).json({ updatedTask: result })
 		}
 		else {
@@ -518,7 +522,7 @@ async function updateTask(
 
 }
 catch(error) { 
-    next (error)
+    next (error);
 }}
 
 

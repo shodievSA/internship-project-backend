@@ -11,7 +11,7 @@ import {
 	TeamMember
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import Task, { TaskAttributes } from '@/models/task';
+import Task, { TaskAttributes, FileAttachments } from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
@@ -21,6 +21,8 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
+import { FileObject } from 'openai/resources';
+import { file } from 'googleapis/build/src/apis/file';
 
 class ProjectService {
 
@@ -883,7 +885,7 @@ class ProjectService {
 					uploadedFiles.push(key);
 
 					return sendFileToQueue({
-						key,
+						key: key,
 						contentType: file.mimetype,
 						action: 'upload',
 						file: file.path
@@ -1131,8 +1133,11 @@ class ProjectService {
     async updateTask(
 		projectId: number,
 		taskId: number,
+		files: Express.Multer.File[],
+		sizes: number[],
+		fileNames: string[],
 		updatedTaskProps: TaskAttributes
-    ) : Promise<ProjectTask> {
+    ): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
@@ -1194,6 +1199,68 @@ class ProjectService {
 				task.deadline = newDeadline;
 
             }
+
+			const _new: FileObject[] = updatedTaskProps.fileAttachments.new;
+			const editedFiles: string[] = [];
+
+			if (_new && _new.length > 0) {
+				if (files && files.length === _new.length) {
+
+					const edit = files.map((file) => {
+						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
+						editedFiles.push(key);
+
+						return sendFileToQueue({
+							key: key,
+							contentType: file.mimetype,
+							action: 'edit',
+							file: file.path
+						});
+					});
+
+
+					const taskFiles = editedFiles.map((key, i) =>
+						models.TaskFiles.create(
+							{
+								taskId: task.id,
+								key: key,
+								fileName: fileNames[i],
+								size: sizes[i]
+							},
+							{ transaction }
+						)
+					);
+
+					await Promise.all([...edit, ...taskFiles]);
+
+				} else {
+					throw new AppError("Mismatch between 'files' and 'fileAttachments.new'", 400);
+				}
+			}
+
+			const _delete: number[] = updatedTaskProps.fileAttachments.deleted;
+
+			if (_delete && _delete.length > 0) {
+
+				const taskFiles =  await models.TaskFiles.findAll(
+					{ where: { id: _delete }, attributes: ['key'], transaction }
+				);
+
+				await Promise.all(
+					taskFiles.map(taskFile =>
+						sendFileToQueue({
+							key: taskFile.key,
+							action: 'remove',
+						})
+					)
+				);
+
+				await models.TaskFiles.destroy({
+					where: { id: _delete },
+					transaction,
+				});
+
+			}
 
             if (
 				updatedTaskProps.assignedBy 
