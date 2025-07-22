@@ -29,24 +29,25 @@ export interface ProjectTask {
     priority: 'low' | 'high' | 'middle';
     deadline: Date;
     assignedBy: {
-        name: string,
-        avatarUrl: string | null,
 		id: number,
-		position: string,
-		email: string
+        name: string,
+        email?: string,
+		position?: string,
+        avatarUrl: string | null,
     };
     assignedTo: {
-        name: string,
-        avatarUrl: string | null,
 		id: number,
-		position: string,
-		email: string
+        name: string,
+        email?: string,
+		position?: string,
+        avatarUrl: string | null,
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
     createdAt: Date;
 	updatedAt: Date;
 }
+
 
 export interface TeamMember {
 	id: number;

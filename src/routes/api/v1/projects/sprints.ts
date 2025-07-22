@@ -1,15 +1,15 @@
 import { RequestHandler, Router } from "express";
-import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
 import projectController from "@/controllers/projectController";
 
 const {
-    createSprint
+    createSprint,
+    getSprintsTasks
 } = projectController;
 
 const router = Router({ mergeParams: true });
 
-//router.get('/', getMemberPermissions, getProjectInvites as RequestHandler)
-router.post('/', getMemberPermissions, createSprint as RequestHandler);
+router.get('/:sprintId', getSprintsTasks as RequestHandler)
+router.post('/', createSprint as RequestHandler);
 //router.patch('/:inviteId', invitationStatus as RequestHandler);
 
 export default router;
