@@ -5,6 +5,7 @@ import projectController from '../../../../controllers/projectController';
 import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 import taskRouter from './tasks'
 import inviteRouter from './invites';
+import sprintRouter from './sprints'
 const {
 	createProject,
 	getProjects,
@@ -18,9 +19,10 @@ const router = Router();
 router.post('/', createProject as RequestHandler);
 router.get('/', getProjects as RequestHandler);
 
-router.use('/:projectId/invites', inviteRouter);
+router.use('/:projectId/invites',getMemberPermissions, inviteRouter);
 router.use('/:projectId/members', getMemberPermissions, memberRouter);
 router.use('/:projectId/tasks', getMemberPermissions, taskRouter);
+router.use('/:projectId/sprints', getMemberPermissions, sprintRouter);
 
 router.get('/:projectId', getProjectDetails as RequestHandler);
 router.patch('/:projectId', getMemberPermissions, isProjectUpdateValid, updateProject as RequestHandler);

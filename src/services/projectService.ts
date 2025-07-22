@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction, UUID} from 'sequelize';
+import {Sequelize, Transaction} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -8,7 +8,9 @@ import {
 	ProjectTask, 
 	ProjectInvite, 
 	AppError, 
-	TeamMember
+	TeamMember,
+    FrontSprintAttributes,
+    SprintMetaData
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task, { TaskAttributes } from '@/models/task';
@@ -667,7 +669,42 @@ class ProjectService {
 		try {
 
 			const project = await models.Project.findByPk(projectId, {
-				attributes: ['id', 'title', 'status', 'createdAt']
+				attributes: ['id', 'title', 'status', 'createdAt'],
+                include: [{
+                    model: models.Sprint,
+                    as : 'sprints',
+                    order: [["created_at", "ASC"]],
+                    attributes: {
+                        include: [ 
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT (*)
+                                    FROM tasks AS t 
+                                    WHERE t.sprint_id = "sprints".id
+                                    )`),
+                                    'taskCount'
+                            ],
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT (*)
+                                    FROM tasks AS t 
+                                    WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
+                                    )`),
+                                    'closedTaskCount'
+                            ],
+                        ]
+                    },
+                    include: [{
+						model: models.ProjectMember,
+						as: 'createdByMember',
+						include: [{ 
+							model: models.User, 
+                            as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					}]
+                }, 
+                ]
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
@@ -753,12 +790,32 @@ class ProjectService {
             });
 
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
+            
+            const sprints: SprintMetaData[] = [];
+            
+            for(const sprint of project.sprints) { 
 
-			const projectTeam = await this.getTeamOfProject(projectId);
-	
+                sprints.push({
+                    id: sprint.id,
+                    title: sprint.title,
+                    description: sprint.description,
+                    status: sprint.status,
+                    projectId: sprint.projectId,
+                    createdBy: {
+                        fullName: sprint.createdByMember.user.fullName,
+                        avatarUrl: sprint.createdByMember.user.avatarUrl,
+                        email: sprint.createdByMember.user.email
+                    },
+                    closedTaskCount: Number(sprint.get('closedTaskCount')),
+                    taskCount: Number(sprint.get('taskCount')),
+                    startDate: sprint.startDate,
+                    endDate: sprint.endDate,
+                })
+            }
 			return {
 				metaData: metaData,
 				tasks: tasks,
+                sprints: sprints,
 				currentMemberId: currentMember.id,
 				currentMemberRole: currentMember.role as "admin" | "manager" | "member",
 				team: projectTeam
@@ -1497,6 +1554,28 @@ class ProjectService {
 		}
 		
 	}
+
+    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ){
+        
+        const project = await models.Project.findByPk(projectId)
+        const startDate = new Date(sprintInfo.startDate)
+        const endDate = new Date(sprintInfo.endDate)
+        if (!project) { 
+            throw new AppError('Np such project')
+        }
+
+        if ( startDate.getTime() < (Date.now() - 24*60*60*1000) || endDate.getTime() < startDate.getTime() ) {
+            throw new AppError('Incorrect time intervals')
+        }
+
+        const sprint = await models.Sprint.create(sprintInfo)
+
+        if (!sprint){ 
+            throw new AppError('Problem faced while saving sprint')
+        }
+
+        return sprint
+    }
 }
 
 export default new ProjectService();

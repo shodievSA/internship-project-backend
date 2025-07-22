@@ -32,6 +32,7 @@ export interface TaskAttributes {
 	projectId: number;
 	fileAttachments: string[];
 	createdAt: Date | string;
+    sprintId: number;
     updatedAt: Date | string;
 }
 
@@ -49,6 +50,7 @@ class Task extends Model<
 	declare status: CreationOptional<'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue'>;
 	declare projectId: number;
 	declare fileAttachments: string[];
+    declare sprintId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 
@@ -125,6 +127,15 @@ Task.init(
 			type: DataTypes.ARRAY(DataTypes.STRING),
 			allowNull: true,
 		},
+        sprintId:{
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: { 
+                model: 'sprints',
+                key: 'id'
+            },
+            onDelete: "CASCADE"
+        },
 		createdAt: {
 			type: DataTypes.DATE,
 			allowNull: false

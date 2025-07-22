@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import { AppError, FormattedProject, ProjectDetails } from '@/types';
+import { AppError, FormattedProject, FrontSprintAttributes, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import Task, { TaskAttributes } from '@/models/task';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
@@ -637,6 +637,43 @@ async function getTeamOfProject(
 
 }
 
+async function createSprint
+(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction  
+) {
+    
+    const projectId = parseInt(req.params.projectId);
+
+    const sprintInfo = req.body.sprint;
+
+    if (!projectId) { 
+        throw new AppError('Empty input')
+    }
+
+    if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)){ 
+        throw new AppError('Invalid fields in request body')
+    }
+
+    try {
+
+        if ( req.memberPermissions?.includes('assignTasks')) {
+
+            const sprint = await projectService.createSprint(projectId, sprintInfo as FrontSprintAttributes)
+            return res.status(200).json({newSprint: sprint})
+        }
+    throw new AppError('No permission')
+
+    }
+    catch(error) { 
+
+    next (error)
+    }
+}
+
+
+
 const projectController = {
 	leaveProject,
 	createProject,
@@ -656,6 +693,7 @@ const projectController = {
     getProjectInvites,
     getTeamOfProject,
 	getTaskFiles,
+    createSprint,
 };
 
 export default projectController;
