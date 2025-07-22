@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction} from 'sequelize';
+import {Transaction, UUID} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -16,7 +16,10 @@ import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
 import Project from '@/models/project';
-import { GmailSenderFactory, GmailType } from '../services/gmaiService';
+import { GmailType } from '../services/gmaiService';
+import { sendEmailToQueue, sendFileToQueue } from '@/queues';
+import { randomUUID } from 'crypto';
+import fileHandler from './fileService';
 
 class ProjectService {
 
@@ -67,11 +70,10 @@ class ProjectService {
 
 			await transaction.commit();
 
-			GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
-				admin.user.email,
-				[project.title, userRole, position]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.LEAVE_PROJECT,
+				receiverEmail: admin.user.email,
+				params: [project.title, userRole, position],
 			});
 
 		} catch (error) {
@@ -222,11 +224,10 @@ class ProjectService {
 
 					await transaction.commit();
 
-					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
-						receiverEmail,
-						[fullProdInvite!.project.title, roleOffered, positionOffered]
-					).catch(err => {
-						console.error('Failed to send email', err);
+					await sendEmailToQueue({
+						type: GmailType.PROJECT_INVITE,
+						receiverEmail: receiverEmail,
+						params: [fullProdInvite!.project.title, roleOffered, positionOffered]
 					});
 
 					return { 
@@ -326,11 +327,10 @@ class ProjectService {
 
 				await transaction.commit();
 
-				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_ACCEPT).sendGmail(
-					invite.inviter.email,
-					[project!.title, roleOffered, positionOffered, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROJECT_INVITE_ACCEPT,
+					receiverEmail: invite.inviter.email,
+					params: [project!.title, roleOffered, positionOffered, projectId]
 				});
 
 				return {
@@ -345,11 +345,10 @@ class ProjectService {
 
 				await transaction.commit();
 
-				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
-					invite.inviter.email,
-					[project!.title, roleOffered, positionOffered, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROJECT_INVITE_REJECT,
+					receiverEmail: invite.inviter.email,
+					params: [project!.title, roleOffered, positionOffered, projectId]
 				});
 
 				return {
@@ -532,11 +531,10 @@ class ProjectService {
 
 			await transaction.commit();	
 
-			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
-				email,
-				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.CHANGE_TASK_STATUS,
+				receiverEmail: email,
+				params: [task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
 			});
 
 			return updatedTask;
@@ -774,11 +772,10 @@ class ProjectService {
 
 	}
 
-	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
-
-    	const transaction = await sequelize.transaction();
+	async createTask(task: any, userId: number, projectId: number, fileNames: string[], sizes: number[], files?: Express.Multer.File[]): Promise<object> {
 
 		const deadline: Date = new Date(task.deadline);
+		const uploadedFiles: string[] = [];
 
 		if (Number.isNaN(deadline.getTime())) {
 			throw new AppError('Invalid deadline format', 400);
@@ -788,89 +785,91 @@ class ProjectService {
 			throw new AppError('Deadline cannot be in the past', 400);
 		}
 
+		let newTask: any;
+		let assignedBy: any;
+		let assignedTo: any;
+		let project: any;
+		let newTaskHistory: any;
+
+		const transaction = await sequelize.transaction();
+
 		try {
 
-            const assignedBy = await models.ProjectMember.findOne({
-                where: { userId: userId },
-                attributes: ['id', 'position'],
-                include: [{
-                    model: models.User,
-                    as: 'user'
-                }],
-                transaction
-            });
+			assignedBy = await models.ProjectMember.findOne({
+				where: { userId },
+				attributes: ['id', 'position'],
+				include: [{ model: models.User, as: 'user' }],
+				transaction
+			});
 
-            const assignedTo = await models.ProjectMember.findOne({
-                where: { id: task.assignedTo },
+			assignedTo = await models.ProjectMember.findOne({
+				where: { id: task.assignedTo },
 				attributes: ['position'],
-                include: [{
-                    model: models.User,
-                    as: 'user'
-				}],
-                transaction
-            })
+				include: [{ model: models.User, as: 'user' }],
+				transaction
+			});
 
-            if (!assignedBy || !assignedTo) { 
-                throw new AppError('No such users in project')
-            }
+			if (!assignedBy || !assignedTo) {
+				throw new AppError('No such users in project');
+			}
 
-			const newTask = await models.Task.create(task, 
-				{ transaction },
+			newTask = await models.Task.create(
+				{ ...task, projectId },
+				{ transaction }
 			);
 
-			const project = await models.Project.findByPk(task.projectId, {
+			project = await models.Project.findByPk(projectId, {
 				attributes: ['title']
 			});
+
 			const history = await models.TaskHistory.create(
 				{
 					taskId: newTask.id,
 					status: newTask.status,
-            	}, 
+				},
 				{ transaction }
 			);
 
-			let newTaskHistory = [history];
-            
-            await models.Notification.create({
-                title: "New Task",
-                message: `Project: ${project?.title}.
-                Assigned new task: ${task.title}`,
-                userId: assignedTo.user.id,
-            },{transaction})
+			newTaskHistory = [history];
+
+			if (files && files.length > 0) {
+
+				if (files.length > 5) {
+					throw new AppError("Maximum 5 files are allowed per task", 400);
+				}
+
+				const upload = files.map(file => {
+					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+					uploadedFiles.push(key);
+
+					return sendFileToQueue({
+						key,
+						contentType: file.mimetype,
+						action: 'upload',
+						file: file.path
+					});
+				});
+
+				await Promise.all(upload);
+
+				await Promise.all(
+					uploadedFiles.map((key, i) =>
+						models.TaskFiles.create({ taskId: newTask.id, key: key, fileName: fileNames[i], size: sizes[i] }, { transaction } )
+					)
+				);
+				
+			}
+
+			await models.Notification.create(
+				{
+					userId: assignedTo.user.id,
+					title: "New Task",
+					message: "You've been assigned new task"
+				},
+				{ transaction }
+			);
 
 			await transaction.commit();
-
-			GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
-				assignedTo.user.email,
-				[project!.title, newTask.title, projectId]
-			).catch(err => {
-				console.error('Failed to send email', err);
-			});
-
-			const formattedNewTask = {
-				deadline: newTask.deadline,
-				createdAt: newTask.createdAt,
-				description: newTask.description,
-				id: newTask.id,
-				priority: newTask.priority,
-				status: newTask.status,
-				title: newTask.title,
-				assignedBy: {
-					id: assignedBy?.id,
-					name: assignedBy?.user.fullName,
-					avatarUrl: assignedBy?.user.avatarUrl,
-					position: assignedBy.position
-				},
-				assignedTo: {
-					id: assignedTo?.id,
-					name: assignedTo?.user.fullName,
-					avatarUrl: assignedTo?.user.avatarUrl,
-					position: assignedTo.position
-				},
-				history: newTaskHistory,
-			} as ProjectTask;
-
-			return formattedNewTask;
 
 		} catch (error) {
 
@@ -879,7 +878,39 @@ class ProjectService {
 
 		}
 
-  	}
+		await sendEmailToQueue({
+			type: GmailType.NEW_TASK,
+			receiverEmail: assignedTo.user.email,
+			params: [project!.title, newTask.title, projectId]
+		});
+
+		return {
+			
+			deadline: newTask.deadline,
+			createdAt: newTask.createdAt,
+			description: newTask.description,
+			id: newTask.id,
+			priority: newTask.priority,
+			status: newTask.status,
+			title: newTask.title,
+			assignedBy: {
+				id: assignedBy.id,
+				name: assignedBy.user.fullName,
+				avatarUrl: assignedBy.user.avatarUrl,
+				position: assignedBy.position
+			},
+			assignedTo: {
+				id: assignedTo.id,
+				name: assignedTo.user.fullName,
+				avatarUrl: assignedTo.user.avatarUrl,
+				position: assignedTo.position
+			},
+			history: newTaskHistory,
+
+		} as ProjectTask;
+
+	}
+
 
 	async updateTeamMemberRole(
 		projectId: number, 
@@ -932,11 +963,10 @@ class ProjectService {
 					userId: member!.user.id,
 				});
 
-				GmailSenderFactory.sendGmail(GmailType.PROMOTE_DEMOTE_MEMBER).sendGmail(
-					member!.user.email,
-					[project!.title as string, newRole, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROMOTE_DEMOTE_MEMBER,
+					receiverEmail: member!.user.email,
+					params: [project!.title as string, newRole, projectId]
 				});
 
 				const projectMember = {
@@ -1012,11 +1042,10 @@ class ProjectService {
 
 			await transaction.commit();
 
-			GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
-				userToRemove.user.email,
-				[projectTitle]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.REMOVE_TEAM_MEMBER,
+				receiverEmail: userToRemove.user.email,
+				params: [projectTitle]
 			});
 
 		} catch (error) {
@@ -1180,11 +1209,10 @@ class ProjectService {
                     {transaction}
                 )
 
-				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId],
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.REASSIGN_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
                 //change receiver
@@ -1200,11 +1228,10 @@ class ProjectService {
                     {transaction}
                 )
 
-				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.NEW_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
             } else { 
@@ -1218,11 +1245,10 @@ class ProjectService {
                     {transaction}
                 )
 
-				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.UPDATED_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
             }
@@ -1438,6 +1464,39 @@ class ProjectService {
 
         return team
     }
+	async getTaskFiles(taskId: number): Promise<Array<object>> {
+
+		try {
+
+			const taskFiles = await models.TaskFiles.findAll({
+				where: { taskId: taskId },
+				attributes: ['id', 'key', 'fileName', 'size']
+			});
+
+			const urls = await Promise.all(
+				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+			);
+
+			const fileAttachments: object[] = [];
+
+			for (let i = 0; i < taskFiles.length; i++) {
+				const taskFile: object = {
+					fileName: taskFiles[i].fileName,
+					id: taskFiles[i].id,
+					url: urls[i],
+					size: Math.round((taskFiles[i].size / (1024 * 1024)) * 100) / 100,
+				};
+
+				fileAttachments.push(taskFile);
+			}
+
+			return fileAttachments;
+			
+		} catch (error) {
+			throw error
+		}
+		
+	}
 }
 
 export default new ProjectService();

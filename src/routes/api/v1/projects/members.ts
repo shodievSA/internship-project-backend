@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
+import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
 import projectController from "../../../../controllers/projectController";
-import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 
 const {
 	changeTeamMemberRole,

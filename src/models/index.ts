@@ -29,6 +29,7 @@ interface Models {
 	Comment: typeof Comment;
 	Notification: typeof Notification;
     TaskHistory : typeof TaskHistory;
+	TaskFiles: typeof TaskFiles;
 };
 
 export const models: Models = {
@@ -44,6 +45,7 @@ export const models: Models = {
 	Comment,
 	Notification,
     TaskHistory,
+	TaskFiles,
 };
 
 export function initAssociations() {

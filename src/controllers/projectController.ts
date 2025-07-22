@@ -5,6 +5,7 @@ import AuthenticatedRequest from '@/types/authenticatedRequest';
 import Task, { TaskAttributes } from '@/models/task';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
+import { parse } from 'path';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -424,19 +425,42 @@ async function createTask(
 	next: NextFunction
 ): Promise<any> {
 
-	const task = req.body.task;
+	const task: {
+
+		title: string;
+		description: string;
+		priority: string;
+		deadline: string;
+		assignedTo: number;
+		assignedBy: number;
+
+	} = {
+
+		title: req.body.title,
+		description: req.body.description,
+		priority: req.body.priority,
+		deadline: req.body.deadline,
+		assignedTo: Number(req.body.assignedTo),
+		assignedBy: Number(req.body.assignedBy),
+
+	};
+
+	const projectId: number = parseInt(req.params.projectId);
 	const userId = req.user.id;
 
-    const projectId: number = task.projectId = parseInt(req.params.projectId);
+	const files = req.files as Express.Multer.File[] ?? [];
+	const sizes: number[] = files.map(file => file.size);
+	const fileNames: string[] = files.map((file) => file.originalname);
 
 	try { 
+		
         if (!hasOnlyKeysOfB(task, models.Task)){ 
             throw new AppError('Invalid fields in request body')
         }
 
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const nTask = await projectService.createTask(task as Task, userId, projectId);
+			const nTask = await projectService.createTask(task, userId, projectId, fileNames, sizes, files);
 			return res.status(201).json(nTask);
 
 		}
@@ -525,17 +549,38 @@ async function getMemberProductivity(
         if ( req.memberPermissions?.includes('viewMemberProductivity')){
     
             const result = await projectService.getMemberProductivity(projectId, memberId);
-            return res.status(200).json({productivityData : result})
+            return res.status(200).json({productivityData: result})
         }
         else{
             throw new AppError('No permission to edit task')
         }
 
-
+	} catch(error) { 
+    	next (error);
+	}
 }
-catch(error) { 
-    next (error)
-}}
+
+async function getTaskFiles(
+	req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+
+	try {
+
+		const taskId: number = parseInt(req.params.taskId);
+
+		if (!taskId ) throw new AppError('taskId is missing');
+
+		const fileAttachments = await projectService.getTaskFiles(taskId);
+
+		return res.status(200).json({ fileURLs: fileAttachments });
+	
+	} catch (error) {
+		next (error);
+	}
+	
+}
 
 async function getProjectInvites(
     req : AuthenticatedRequest,
@@ -610,6 +655,7 @@ const projectController = {
     getMemberProductivity,
     getProjectInvites,
     getTeamOfProject,
+	getTaskFiles,
 };
 
 export default projectController;

@@ -12,6 +12,7 @@ import { createServer } from 'http';
 import { WebSocketServer, WebSocket as WSWebSocket } from 'ws';
 import { handleCommentWSConnection } from './controllers/commentController';
 import { handleNotificationWSConnection } from './services/notificationWSService';
+import { initConsumers } from './queues/initConsumers';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +67,7 @@ async function main() {
 
 		await initDB();
 		await startCronJobs();
+		await initConsumers();
 		server.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
 
 	} catch (error) {

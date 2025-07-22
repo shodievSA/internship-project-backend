@@ -1,6 +1,6 @@
 import { models } from '../models';
 import { AppError, FrontInvite, UserData } from '@/types';
-import { decryptToken } from '../config/passport';
+import { runCryptoWorker } from '@/utils/cryptoWorkerHelper';
 import { Contact, GooglePerson } from '@/types';
 import Project from '@/models/project';
 import User from '@/models/user';
@@ -9,7 +9,6 @@ import sequelize from '@/clients/sequelize';
 import { Op, Transaction } from 'sequelize';
 import { DateTime } from 'luxon';
 import DailyAiReport from '@/models/dailyAiReport';
-import { DailyReport } from '@/types/dailyReport';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -45,7 +44,7 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 			attributes : ['refreshToken']
 		});
 
-		const refreshToken = decryptToken(user?.refreshToken!);
+		const refreshToken = await runCryptoWorker('decrypt', user?.refreshToken!, process.env.ENCRYPTION_KEY!);
 
 		const oauth2Client = new auth.OAuth2(
 			process.env.GOOGLE_CLIENT_ID!,
