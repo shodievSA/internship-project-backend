@@ -59,9 +59,25 @@ export interface ProjectMetaData {
 	createdAt: Date;
 }
 
+export interface SprintMetaData { 
+    id: number;
+	title: string;
+	description?: string;
+	status: 'planned' |'active' | 'closed' | 'overdue';
+	projectId: number;
+	createdBy: {
+        fullName: string | null
+        avatarUrl: string | null
+        email: string
+    };
+    startDate: Date;
+    endDate: Date;
+}
+
 export interface ProjectDetails {
 	metaData: ProjectMetaData;
     tasks: ProjectTask[];
+    sprints: SprintMetaData[];
 	currentMemberId: number;
     currentMemberRole : "admin" | "manager" | "member"
 }

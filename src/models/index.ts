@@ -14,10 +14,12 @@ import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
 import Invite from './invites';
+import Sprint from './sprint';
 
 interface Models {
 	User: typeof User;
 	Project: typeof Project;
+    Sprint: typeof Sprint;
 	ProjectMember: typeof ProjectMember;
 	Permission: typeof Permission;
 	Role: typeof Role;
@@ -28,11 +30,13 @@ interface Models {
 	Comment: typeof Comment;
 	Notification: typeof Notification;
     TaskHistory : typeof TaskHistory;
+    
 };
 
 export const models: Models = {
 	User,
 	Project,
+    Sprint,
 	ProjectMember,
 	Permission,
 	Role,
@@ -202,6 +206,41 @@ export function initAssociations() {
         foreignKey : 'task_id',
         as : 'history',
     });
+
+    //
+    Project.hasMany(Sprint, { 
+        foreignKey: 'project_id',
+        as: 'sprints',
+        onDelete:'CASCADE',
+        hooks: true
+    })
+
+    Sprint.belongsTo(Project,{
+        foreignKey: 'project_id',
+        as: 'project'
+    })
+
+    Sprint.hasMany(Task, { 
+        foreignKey: 'sprint_id',
+        as: 'tasks',
+        onDelete: 'CASCADE',
+        hooks:true,
+    })
+
+    Task.belongsTo(Sprint, { 
+        foreignKey: 'sprint_id',
+        hooks:true
+    })
+
+	ProjectMember.hasMany(Sprint, {
+		foreignKey: 'created_by',
+        onDelete: 'SET NULL'
+	});
+
+	Sprint.belongsTo(ProjectMember, {
+		as: 'createdByMember',
+		foreignKey: 'created_by'
+	});
 };
 
 export default async function initDB() {

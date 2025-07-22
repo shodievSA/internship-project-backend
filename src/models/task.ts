@@ -28,6 +28,7 @@ export interface TaskAttributes {
 	assignedTo: number;
 	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
 	projectId: number;
+    sprintId: number;
     updatedAt: Date | string;
     createdAt: Date | string;
 }
@@ -45,6 +46,7 @@ class Task extends Model<
 	declare assignedTo: number;
 	declare status: CreationOptional<'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue'>;
 	declare projectId: number;
+    declare sprintId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
 
@@ -116,6 +118,15 @@ Task.init(
 			},
 			onDelete: "CASCADE"
 		},
+        sprintId:{
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: { 
+                model: 'sprints',
+                key: 'id'
+            },
+            onDelete: "CASCADE"
+        },
 		createdAt: {
 			type: DataTypes.DATE,
 			allowNull: false
