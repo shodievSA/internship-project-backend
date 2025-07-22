@@ -8,10 +8,14 @@ import {
 } from 'sequelize';
 import Project from './project';
 import ProjectMember from './projectMember';
+import Task from './task';
 
 export interface SprintAssociations {
 	project: Project;
 	createdByMember: ProjectMember;
+    tasks: Task[],
+    taskCount: number,
+    closedTaskCount: number,
 } 
 
 export interface SprintAttributes { 
@@ -41,6 +45,9 @@ class Sprint extends Model<
 
 	declare project: Project;
 	declare createdByMember: ProjectMember;
+    declare tasks?: Task[];
+    declare taskCount?: number;
+    declare closedTaskCount?: number
 }
 
 Sprint.init(

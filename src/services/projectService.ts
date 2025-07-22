@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction} from 'sequelize';
+import {Sequelize, Transaction} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -667,6 +667,26 @@ class ProjectService {
                     model: models.Sprint,
                     as : 'sprints',
                     order: [["created_at", "ASC"]],
+                    attributes: {
+                        include: [ 
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT (*)
+                                    FROM tasks AS t 
+                                    WHERE t.sprint_id = "sprints".id
+                                    )`),
+                                    'taskCount'
+                            ],
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT (*)
+                                    FROM tasks AS t 
+                                    WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
+                                    )`),
+                                    'closedTaskCount'
+                            ],
+                        ]
+                    },
                     include: [{
 						model: models.ProjectMember,
 						as: 'createdByMember',
@@ -675,8 +695,9 @@ class ProjectService {
                             as: 'user',
 							attributes: ['fullName', 'avatarUrl', 'email'] 
 						}],
-					},]
-                }]
+					}]
+                }, 
+                ]
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
@@ -759,8 +780,9 @@ class ProjectService {
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
             
             const sprints: SprintMetaData[] = [];
-
+            
             for(const sprint of project.sprints) { 
+
                 sprints.push({
                     id: sprint.id,
                     title: sprint.title,
@@ -772,11 +794,12 @@ class ProjectService {
                         avatarUrl: sprint.createdByMember.user.avatarUrl,
                         email: sprint.createdByMember.user.email
                     },
+                    closedTaskCount: Number(sprint.get('closedTaskCount')),
+                    taskCount: Number(sprint.get('taskCount')),
                     startDate: sprint.startDate,
                     endDate: sprint.endDate,
                 })
             }
-            
 			return {
 				metaData: metaData,
 				tasks: tasks,
