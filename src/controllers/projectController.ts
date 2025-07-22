@@ -625,6 +625,32 @@ async function createSprint
     }
 }
 
+async function getSprintsTasks(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const projectId = parseInt(req.params.projectId);
+        const sprintId = parseInt(req.params.sprintId);
+
+        if (!projectId || !sprintId) { 
+            throw new AppError('Empty input')
+        }
+		const tasks = await projectService.getSprintsTasks( projectId, sprintId );
+
+		res.status(200).json({ sprintTasks: tasks });
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
 
 
 const projectController = {
@@ -646,6 +672,7 @@ const projectController = {
     getProjectInvites,
     getTeamOfProject,
     createSprint,
+    getSprintsTasks,
 };
 
 export default projectController;

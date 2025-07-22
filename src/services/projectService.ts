@@ -1504,6 +1504,87 @@ class ProjectService {
 
         return sprint
     }
+
+    async getSprintsTasks( projectId: number, sprintId: number): Promise<ProjectTask[]> { 
+
+    try{
+        
+        const sprintsTasks = await models.Task.findAll({
+            where: { 
+                projectId: projectId,
+                sprintId: sprintId
+            },
+            include: [
+                {
+                    model: models.ProjectMember,
+                    as: 'assignedByMember',
+                    include: [{ 
+                        model: models.User, 
+                        as: 'user',
+                        attributes: ['fullName', 'avatarUrl','email'] 
+                    }],
+                    attributes: ['id']
+                },
+                {
+                    model: models.ProjectMember,
+                    as: 'assignedToMember',
+                    include: [{ 
+                        model: models.User, 
+                        as: 'user',
+                        attributes: ['fullName', 'avatarUrl','email'] 
+                    }],
+                    attributes: ['id']
+                },
+                {
+                    model: models.TaskHistory,
+                    as: 'history',
+                    separate: true,
+                    order: [['created_at', 'DESC']]
+                }
+            ],
+
+            order: [['created_at', 'DESC']]
+		});
+
+        if(!sprintsTasks) { 
+            throw new AppError('Cannot find tasks')
+        }
+
+        const tasks: ProjectTask[] = [];
+
+        for (const task of sprintsTasks) {
+
+            tasks.push({
+                id: task.id as number,
+                title: task.title,
+                description: task.description as string,
+                priority: task.priority,
+                deadline: task.deadline,
+                assignedBy: {
+                    id: task.assignedByMember.id,
+                    name: task.assignedByMember.user.fullName as string,
+                    email: task.assignedByMember.user.email,
+                    avatarUrl: task.assignedByMember.user.avatarUrl,
+                },
+                assignedTo: {
+                    id: task.assignedToMember.id,
+                    name: task.assignedToMember.user.fullName as string,
+                    email: task.assignedToMember.user.email,
+                    avatarUrl: task.assignedToMember.user.avatarUrl,
+                },
+                status: task.status,
+                history : task.history,
+                createdAt: task.createdAt
+            });
+        };
+        
+        return tasks
+
+        }catch(err){
+            throw err
+        }
+
+    }
 }
 
 export default new ProjectService();
