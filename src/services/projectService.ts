@@ -780,7 +780,7 @@ class ProjectService {
             if (!currentMember) throw new AppError(`Project member doesn't exist`);
             
             const sprints: SprintMetaData[] = [];
-            
+
             for(const sprint of project.sprints) { 
 
                 sprints.push({
@@ -800,10 +800,15 @@ class ProjectService {
                     endDate: sprint.endDate,
                 })
             }
+            const team = await this.getTeamOfProject(projectId)
+            if (!team) {
+                throw new AppError("Faced error while getting team")
+            }
 			return {
 				metaData: metaData,
 				tasks: tasks,
                 sprints: sprints,
+                team: team,
 				currentMemberId: currentMember.id,
 				currentMemberRole: currentMember.role as "admin" | "manager" | "member"
 			};
