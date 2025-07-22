@@ -75,8 +75,8 @@ export interface SprintMetaData {
         avatarUrl: string | null
         email: string
     };
-    taskCount: number, 
-    closedTaskCount: number,
+    totalTasks: number, 
+    totalTasksCompleted: number,
     startDate: Date;
     endDate: Date;
 }

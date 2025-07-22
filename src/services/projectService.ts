@@ -806,8 +806,8 @@ class ProjectService {
                         avatarUrl: sprint.createdByMember.user.avatarUrl,
                         email: sprint.createdByMember.user.email
                     },
-                    closedTaskCount: Number(sprint.get('closedTaskCount')),
-                    taskCount: Number(sprint.get('taskCount')),
+                    totalTasksCompleted: Number(sprint.get('closedTaskCount')),
+                    totalTasks: Number(sprint.get('taskCount')),
                     startDate: sprint.startDate,
                     endDate: sprint.endDate,
                 })
@@ -1586,7 +1586,33 @@ class ProjectService {
 
         if (!sprint) throw new AppError('Problem faced while saving sprint');
 
-        return sprint;
+		const createdBy = await models.ProjectMember.findOne({
+			where: { id: sprint.createdBy },
+			include: [{
+				model: models.User,
+				as: "user",
+				attributes: ["email", "fullName", "avatarUrl"]
+			}]
+		});
+
+		if (!createdBy) throw new AppError('Problem faced while finding sprint creator');
+
+        return {
+			id: sprint.id,
+			title: sprint.title,
+			description: sprint.description,
+			status: sprint.status,
+			projectId: sprint.projectId,
+			createdBy: {
+				fullName: createdBy.user.fullName,
+				avatarUrl: createdBy.user.avatarUrl,
+				email: createdBy.user.email
+			},
+			totalTasksCompleted: 0,
+			totalTasks: 0,
+			startDate: sprint.startDate,
+			endDate: sprint.endDate,
+		}
 
     }
 
