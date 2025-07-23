@@ -663,44 +663,53 @@ class ProjectService {
 
 			const project = await models.Project.findByPk(projectId, {
 				attributes: ['id', 'title', 'status', 'createdAt'],
-                include: [{
-                    model: models.Sprint,
-                    as : 'sprints',
-                    order: [["created_at", "ASC"]],
-                    attributes: {
-                        include: [ 
-                            [
-                                Sequelize.literal(`(
-                                    SELECT COUNT (*)
-                                    FROM tasks AS t 
-                                    WHERE t.sprint_id = "sprints".id
-                                    )`),
-                                    'taskCount'
-                            ],
-                            [
-                                Sequelize.literal(`(
-                                    SELECT COUNT (*)
-                                    FROM tasks AS t 
-                                    WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
-                                    )`),
-                                    'closedTaskCount'
-                            ],
-                        ]
-                    },
-                    include: [{
-						model: models.ProjectMember,
-						as: 'createdByMember',
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl', 'email'] 
-						}],
-					}]
-                }, 
+                include: [
+					{
+						model: models.Sprint,
+						as : 'sprints',
+						order: [["created_at", "ASC"]],
+						attributes: {
+							include: [ 
+								[
+									Sequelize.literal(`(
+										SELECT COUNT (*)
+										FROM tasks AS t 
+										WHERE t.sprint_id = "sprints".id
+									)`),
+									'taskCount'
+								],
+								[
+									Sequelize.literal(`(
+										SELECT COUNT (*)
+										FROM tasks AS t 
+										WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
+									)`),
+									'closedTaskCount'
+								],
+							]
+						},
+						include: [{
+							model: models.ProjectMember,
+							as: 'createdByMember',
+							include: [{ 
+								model: models.User, 
+								as: 'user',
+								attributes: ['fullName', 'avatarUrl', 'email'] 
+							}],
+						}]
+					}, 
                 ]
+			});
+
+			const currentMember = await models.ProjectMember.findOne({
+				where: {
+					userId: userId,
+					projectId: projectId
+				}
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+			if (!currentMember) throw new AppError("Couldn't find current project member");
 
 			const metaData = {
 				id: project.id,
@@ -713,11 +722,10 @@ class ProjectService {
 				where: { 
                     projectId: projectId,
                     [Op.or]: [
-                        {assignedBy: userId},
-                        {assignedTo: userId}
+                        { assignedBy: currentMember.id },
+                        { assignedTo: currentMember.id }
                     ]
                 },
-
 				include: [
 					{
 						model: models.ProjectMember,
@@ -775,16 +783,6 @@ class ProjectService {
                 });
 
 			};
-
-			const currentMember = await models.ProjectMember.findOne({
-                where: { 
-					userId: userId, 
-					projectId: projectId 
-				},
-                attributes: ['id', 'roleId']
-            });
-
-            if (!currentMember) throw new AppError(`Project member doesn't exist`);
             
             const sprints: SprintMetaData[] = [];
 
