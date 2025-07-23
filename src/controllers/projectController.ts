@@ -500,7 +500,7 @@ async function updateTask(
 	const sizes: number[] = files.map(file => file.size);
 	const fileNames: string[] = files.map((file) => file.originalname);
 
-	const updatedTaskProps = req.body.updatedTaskProps
+	const updatedTaskProps = req.body.updatedTaskProps;
 	if (!updateProject || !projectId || !taskId) {
 		throw new AppError('Empty input')
 	}

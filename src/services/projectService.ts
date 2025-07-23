@@ -919,11 +919,15 @@ class ProjectService {
 
 		}
 
-		await sendEmailToQueue({
-			type: GmailType.NEW_TASK,
-			receiverEmail: assignedTo.user.email,
-			params: [project!.title, newTask.title, projectId]
-		});
+		if (assignedTo.user.email !== assignedBy.user.email) {
+
+			await sendEmailToQueue({
+				type: GmailType.NEW_TASK,
+				receiverEmail: assignedTo.user.email,
+				params: [project!.title, newTask.title, projectId]
+			});
+			
+		}
 
 		return {
 			
