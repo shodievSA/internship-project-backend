@@ -8,6 +8,7 @@ import {
 } from 'sequelize';
 import User from './user';
 import Project from './project';
+import { notificationConnectionsMap } from '..';
 
 export interface NotificationAssociations {
   	user: User;
@@ -67,9 +68,29 @@ Notification.init(
 			allowNull: false,
 		}
 	},
-	{
+	{   
+        hooks: { 
+
+            afterCreate: async (record, options) => { 
+                              
+                const userWs = notificationConnectionsMap.get(record.userId);
+                
+                if (userWs) {
+
+                    const payload = JSON.stringify ({
+                        type: "new-notification",
+                        newNotification: record,
+                    })
+
+                    userWs.send(payload);
+
+                }
+
+            }
+
+        },
 		sequelize,
-		underscored: true,
+		underscored: true
 	}
 );
 

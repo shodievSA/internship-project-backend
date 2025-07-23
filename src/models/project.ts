@@ -10,12 +10,14 @@ import Invite from './invites';
 import ProjectMember from './projectMember';
 import Task from './task';
 import User from './user';
+import Sprint from './sprint';
 
 export interface ProjectAssociations {
 	projectMember: ProjectMember[];
 	invites: Invite[];
 	tasks: Task[];
 	users: User[];
+    sprints: Sprint[];
 }
 
 class Project extends Model<
@@ -32,6 +34,7 @@ class Project extends Model<
 	declare invites: Invite[];
 	declare tasks: Task[];
 	declare users: User[];
+    declare sprints: Sprint[];
 }
  
 Project.init(

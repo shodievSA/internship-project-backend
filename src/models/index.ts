@@ -15,11 +15,13 @@ import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
 import Invite from './invites';
 import TaskFiles from './taskFiles';
+import Sprint from './sprint';
 import TimeEntry from './timeEntry';
 
-export interface Models {
+interface Models {
 	User: typeof User;
 	Project: typeof Project;
+	Sprint: typeof Sprint;
 	ProjectMember: typeof ProjectMember;
 	Permission: typeof Permission;
 	Role: typeof Role;
@@ -29,6 +31,8 @@ export interface Models {
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
+	TaskHistory: typeof TaskHistory;
+	TaskFiles: typeof TaskFiles;
 	TaskHistory: typeof TaskHistory
 	TimeEntry: typeof TimeEntry;
 };
@@ -36,6 +40,7 @@ export interface Models {
 export const models: Models = {
 	User,
 	Project,
+	Sprint,
 	ProjectMember,
 	Permission,
 	Role,
@@ -45,6 +50,8 @@ export const models: Models = {
 	DailyAiReport,
 	Comment,
 	Notification,
+	TaskHistory,
+	TaskFiles,
 	TaskHistory,
 	TimeEntry,
 };
@@ -218,33 +225,68 @@ export function initAssociations() {
 		as: 'task',
 	});
 
-	User.hasMany(TimeEntry, {
-		foreignKey: 'user_id',
-		as: 'timeEntries',
-		onDelete: 'CASCADE'
+	//
+	Project.hasMany(Sprint, {
+		foreignKey: 'project_id',
+		as: 'sprints',
+		onDelete: 'CASCADE',
+		hooks: true
+	})
+
+	Sprint.belongsTo(Project, {
+		foreignKey: 'project_id',
+		as: 'project'
+	})
+
+	Sprint.hasMany(Task, {
+		foreignKey: 'sprint_id',
+		as: 'tasks',
+		onDelete: 'CASCADE',
+		hooks: true,
+	})
+
+	Task.belongsTo(Sprint, {
+		foreignKey: 'sprint_id',
+		hooks: true
+	})
+
+	ProjectMember.hasMany(Sprint, {
+		foreignKey: 'created_by',
+		onDelete: 'SET NULL'
 	});
 
-	TimeEntry.belongsTo(User, {
-		foreignKey: 'user_id',
-		as: 'user'
+	Sprint.belongsTo(ProjectMember, {
+		as: 'createdByMember',
+		foreignKey: 'created_by'
 	});
+};
 
-	Task.hasMany(TimeEntry, {
-		foreignKey: 'task_id',
-		as: 'timeEntries',
-		onDelete: 'CASCADE'
-	});
+User.hasMany(TimeEntry, {
+	foreignKey: 'user_id',
+	as: 'timeEntries',
+	onDelete: 'CASCADE'
+});
 
-	TimeEntry.belongsTo(Task, {
-		foreignKey: 'task_id',
-		as: 'task'
-	});
+TimeEntry.belongsTo(User, {
+	foreignKey: 'user_id',
+	as: 'user'
+});
+
+Task.hasMany(TimeEntry, {
+	foreignKey: 'task_id',
+	as: 'timeEntries',
+	onDelete: 'CASCADE'
+});
+
+TimeEntry.belongsTo(Task, {
+	foreignKey: 'task_id',
+	as: 'task'
+});
 }
 
 export default async function initDB() {
 
 	try {
-
 		await sequelize.authenticate();
 		await sequelize.sync({ force: false });
 		initAssociations();
@@ -256,7 +298,6 @@ export default async function initDB() {
 
 	} catch (error) {
 
-		console.error('Error synchronizing the database:', error);
 
 	}
 

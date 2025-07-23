@@ -18,7 +18,9 @@ class TaskFiles extends Model<
 > {
     declare id: CreationOptional<number>;
     declare taskId: number;
-    declare filePath: string;
+    declare key: string;
+    declare fileName: string;
+    declare size: number;
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
 
@@ -42,8 +44,18 @@ TaskFiles.init({
         onDelete: 'CASCADE',
     },
 
-    filePath: {
+    key: {
         type: DataTypes.STRING,
+        allowNull: false,
+    },
+
+    fileName: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    size: {
+        type: DataTypes.INTEGER,
         allowNull: false,
     },
 

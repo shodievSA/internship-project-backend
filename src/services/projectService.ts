@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Transaction} from 'sequelize';
+import {Op, Sequelize, Transaction} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -8,16 +8,22 @@ import {
 	ProjectTask, 
 	ProjectInvite, 
 	AppError, 
-	TeamMember
+	TeamMember,
+    FrontSprintAttributes,
+    SprintMetaData
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import Task, { TaskAttributes } from '@/models/task';
+import Task, { TaskAttributes, FileAttachments } from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
 import Project from '@/models/project';
-import { createNotification } from './notificationService';
-import { GmailSenderFactory, GmailType } from '../services/gmaiService';
+import { GmailType } from '../services/gmaiService';
+import { sendEmailToQueue, sendFileToQueue } from '@/queues';
+import { randomUUID } from 'crypto';
+import fileHandler from './fileService';
+import { FileObject } from 'openai/resources';
+import { file } from 'googleapis/build/src/apis/file';
 
 class ProjectService {
 
@@ -68,11 +74,10 @@ class ProjectService {
 
 			await transaction.commit();
 
-			GmailSenderFactory.sendGmail(GmailType.LEAVE_PROJECT).sendGmail(
-				admin.user.email,
-				[project.title, userRole, position]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.LEAVE_PROJECT,
+				receiverEmail: admin.user.email,
+				params: [project.title, userRole, position],
 			});
 
 		} catch (error) {
@@ -113,7 +118,16 @@ class ProjectService {
 		
 			await transaction.commit();
 
-			return project;
+			return {
+				id: project.id,
+				title: project.title,
+				status: project.status,
+				createdAt: project.createdAt,
+				members: 1,
+				totalTasks: 0,
+				totalTasksCompleted: 0,
+				isAdmin: true
+			};
 
 		} catch (error) {
 
@@ -214,11 +228,10 @@ class ProjectService {
 
 					await transaction.commit();
 
-					GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE).sendGmail(
-						receiverEmail,
-						[fullProdInvite!.project.title, roleOffered, positionOffered]
-					).catch(err => {
-						console.error('Failed to send email', err);
+					await sendEmailToQueue({
+						type: GmailType.PROJECT_INVITE,
+						receiverEmail: receiverEmail,
+						params: [fullProdInvite!.project.title, roleOffered, positionOffered]
 					});
 
 					return { 
@@ -318,11 +331,10 @@ class ProjectService {
 
 				await transaction.commit();
 
-				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_ACCEPT).sendGmail(
-					invite.inviter.email,
-					[project!.title, roleOffered, positionOffered, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROJECT_INVITE_ACCEPT,
+					receiverEmail: invite.inviter.email,
+					params: [project!.title, roleOffered, positionOffered, projectId]
 				});
 
 				return {
@@ -337,11 +349,10 @@ class ProjectService {
 
 				await transaction.commit();
 
-				GmailSenderFactory.sendGmail(GmailType.PROJECT_INVITE_REJECT).sendGmail(
-					invite.inviter.email,
-					[project!.title, roleOffered, positionOffered, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROJECT_INVITE_REJECT,
+					receiverEmail: invite.inviter.email,
+					params: [project!.title, roleOffered, positionOffered, projectId]
 				});
 
 				return {
@@ -524,11 +535,10 @@ class ProjectService {
 
 			await transaction.commit();	
 
-			GmailSenderFactory.sendGmail(GmailType.CHANGE_TASK_STATUS).sendGmail(
-				email,
-				[task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.CHANGE_TASK_STATUS,
+				receiverEmail: email,
+				params: [task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
 			});
 
 			return updatedTask;
@@ -662,18 +672,53 @@ class ProjectService {
 
 			const project = await models.Project.findByPk(projectId, {
 				attributes: ['id', 'title', 'status', 'createdAt'],
-				include: [{
-					model: models.User,
-					as: 'users',
-					attributes: ['fullName', 'email', 'avatarUrl'],
-					through: {
-						as: 'projectMember',
-						attributes: ['id', 'userId', 'position', 'roleId'],
-					},
-                }]
+                include: [
+					{
+						model: models.Sprint,
+						as : 'sprints',
+						order: [["created_at", "ASC"]],
+						attributes: {
+							include: [ 
+								[
+									Sequelize.literal(`(
+										SELECT COUNT (*)
+										FROM tasks AS t 
+										WHERE t.sprint_id = "sprints".id
+									)`),
+									'taskCount'
+								],
+								[
+									Sequelize.literal(`(
+										SELECT COUNT (*)
+										FROM tasks AS t 
+										WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
+									)`),
+									'closedTaskCount'
+								],
+							]
+						},
+						include: [{
+							model: models.ProjectMember,
+							as: 'createdByMember',
+							include: [{ 
+								model: models.User, 
+								as: 'user',
+								attributes: ['fullName', 'avatarUrl', 'email'] 
+							}],
+						}]
+					}, 
+                ]
+			});
+
+			const currentMember = await models.ProjectMember.findOne({
+				where: {
+					userId: userId,
+					projectId: projectId
+				}
 			});
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+			if (!currentMember) throw new AppError("Couldn't find current project member");
 
 			const metaData = {
 				id: project.id,
@@ -681,24 +726,15 @@ class ProjectService {
 				status: project.status,
 				createdAt: project.createdAt
 			};
-	
-			const team = project.users.map((pm: User) => {
-
-				const projectMember = pm.projectMember;
-
-				return {
-					id: projectMember.id as number,
-					name: pm.fullName,
-					email: pm.email,
-                    avatarUrl: pm.avatarUrl,
-					position: projectMember.position,
-					role: projectMember.role as string
-				}
-
-			});
 		
 			const projectTasks = await models.Task.findAll({
-				where: { projectId: projectId },
+				where: { 
+                    projectId: projectId,
+                    [Op.or]: [
+                        { assignedBy: currentMember.id },
+                        { assignedTo: currentMember.id }
+                    ]
+                },
 				include: [
 					{
 						model: models.ProjectMember,
@@ -707,7 +743,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+							attributes: ['fullName', 'avatarUrl', 'email'] 
 						}],
 					},
 					{
@@ -717,7 +753,7 @@ class ProjectService {
 						include: [{ 
 							model: models.User, 
                             as: 'user',
-							attributes: ['fullName', 'avatarUrl'] 
+							attributes: ['fullName', 'avatarUrl', 'email'] 
 						}],
 					},
                     {
@@ -734,8 +770,6 @@ class ProjectService {
 
 			for (const task of projectTasks) {
 
-				console.log(task.assignedByMember.position)
-
                 tasks.push({
                     id: task.id as number,
                     title: task.title,
@@ -746,65 +780,60 @@ class ProjectService {
                         name: task.assignedByMember.user.fullName as string,
                         avatarUrl: task.assignedByMember.user.avatarUrl,
 						id: task.assignedByMember.id,
-						position: task.assignedByMember.position
+						position: task.assignedByMember.position,
+						email: task.assignedByMember.user.email
                     },
                     assignedTo: {
                         name: task.assignedToMember.user.fullName as string,
                         avatarUrl: task.assignedToMember.user.avatarUrl,
 						id: task.assignedToMember.id,
-						position: task.assignedToMember.position
+						position: task.assignedToMember.position,
+						email: task.assignedToMember.user.email
                     },
                     status: task.status,
                     history : task.history,
-                    createdAt: task.createdAt
+                    createdAt: task.createdAt,
+					updatedAt: task.updatedAt
                 });
 
 			};
-		
-			const projectInvites = await models.Invite.findAll({
-				where: { projectId },
-				include: [{
-					model: models.User,
-					as: 'user'
-				}],
-                order: [['created_at', 'DESC']]
-			});
+            
+            const sprints: SprintMetaData[] = [];
 
-			const invites: ProjectInvite[] = [];
+            for(const sprint of project.sprints) { 
 
-			for (const invite of projectInvites) {
+                sprints.push({
+                    id: sprint.id,
+                    title: sprint.title,
+                    description: sprint.description,
+                    status: sprint.status,
+                    projectId: sprint.projectId,
+                    createdBy: {
+                        fullName: sprint.createdByMember.user.fullName,
+                        avatarUrl: sprint.createdByMember.user.avatarUrl,
+                        email: sprint.createdByMember.user.email
+                    },
+                    totalTasksCompleted: Number(sprint.get('closedTaskCount')),
+                    totalTasks: Number(sprint.get('taskCount')),
+                    startDate: sprint.startDate,
+                    endDate: sprint.endDate,
+                })
+            }
 
-				invites.push({
-					id: invite.id as number,
-					status: invite.status,
-					receiverEmail: invite.user.email,
-					receiverName: invite.user.fullName,
-					receiverAvatarUrl: invite.user.avatarUrl,
-					createdAt: invite.createdAt as Date,
-					positionOffered: invite.positionOffered as string,
-					roleOffered: invite.roleOffered,
-				});
+            const team = await this.getTeamOfProject(projectId);
 
-			}
+            if (!team) {
+                throw new AppError("Faced error while getting team")
+            }
 
-			const currentMember = await models.ProjectMember.findOne({
-                where: { 
-					userId: userId, 
-					projectId: projectId 
-				},
-                attributes: ['id', 'roleId']
-            });
-
-            if (!currentMember) throw new AppError(`Project member doesn't exist`);
-	
 			return {
 				metaData: metaData,
-				team: team,
 				tasks: tasks,
-				invites: invites,
+                sprints: sprints,
+                team: team,
 				currentMemberId: currentMember.id,
-				currentMemberRole: currentMember.role
-			} as ProjectDetails;
+				currentMemberRole: currentMember.role as "admin" | "manager" | "member"
+			};
 
 		} catch(err) {  
 
@@ -814,11 +843,17 @@ class ProjectService {
 
 	}
 
-	async createTask(task: Task, userId: number, projectId: number): Promise<object> {
-
-    	const transaction = await sequelize.transaction();
+	async createTask(
+		task: any, 
+		userId: number, 
+		projectId: number, 
+		fileNames: string[], 
+		sizes: number[], 
+		files?: Express.Multer.File[]
+	): Promise<object> {
 
 		const deadline: Date = new Date(task.deadline);
+		const uploadedFiles: string[] = [];
 
 		if (Number.isNaN(deadline.getTime())) {
 			throw new AppError('Invalid deadline format', 400);
@@ -828,90 +863,95 @@ class ProjectService {
 			throw new AppError('Deadline cannot be in the past', 400);
 		}
 
+		let newTask: any;
+		let assignedBy: any;
+		let assignedTo: any;
+		let project: any;
+		let newTaskHistory: any;
+
+		const transaction = await sequelize.transaction();
+
 		try {
 
-            const assignedBy = await models.ProjectMember.findOne({
-                where: { userId: userId },
-                attributes: ['id', 'position'],
-                include: [{
-                    model: models.User,
-                    as: 'user'
-                }],
-                transaction
-            });
+			assignedBy = await models.ProjectMember.findOne({
+				where: { userId: userId, projectId: projectId },
+				attributes: ['id', 'position'],
+				include: [{ model: models.User, as: 'user' }],
+				transaction
+			});
 
-            const assignedTo = await models.ProjectMember.findOne({
-                where: { id: task.assignedTo },
-				attributes: ['position'],
-                include: [{
-                    model: models.User,
-                    as: 'user'
-				}],
-                transaction
-            })
+			assignedTo = await models.ProjectMember.findOne({
+				where: { id: task.assignedTo },
+				include: [{ model: models.User, as: 'user' }],
+				transaction
+			});
 
-            if (!assignedBy || !assignedTo) { 
-                throw new AppError('No such users in project')
-            }
+			if (!assignedBy || !assignedTo) {
+				throw new AppError('No such users in project');
+			}
 
-			const newTask = await models.Task.create(task, 
-				{ transaction },
+			newTask = await models.Task.create(task,
+				{ transaction }
 			);
 
-			const project = await models.Project.findByPk(task.projectId, {
+			project = await models.Project.findByPk(projectId, {
 				attributes: ['title']
 			});
+
 			const history = await models.TaskHistory.create(
 				{
 					taskId: newTask.id,
 					status: newTask.status,
-            	}, 
+				},
 				{ transaction }
 			);
 
-			let newTaskHistory = [history];
-            
-            await createNotification(
-                assignedTo.user.id,
-                task.projectId,
-                task.title,
-                transaction,
-                'newTask'
-            );
+			newTaskHistory = [history];
+
+			if (files && files.length > 0) {
+
+				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
+
+				const upload = files.map((file) => {
+
+					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+					uploadedFiles.push(key);
+
+					return sendFileToQueue({
+						key: key,
+						contentType: file.mimetype,
+						action: 'upload',
+						file: file.path
+					});
+
+				});
+
+				await Promise.all(upload);
+
+				await Promise.all(
+					uploadedFiles.map((key, i) =>
+						models.TaskFiles.create({ 
+							taskId: newTask.id, 
+							key: key, 
+							fileName: fileNames[i], 
+							size: sizes[i] 
+						}, 
+						{ transaction } 
+					))
+				);
+				
+			}
+
+			await models.Notification.create(
+				{
+					userId: assignedTo.user.id,
+					title: "New Task",
+					message: "You've been assigned new task"
+				},
+				{ transaction }
+			);
 
 			await transaction.commit();
-
-			GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
-				assignedTo.user.email,
-				[project!.title, newTask.title, projectId]
-			).catch(err => {
-				console.error('Failed to send email', err);
-			});
-
-			const formattedNewTask = {
-				deadline: newTask.deadline,
-				createdAt: newTask.createdAt,
-				description: newTask.description,
-				id: newTask.id,
-				priority: newTask.priority,
-				status: newTask.status,
-				title: newTask.title,
-				assignedBy: {
-					id: assignedBy?.id,
-					name: assignedBy?.user.fullName,
-					avatarUrl: assignedBy?.user.avatarUrl,
-					position: assignedBy.position
-				},
-				assignedTo: {
-					id: assignedTo?.id,
-					name: assignedTo?.user.fullName,
-					avatarUrl: assignedTo?.user.avatarUrl,
-					position: assignedTo.position
-				},
-				history: newTaskHistory,
-			} as ProjectTask;
-
-			return formattedNewTask;
 
 		} catch (error) {
 
@@ -920,7 +960,42 @@ class ProjectService {
 
 		}
 
-  	}
+		if (assignedTo.user.email !== assignedBy.user.email) {
+
+			await sendEmailToQueue({
+				type: GmailType.NEW_TASK,
+				receiverEmail: assignedTo.user.email,
+				params: [project!.title, newTask.title, projectId]
+			});
+			
+		}
+
+		return {
+			deadline: newTask.deadline,
+			createdAt: newTask.createdAt,
+			updatedAt: newTask.updatedAt,
+			description: newTask.description,
+			id: newTask.id,
+			priority: newTask.priority,
+			status: newTask.status,
+			title: newTask.title,
+			assignedBy: {
+				id: assignedBy.id,
+				name: assignedBy.user.fullName,
+				avatarUrl: assignedBy.user.avatarUrl,
+				position: assignedBy.position
+			},
+			assignedTo: {
+				id: assignedTo.id,
+				name: assignedTo.user.fullName,
+				avatarUrl: assignedTo.user.avatarUrl,
+				position: assignedTo.position
+			},
+			history: newTaskHistory,
+		} as ProjectTask;
+
+	}
+
 
 	async updateTeamMemberRole(
 		projectId: number, 
@@ -973,11 +1048,10 @@ class ProjectService {
 					userId: member!.user.id,
 				});
 
-				GmailSenderFactory.sendGmail(GmailType.PROMOTE_DEMOTE_MEMBER).sendGmail(
-					member!.user.email,
-					[project!.title as string, newRole, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.PROMOTE_DEMOTE_MEMBER,
+					receiverEmail: member!.user.email,
+					params: [project!.title as string, newRole, projectId]
 				});
 
 				const projectMember = {
@@ -1053,11 +1127,10 @@ class ProjectService {
 
 			await transaction.commit();
 
-			GmailSenderFactory.sendGmail(GmailType.REMOVE_TEAM_MEMBER).sendGmail(
-				userToRemove.user.email,
-				[projectTitle]
-			).catch(err => {
-				console.error('Failed to send email', err);
+			await sendEmailToQueue({
+				type: GmailType.REMOVE_TEAM_MEMBER,
+				receiverEmail: userToRemove.user.email,
+				params: [projectTitle]
 			});
 
 		} catch (error) {
@@ -1104,8 +1177,11 @@ class ProjectService {
     async updateTask(
 		projectId: number,
 		taskId: number,
-		updatedTaskProps: TaskAttributes
-    ) : Promise<ProjectTask> {
+		files: Express.Multer.File[],
+		sizes: number[],
+		fileNames: string[],
+		updatedTaskProps: any
+    ): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
@@ -1168,6 +1244,68 @@ class ProjectService {
 
             }
 
+			const _new: FileObject[] = updatedTaskProps.fileAttachments.new;
+			const editedFiles: string[] = [];
+
+			if (_new && _new.length > 0) {
+				if (files && files.length === _new.length) {
+
+					const edit = files.map((file) => {
+						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
+						editedFiles.push(key);
+
+						return sendFileToQueue({
+							key: key,
+							contentType: file.mimetype,
+							action: 'edit',
+							file: file.path
+						});
+					});
+
+
+					const taskFiles = editedFiles.map((key, i) =>
+						models.TaskFiles.create(
+							{
+								taskId: task.id,
+								key: key,
+								fileName: fileNames[i],
+								size: sizes[i]
+							},
+							{ transaction }
+						)
+					);
+
+					await Promise.all([...edit, ...taskFiles]);
+
+				} else {
+					throw new AppError("Mismatch between 'files' and 'fileAttachments.new'", 400);
+				}
+			}
+
+			const _delete: number[] = updatedTaskProps.fileAttachments.deleted;
+
+			if (_delete && _delete.length > 0) {
+
+				const taskFiles =  await models.TaskFiles.findAll(
+					{ where: { id: _delete }, attributes: ['key'], transaction }
+				);
+
+				await Promise.all(
+					taskFiles.map(taskFile =>
+						sendFileToQueue({
+							key: taskFile.key,
+							action: 'remove',
+						})
+					)
+				);
+
+				await models.TaskFiles.destroy({
+					where: { id: _delete },
+					transaction,
+				});
+
+			}
+
             if (
 				updatedTaskProps.assignedBy 
 				&& 
@@ -1212,58 +1350,60 @@ class ProjectService {
                     throw new AppError ('No such user to assign task');
                 }
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'reassignTask'
-                );
+                await models.Notification.create({
+                    
+                    title: "Task reassigned",
+                    message: `Your task: ${task.title} was removed from your tasks by authority`,
+                    userId: task.assignedToMember.user.id,
+                    },
+                    {transaction}
+                )
 
-				GmailSenderFactory.sendGmail(GmailType.REASSIGN_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId],
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.REASSIGN_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
                 //change receiver
                 task.assignedToMember.user = newAssignedUser.user
 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'newTask'
+                await models.Notification.create({
+
+                    title: "New Task",
+                    userId: task.assignedToMember.user.id,
+                    message: `Project: ${task.project.title}.
+                    Assigned new task: "${task.title}"`,
+                    },
+                    {transaction}
                 )
 
-				GmailSenderFactory.sendGmail(GmailType.NEW_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.NEW_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
             } else { 
-                await createNotification(
-                    task.assignedToMember.user.id,
-                    projectId,
-                    task.title,
-                    transaction,
-                    'updatedTask',
+
+                await models.Notification.create({ 
+                    title: "Task updated",
+                    userId: task.assignedToMember.user.id,
+                    message:`Project: ${task.project.title}.
+                    Your task: ${task.title} was updated by authority`
+                },
+                    {transaction}
                 )
 
-				GmailSenderFactory.sendGmail(GmailType.UPDATED_TASK).sendGmail(
-					task.assignedToMember.user.email,
-					[task.project.title, task.title, projectId]
-				).catch(err => {
-					console.error('Failed to send email', err);
+				await sendEmailToQueue({
+					type: GmailType.UPDATED_TASK,
+					receiverEmail: task.assignedToMember.user.email,
+					params: [task.project.title, task.title, projectId]
 				});
 
             }
 
-            await task.update(updatedTaskProps as Task, {transaction});
+            await task.update(updatedTaskProps, { transaction });
 
             await transaction.commit();
 
@@ -1289,8 +1429,10 @@ class ProjectService {
             } as ProjectTask;
 
         } catch(error) {
-            await transaction.rollback()
-            throw error
+
+            await transaction.rollback();
+            throw error;
+
         }      
         
     }
@@ -1411,6 +1553,237 @@ class ProjectService {
             throw err
         }
     
+    }
+
+    async getProjectInvites(projectId: number): Promise<ProjectInvite[]> {
+        
+        const projectInvites = await models.Invite.findAll({
+            where: { projectId },
+            include: [{
+                model: models.User,
+                as: 'user'
+            }],
+            order: [['created_at', 'DESC']]
+		});
+
+		const invites: ProjectInvite[] = [];
+
+        for (const invite of projectInvites) {
+
+            invites.push({
+                id: invite.id as number,
+                status: invite.status,
+                receiverEmail: invite.user.email,
+                receiverName: invite.user.fullName,
+                receiverAvatarUrl: invite.user.avatarUrl,
+                createdAt: invite.createdAt as Date,
+                positionOffered: invite.positionOffered as string,
+                roleOffered: invite.roleOffered,
+            });
+
+        }
+
+        return invites
+    }
+
+    async getTeamOfProject(projectId: number): Promise<TeamMember[]> {
+
+        const project = await models.Project.findByPk(projectId, {
+            include: [{
+                model: models.User,
+                as: 'users',
+                attributes: ['fullName', 'email', 'avatarUrl'],
+                through: {
+                    as: 'projectMember',
+                    attributes: ['id', 'userId', 'position', 'roleId'],
+                },
+            }]
+        });
+
+        if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+
+            const team = project.users.map((projectN: User) => {
+
+                return {
+                    id: projectN.projectMember.id as number,
+                    name: projectN.fullName,
+                    email: projectN.email,
+                    avatarUrl: projectN.avatarUrl,
+                    position: projectN.projectMember.position,
+                    role: projectN.projectMember.role as string
+                }
+            });
+
+        return team
+    }
+
+	async getTaskFiles(taskId: number): Promise<Array<object>> {
+
+		try {
+
+			const taskFiles = await models.TaskFiles.findAll({
+				where: { taskId: taskId },
+				attributes: ['id', 'key', 'fileName', 'size']
+			});
+
+			const urls = await Promise.all(
+				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+			);
+
+			const fileAttachments: object[] = [];
+
+			for (let i = 0; i < taskFiles.length; i++) {
+				const taskFile: object = {
+					fileName: taskFiles[i].fileName,
+					id: taskFiles[i].id,
+					url: urls[i],
+					size: Math.round((taskFiles[i].size / (1024 * 1024)) * 100) / 100,
+				};
+
+				fileAttachments.push(taskFile);
+			}
+
+			return fileAttachments;
+			
+		} catch (error) {
+			throw error
+		}
+		
+	}
+
+    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ) {
+        
+        const project = await models.Project.findByPk(projectId);
+        const startDate = new Date(sprintInfo.startDate);
+        const endDate = new Date(sprintInfo.endDate);
+
+        if (!project) throw new AppError('No such project');
+
+        if (
+			startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
+			|| 
+			endDate.getTime() < startDate.getTime()
+		) {
+            throw new AppError('Incorrect time intervals');
+        }
+
+        const sprint = await models.Sprint.create({
+			...sprintInfo,
+			projectId: projectId
+		});
+
+        if (!sprint) throw new AppError('Problem faced while saving sprint');
+
+		const createdBy = await models.ProjectMember.findOne({
+			where: { id: sprint.createdBy },
+			include: [{
+				model: models.User,
+				as: "user",
+				attributes: ["email", "fullName", "avatarUrl"]
+			}]
+		});
+
+		if (!createdBy) throw new AppError('Problem faced while finding sprint creator');
+
+        return {
+			id: sprint.id,
+			title: sprint.title,
+			description: sprint.description,
+			status: sprint.status,
+			projectId: sprint.projectId,
+			createdBy: {
+				fullName: createdBy.user.fullName,
+				avatarUrl: createdBy.user.avatarUrl,
+				email: createdBy.user.email
+			},
+			totalTasksCompleted: 0,
+			totalTasks: 0,
+			startDate: sprint.startDate,
+			endDate: sprint.endDate,
+		}
+
+    }
+
+    async getSprintsTasks( projectId: number, sprintId: number): Promise<ProjectTask[]> { 
+
+    try{
+        
+        const sprintsTasks = await models.Task.findAll({
+            where: { 
+                projectId: projectId,
+                sprintId: sprintId
+            },
+            include: [
+                {
+                    model: models.ProjectMember,
+                    as: 'assignedByMember',
+                    include: [{ 
+                        model: models.User, 
+                        as: 'user',
+                        attributes: ['fullName', 'avatarUrl','email'] 
+                    }],
+                    attributes: ['id']
+                },
+                {
+                    model: models.ProjectMember,
+                    as: 'assignedToMember',
+                    include: [{ 
+                        model: models.User, 
+                        as: 'user',
+                        attributes: ['fullName', 'avatarUrl','email'] 
+                    }],
+                    attributes: ['id']
+                },
+                {
+                    model: models.TaskHistory,
+                    as: 'history',
+                    separate: true,
+                    order: [['created_at', 'DESC']]
+                }
+            ],
+
+            order: [['created_at', 'DESC']]
+		});
+
+        if(!sprintsTasks) { 
+            throw new AppError('Cannot find tasks')
+        }
+
+        const tasks: ProjectTask[] = [];
+
+        for (const task of sprintsTasks) {
+
+            tasks.push({
+                id: task.id as number,
+                title: task.title,
+                description: task.description as string,
+                priority: task.priority,
+                deadline: task.deadline,
+                assignedBy: {
+                    id: task.assignedByMember.id,
+                    name: task.assignedByMember.user.fullName as string,
+                    email: task.assignedByMember.user.email,
+                    avatarUrl: task.assignedByMember.user.avatarUrl,
+                },
+                assignedTo: {
+                    id: task.assignedToMember.id,
+                    name: task.assignedToMember.user.fullName as string,
+                    email: task.assignedToMember.user.email,
+                    avatarUrl: task.assignedToMember.user.avatarUrl,
+                },
+                status: task.status,
+                history : task.history,
+                createdAt: task.createdAt,
+				updatedAt: task.updatedAt
+            });
+        };
+        
+        return tasks
+
+        }catch(err){
+            throw err
+        }
+
     }
 }
 

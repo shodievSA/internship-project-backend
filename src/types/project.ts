@@ -29,21 +29,25 @@ export interface ProjectTask {
     priority: 'low' | 'high' | 'middle';
     deadline: Date;
     assignedBy: {
-        name: string,
-        avatarUrl: string | null,
 		id: number,
-		position: string
+        name: string,
+        email?: string,
+		position?: string,
+        avatarUrl: string | null,
     };
     assignedTo: {
-        name: string,
-        avatarUrl: string | null,
 		id: number,
-		position: string
+        name: string,
+        email?: string,
+		position?: string,
+        avatarUrl: string | null,
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
     createdAt: Date;
+	updatedAt: Date;
 }
+
 
 export interface TeamMember {
 	id: number;
@@ -61,11 +65,28 @@ export interface ProjectMetaData {
 	createdAt: Date;
 }
 
+export interface SprintMetaData { 
+    id: number;
+	title: string;
+	description?: string;
+	status: 'planned' |'active' | 'closed' | 'overdue';
+	projectId: number;
+	createdBy: {
+        fullName: string | null
+        avatarUrl: string | null
+        email: string
+    };
+    totalTasks: number, 
+    totalTasksCompleted: number,
+    startDate: Date;
+    endDate: Date;
+}
+
 export interface ProjectDetails {
 	metaData: ProjectMetaData;
-	team: TeamMember[];
     tasks: ProjectTask[];
-    invites: ProjectInvite[];
-	currentMemberId: number;
+    sprints: SprintMetaData[];
+    currentMemberId: number;
     currentMemberRole : "admin" | "manager" | "member"
+	team: TeamMember[]
 }

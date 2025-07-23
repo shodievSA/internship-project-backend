@@ -8,6 +8,7 @@ import {
 } from 'sequelize';
 import Project from './project';
 import User from './user';
+import { notificationConnectionsMap } from '..';
 
 export interface InviteAssociations {
 	project: Project;
@@ -89,6 +90,55 @@ Invite.init(
 		}
 	},
 	{
+        hooks: { 
+                    afterCreate: async (record, options) => { 
+
+                        const recordWithUserAndProject = await record.reload({ 
+                            include : [
+                                {
+                                    model: Project,
+                                    as: 'project',
+                                    attributes: ['title']
+                                    
+                                },
+                                {
+                                    model : User, 
+                                    as: "inviter",
+                                    attributes : ['fullName', 'email', 'avatarUrl']
+                                }
+                            ],
+                            transaction : options.transaction,
+                        })
+                        //send via websocket connection to receiver user              
+                        const userWs = notificationConnectionsMap.get(recordWithUserAndProject.invitedUserId);
+                        
+                        if (userWs) {
+        
+                            const payload = JSON.stringify ({
+                                type: "new-invite",
+                                newInvite: { 
+                                    id: recordWithUserAndProject.id,
+				                    projectId: recordWithUserAndProject.projectId,
+				                    project: { 
+					                    title: recordWithUserAndProject.project.title,       
+				                    },
+				                    from: { 
+					                    fullName: recordWithUserAndProject.inviter.fullName as string,
+					                    email: recordWithUserAndProject.inviter.email,
+					                    avatarUrl: recordWithUserAndProject.inviter.avatarUrl,               
+				                    },
+				                    positionOffered: recordWithUserAndProject.positionOffered,
+				                    roleOffered: recordWithUserAndProject.roleOffered,
+				                    status: recordWithUserAndProject.status,
+				                    createdAt: recordWithUserAndProject.createdAt,
+				                    updatedAt: recordWithUserAndProject.updatedAt,
+			                    },
+                            })
+        
+                            userWs.send(payload);
+                        }
+                    }
+                },
 		sequelize,
 		underscored: true
 	}
