@@ -1,4 +1,4 @@
-import User from './user'; 
+import User from './user';
 import Project from './project';
 import ProjectMember from './projectMember';
 import Permission from './permission';
@@ -15,6 +15,7 @@ import seedPermissions from '../seed/seedPermissions';
 import TaskHistory from './taskHistory';
 import Invite from './invites';
 import TaskFiles from './taskFiles';
+import TimeEntry from './timeEntry';
 
 export interface Models {
 	User: typeof User;
@@ -28,7 +29,8 @@ export interface Models {
 	DailyAiReport: typeof DailyAiReport;
 	Comment: typeof Comment;
 	Notification: typeof Notification;
-    TaskHistory : typeof TaskHistory
+	TaskHistory: typeof TaskHistory
+	TimeEntry: typeof TimeEntry;
 };
 
 export const models: Models = {
@@ -43,7 +45,8 @@ export const models: Models = {
 	DailyAiReport,
 	Comment,
 	Notification,
-    TaskHistory,
+	TaskHistory,
+	TimeEntry,
 };
 
 export function initAssociations() {
@@ -192,17 +195,17 @@ export function initAssociations() {
 		foreignKey: 'task_id'
 	});
 
-    Task.hasMany(TaskHistory, {
-        foreignKey : 'task_id',
-        as : 'history',
-        onDelete: 'CASCADE',
-        hooks : true,
-    });
+	Task.hasMany(TaskHistory, {
+		foreignKey: 'task_id',
+		as: 'history',
+		onDelete: 'CASCADE',
+		hooks: true,
+	});
 
-    TaskHistory.belongsTo(Task, { 
-        foreignKey : 'task_id',
-        as : 'history',
-    });
+	TaskHistory.belongsTo(Task, {
+		foreignKey: 'task_id',
+		as: 'history',
+	});
 
 	Task.hasMany(TaskFiles, {
 		foreignKey: 'taskId',
@@ -214,7 +217,29 @@ export function initAssociations() {
 		foreignKey: 'taskId',
 		as: 'task',
 	});
-};
+
+	User.hasMany(TimeEntry, {
+		foreignKey: 'user_id',
+		as: 'timeEntries',
+		onDelete: 'CASCADE'
+	});
+
+	TimeEntry.belongsTo(User, {
+		foreignKey: 'user_id',
+		as: 'user'
+	});
+
+	Task.hasMany(TimeEntry, {
+		foreignKey: 'task_id',
+		as: 'timeEntries',
+		onDelete: 'CASCADE'
+	});
+
+	TimeEntry.belongsTo(Task, {
+		foreignKey: 'task_id',
+		as: 'task'
+	});
+}
 
 export default async function initDB() {
 
