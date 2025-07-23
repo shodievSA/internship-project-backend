@@ -872,7 +872,7 @@ class ProjectService {
 		try {
 
 			assignedBy = await models.ProjectMember.findOne({
-				where: { userId },
+				where: { userId: userId, projectId: projectId },
 				attributes: ['id', 'position'],
 				include: [{ model: models.User, as: 'user' }],
 				transaction
@@ -880,7 +880,6 @@ class ProjectService {
 
 			assignedTo = await models.ProjectMember.findOne({
 				where: { id: task.assignedTo },
-				attributes: ['position'],
 				include: [{ model: models.User, as: 'user' }],
 				transaction
 			});
@@ -966,9 +965,9 @@ class ProjectService {
 		});
 
 		return {
-			
 			deadline: newTask.deadline,
 			createdAt: newTask.createdAt,
+			updatedAt: newTask.updatedAt,
 			description: newTask.description,
 			id: newTask.id,
 			priority: newTask.priority,
@@ -987,7 +986,6 @@ class ProjectService {
 				position: assignedTo.position
 			},
 			history: newTaskHistory,
-
 		} as ProjectTask;
 
 	}

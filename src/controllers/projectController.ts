@@ -458,14 +458,16 @@ async function createTask(
 
 	try { 
 		
-        if (!hasOnlyKeysOfB(task, models.Task)){ 
-            throw new AppError('Invalid fields in request body')
+        if (!hasOnlyKeysOfB(task, models.Task)) { 
+            throw new AppError('Invalid fields in request body');
         }
 
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const nTask = await projectService.createTask(task, userId, projectId, fileNames, sizes, files);
-			return res.status(201).json(nTask);
+			const newTask = await projectService.createTask(
+				task, userId, projectId, fileNames, sizes, files
+			);
+			return res.status(201).json({ newTask });
 
 		}
 
