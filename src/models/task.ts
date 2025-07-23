@@ -11,6 +11,7 @@ import ProjectMember from './projectMember';
 import Comment from './comment';
 import TaskHistory from './taskHistory';
 import TaskFiles from './taskFiles';
+import { FileObject } from 'openai/resources';
 
 export interface TaskAssociations {
 	project: Project;
@@ -19,7 +20,12 @@ export interface TaskAssociations {
 	comments: Comment[];
     history: TaskHistory[];
 	taskFiles: TaskFiles[];
-} 
+}
+
+export interface FileAttachments {
+	deleted: number[];
+	new: FileObject[];
+}
 
 export interface TaskAttributes { 
 	title: string;
@@ -30,7 +36,7 @@ export interface TaskAttributes {
 	assignedTo: number;
 	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
 	projectId: number;
-	fileAttachments: string[];
+	fileAttachments: FileAttachments;
 	createdAt: Date | string;
     sprintId: number;
     updatedAt: Date | string;
@@ -124,7 +130,7 @@ Task.init(
 			onDelete: "CASCADE"
 		},
 		fileAttachments: {
-			type: DataTypes.ARRAY(DataTypes.STRING),
+			type: DataTypes.JSONB,
 			allowNull: true,
 		},
         sprintId:{

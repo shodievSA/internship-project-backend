@@ -508,34 +508,46 @@ async function updateTask(
 	res: Response,
 	next: NextFunction
 ) {
-	const projectId = parseInt(req.params.projectId)
-	const taskId = parseInt(req.params.taskId)
 
-	const updatedTaskProps = req.body.updatedTaskProps
+	const projectId = parseInt(req.params.projectId);
+	const taskId = parseInt(req.params.taskId);
+
+	const files = req.files as Express.Multer.File[] ?? [];
+	const sizes: number[] = files.map(file => file.size);
+	const fileNames: string[] = files.map((file) => file.originalname);
+
+	const updatedTaskProps = req.body.updatedTaskProps;
+
 	if (!updateProject || !projectId || !taskId) {
-		throw new AppError('Empty input')
+		throw new AppError('Empty input');
 	}
+
 	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) {
-		throw new AppError('Invalid fields forbidden')
+		throw new AppError('Invalid fields forbidden');
 	}
 
 	try {
 
 		if (req.memberPermissions?.includes('editTasks')) {
 
-			const result = await projectService.updateTask(projectId, taskId, updatedTaskProps as TaskAttributes)
-			return res.status(200).json({ updatedTask: result })
-		}
-		else {
-			throw new AppError('No permission to edit task')
+			const result = await projectService.updateTask(
+				projectId, taskId, files, sizes, fileNames, updatedTaskProps
+			);
+			return res.status(200).json({ updatedTask: result });
+
+		} else {
+
+			throw new AppError('No permission to edit task');
+
 		}
 
+	} catch(error) { 
+
+		next (error);
+
+	}
 
 }
-catch(error) { 
-    next (error)
-}}
-
 
 async function getMemberProductivity(
     req : AuthenticatedRequest,

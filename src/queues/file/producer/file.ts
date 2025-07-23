@@ -4,9 +4,9 @@ import { getQueueChannel } from "@/config/rabbitmq";
 type FileUploadPayload = {
 
     key: string;
-    contentType: string;
+    contentType?: string;
     action: 'upload' | 'edit' | 'remove';
-    file: string;
+    file?: string;
 
 };
 
