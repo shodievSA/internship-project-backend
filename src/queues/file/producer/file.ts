@@ -6,7 +6,7 @@ type FileUploadPayload = {
     key: string;
     contentType?: string;
     action: 'upload' | 'edit' | 'remove';
-    file?: string | string[];
+    file?: string | string[]; // Path(s) to file(s) on disk (from Multer's `req.files[i].path`)
 
 };
 
