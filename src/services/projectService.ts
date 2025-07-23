@@ -22,8 +22,6 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
-import { FileObject } from 'openai/resources';
-import { file } from 'googleapis/build/src/apis/file';
 
 class ProjectService {
 
@@ -1244,7 +1242,7 @@ class ProjectService {
 
             }
 
-			const _new: FileObject[] = updatedTaskProps.fileAttachments.new;
+			const _new: string[] = updatedTaskProps.fileAttachments.new;
 			const editedFiles: string[] = [];
 
 			if (_new && _new.length > 0) {
