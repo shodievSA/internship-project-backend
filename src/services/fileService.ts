@@ -3,7 +3,6 @@ import { s3 } from "@/clients/s3";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Readable } from "stream";
-import { rmTaskFileUploadsDir } from "@/utils/rmTaskFileUploadsDir";
 import { AppError } from "@/types";
 
 enum FileAction {
@@ -89,19 +88,6 @@ class FileHandler {
 
             const msg = error instanceof Error ? error.message : 'Unknown error';
             throw new AppError(`Failed to ${action} file: ${msg}`, 500);
-
-        } finally {
-
-            try {
-
-                await rmTaskFileUploadsDir();
-
-            } catch (error: unknown) {
-
-                const msg = error instanceof Error ? error.message : 'Unknown error';
-                console.warn(`Failed to clean up task file uploads directory: ${msg}`);
-
-            }
 
         }
     }

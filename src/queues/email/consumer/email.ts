@@ -25,7 +25,7 @@ export function consumeEmailQueue(channel: Channel): void {
 
             await GmailSenderFactory.sendGmail(type).sendGmail(receiverEmail, params);
 
-            channel.ack(msg);            
+            channel.ack(msg);       
             
         } catch (error) {
 
