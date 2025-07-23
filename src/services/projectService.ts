@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Sequelize, Transaction} from 'sequelize';
+import {Op, Sequelize, Transaction} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -710,7 +710,14 @@ class ProjectService {
 			};
 		
 			const projectTasks = await models.Task.findAll({
-				where: { projectId: projectId },
+				where: { 
+                    projectId: projectId,
+                    [Op.or]: [
+                        {assignedBy: userId},
+                        {assignedTo: userId}
+                    ]
+                },
+
 				include: [
 					{
 						model: models.ProjectMember,
