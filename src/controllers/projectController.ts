@@ -433,6 +433,8 @@ async function createTask(
 		deadline: string;
 		assignedTo: number;
 		assignedBy: number;
+		projectId: number;
+		sprintId: number;
 
 	} = {
 
@@ -442,6 +444,8 @@ async function createTask(
 		deadline: req.body.deadline,
 		assignedTo: Number(req.body.assignedTo),
 		assignedBy: Number(req.body.assignedBy),
+		projectId: Number(req.body.projectId),
+		sprintId: Number(req.body.sprintId)
 
 	};
 
@@ -642,7 +646,6 @@ async function createSprint(
     res : Response,
     next: NextFunction  
 ) {
-    
     const projectId = parseInt(req.params.projectId);
     const sprintInfo = req.body.sprint;
 

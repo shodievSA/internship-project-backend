@@ -836,7 +836,14 @@ class ProjectService {
 
 	}
 
-	async createTask(task: any, userId: number, projectId: number, fileNames: string[], sizes: number[], files?: Express.Multer.File[]): Promise<object> {
+	async createTask(
+		task: any, 
+		userId: number, 
+		projectId: number, 
+		fileNames: string[], 
+		sizes: number[], 
+		files?: Express.Multer.File[]
+	): Promise<object> {
 
 		const deadline: Date = new Date(task.deadline);
 		const uploadedFiles: string[] = [];
@@ -877,8 +884,7 @@ class ProjectService {
 				throw new AppError('No such users in project');
 			}
 
-			newTask = await models.Task.create(
-				{ ...task, projectId },
+			newTask = await models.Task.create(task,
 				{ transaction }
 			);
 
@@ -898,11 +904,10 @@ class ProjectService {
 
 			if (files && files.length > 0) {
 
-				if (files.length > 5) {
-					throw new AppError("Maximum 5 files are allowed per task", 400);
-				}
+				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
 
-				const upload = files.map(file => {
+				const upload = files.map((file) => {
+
 					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
 					uploadedFiles.push(key);
 
@@ -912,14 +917,21 @@ class ProjectService {
 						action: 'upload',
 						file: file.path
 					});
+
 				});
 
 				await Promise.all(upload);
 
 				await Promise.all(
 					uploadedFiles.map((key, i) =>
-						models.TaskFiles.create({ taskId: newTask.id, key: key, fileName: fileNames[i], size: sizes[i] }, { transaction } )
-					)
+						models.TaskFiles.create({ 
+							taskId: newTask.id, 
+							key: key, 
+							fileName: fileNames[i], 
+							size: sizes[i] 
+						}, 
+						{ transaction } 
+					))
 				);
 				
 			}
