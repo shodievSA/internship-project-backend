@@ -6,7 +6,7 @@ type FileUploadPayload = {
     key: string;
     contentType?: string;
     action: 'upload' | 'edit' | 'remove';
-    file?: string;
+    file?: string | string[];
 
 };
 

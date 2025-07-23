@@ -2,13 +2,14 @@ import type { Channel, ConsumeMessage } from 'amqplib';
 import fileHandler from '@/services/fileService';
 import { AppError } from '@/types';
 import fs from 'fs';
+import { rmTaskFileUploads } from '@/utils/rmTaskFileUploads';
 
 type FileUploadPayload = {
 
     key: string;
     contentType?: string;
     action: 'upload' | 'edit' | 'remove';
-    file?: string;
+    file?: string | string[];
 
 };
 
@@ -31,12 +32,12 @@ export function consumeFileQueue(channel: Channel): void {
 
             if (action === 'upload') {
 
-                const stream = fs.createReadStream(file!);
+                const stream = fs.createReadStream(file as string);
                 await fileHandler.uploadfile(key, stream, contentType!);
 
             } else if (action === 'edit') {
 
-                const stream = fs.createReadStream(file!);
+                const stream = fs.createReadStream(file as string);
                 await fileHandler.editFile(key, stream, contentType!);
 
             } else if (action === 'remove') {
@@ -49,7 +50,22 @@ export function consumeFileQueue(channel: Channel): void {
                 
             }
 
-            channel.ack(msg);            
+            channel.ack(msg);
+
+            if (file) {
+
+                if (Array.isArray(file)) {
+
+                    await rmTaskFileUploads(file);
+
+                } else {
+
+                    await rmTaskFileUploads([file]);
+
+                }
+
+            }
+
             
         } catch (error) {
 
