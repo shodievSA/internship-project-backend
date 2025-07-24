@@ -13,7 +13,7 @@ import {
     SprintMetaData
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import Task, { TaskAttributes, FileAttachments } from '@/models/task';
+import Task from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
@@ -23,7 +23,6 @@ import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
 import { FileObject } from 'openai/resources';
-import { file } from 'googleapis/build/src/apis/file';
 
 class ProjectService {
 
