@@ -217,10 +217,9 @@ export function initAssociations() {
 
 	TaskFiles.belongsTo(Task, {
 		foreignKey: 'taskId',
-		as: 'task',
+		as: 'taskFiles',
 	});
 
-    //
     Project.hasMany(Sprint, { 
         foreignKey: 'project_id',
         as: 'sprints',

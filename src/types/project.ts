@@ -22,6 +22,15 @@ export interface ProjectInvite {
 	roleOffered: 'manager' | 'member';
 }
 
+export interface FilesMetaData {
+	id: number;
+	taskId: number;
+	fileName: string;
+	size: number;
+	createdAt: Date;
+	updatedAt: Date;
+}
+
 export interface ProjectTask { 
     id: number;
     title: string | null;
@@ -44,10 +53,10 @@ export interface ProjectTask {
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
+	filesMetaData: FilesMetaData[];
     createdAt: Date;
 	updatedAt: Date;
 }
-
 
 export interface TeamMember {
 	id: number;
