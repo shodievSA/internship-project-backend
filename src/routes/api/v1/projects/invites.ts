@@ -10,8 +10,8 @@ const {
 
 const router = Router({ mergeParams: true });
 
-router.get('/', getProjectInvites as RequestHandler)
-router.post('/', inviteToProject as RequestHandler);
 router.patch('/:inviteId', invitationStatus as RequestHandler);
+router.get('/', getMemberPermissions, getProjectInvites as RequestHandler)
+router.post('/', getMemberPermissions, inviteToProject as RequestHandler);
 
 export default router;

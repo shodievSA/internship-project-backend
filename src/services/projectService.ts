@@ -763,10 +763,7 @@ class ProjectService {
                     },
 					{
 						model: models.TaskFiles,
-						as: 'taskFiles',
-						attributes: {
-							exclude: ["key"]
-						}
+						as: 'taskFiles'
 					}
 				],
                 order: [['created_at', 'DESC']]
