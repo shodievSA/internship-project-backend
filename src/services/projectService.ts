@@ -1252,6 +1252,15 @@ class ProjectService {
 
 			if (filesToAdd && filesToAdd.length > 0) {
 
+				const existingFileCount = await models.TaskFiles.count({
+					where: { taskId: task.id },
+					transaction,
+				});
+
+				if ((existingFileCount + filesToAdd.length) > 5) {
+					throw new AppError("Maximum 5 files allowed per task", 400);
+				}
+
 				const edit = filesToAdd.map(file => {
 					const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
 					editedFiles.push(key);
@@ -1401,6 +1410,11 @@ class ProjectService {
 
             await task.update(updatedTaskProps, { transaction });
 
+			const filesMetaData = await models.TaskFiles.findAll({
+				where: { taskId: task.id },
+				transaction
+			});
+
             await transaction.commit();
 
             return { 
@@ -1408,20 +1422,26 @@ class ProjectService {
                 title: updatedTaskProps.title || task.title,
                 description: updatedTaskProps.description || task.description,
                 priority: updatedTaskProps.priority || task.priority,
-                deadline: task.deadline,
+                deadline: updatedTaskProps.deadline || task.deadline,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,
-                    avatarUrl: task.assignedByMember.user.avatarUrl
+                    avatarUrl: task.assignedByMember.user.avatarUrl,
+					position: task.assignedByMember.position,
+					email: task.assignedByMember.user.email
                 },
                 assignedTo: { 
                     id: task.assignedToMember.id,
                     name: task.assignedToMember.user.fullName,
                     avatarUrl: task.assignedToMember.user.avatarUrl,
+					position: task.assignedToMember.position,
+					email: task.assignedToMember.user.email
                 },
+				filesMetaData: filesMetaData,
                 status: task.status,
                 history: task.history,
-                createdAt: task.createdAt 
+                createdAt: task.createdAt,
+				updatedAt: task.updatedAt
             } as ProjectTask;
 
         } catch(error) {
