@@ -5,7 +5,9 @@ export const rmTaskFileUploads = async (files: string[]): Promise<void> => {
     try {
 
         const deletions = files.map(file =>
+
             fs.rm(file, { recursive: true, force: true })
+            
         );
 
         await Promise.all(deletions);

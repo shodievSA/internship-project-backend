@@ -3,10 +3,10 @@ import { getQueueChannel } from "@/config/rabbitmq";
 
 type FileUploadPayload = {
 
-    key: string;
-    contentType?: string;
+    key: string | string[];
+    contentType?: string | string[];
     action: 'upload' | 'edit' | 'remove';
-    file?: string | string[]; // Path(s) to file(s) on disk (from Multer's `req.files[i].path`)
+    filePath?: string | string[];
 
 };
 

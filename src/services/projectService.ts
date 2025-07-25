@@ -910,7 +910,7 @@ class ProjectService {
 
 				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
 
-				const upload = files.map((file) => {
+				const upload = files.map(file => {
 
 					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
 					uploadedFiles.push(key);
@@ -919,7 +919,7 @@ class ProjectService {
 						key: key,
 						contentType: file.mimetype,
 						action: 'upload',
-						file: file.path
+						filePath: file.path
 					});
 
 				});
@@ -1178,7 +1178,9 @@ class ProjectService {
 		files: Express.Multer.File[],
 		sizes: number[],
 		fileNames: string[],
-		updatedTaskProps: any
+		updatedTaskProps: any,
+		filesToAdd: Express.Multer.File[],
+		filesToDelete: number[]
     ): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
@@ -1242,13 +1244,12 @@ class ProjectService {
 
             }
 
-			const _new: string[] = updatedTaskProps.fileAttachments.new;
 			const editedFiles: string[] = [];
 
-			if (_new && _new.length > 0) {
-				if (files && files.length === _new.length) {
+			if (filesToAdd && filesToAdd.length > 0) {
+				if (files && files.length === filesToAdd.length) {
 
-					const edit = files.map((file) => {
+					const edit = files.map(file => {
 						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
 						editedFiles.push(key);
 
@@ -1256,10 +1257,9 @@ class ProjectService {
 							key: key,
 							contentType: file.mimetype,
 							action: 'edit',
-							file: file.path
+							filePath: file.path
 						});
 					});
-
 
 					const taskFiles = editedFiles.map((key, i) =>
 						models.TaskFiles.create(
@@ -1280,12 +1280,10 @@ class ProjectService {
 				}
 			}
 
-			const _delete: number[] = updatedTaskProps.fileAttachments.deleted;
-
-			if (_delete && _delete.length > 0) {
+			if (filesToDelete && filesToDelete.length > 0) {
 
 				const taskFiles =  await models.TaskFiles.findAll(
-					{ where: { id: _delete }, attributes: ['key'], transaction }
+					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
 				);
 
 				await Promise.all(
@@ -1298,7 +1296,7 @@ class ProjectService {
 				);
 
 				await models.TaskFiles.destroy({
-					where: { id: _delete },
+					where: { id: filesToDelete },
 					transaction,
 				});
 
@@ -1625,7 +1623,7 @@ class ProjectService {
 			});
 
 			const urls = await Promise.all(
-				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+				taskFiles.map(file => fileHandler.retrieveFile(file.key))
 			);
 
 			const fileAttachments: object[] = [];

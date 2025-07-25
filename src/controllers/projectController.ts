@@ -515,21 +515,18 @@ async function updateTask(
 	const fileNames: string[] = files.map((file) => file.originalname);
 
 	const updatedTaskProps = req.body.updatedTaskProps;
+	const filesToAdd: Express.Multer.File[] = JSON.parse(req.body.filesToAdd ?? []);
+	const filesToDelete: number[] = JSON.parse(req.body.filesToDelete);
 
-	if (!updateProject || !projectId || !taskId) {
-		throw new AppError('Empty input');
-	}
-
-	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) {
-		throw new AppError('Invalid fields forbidden');
-	}
-
+	if (!updateProject || !projectId || !taskId) throw new AppError('Empty input');
+	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) throw new AppError('Invalid fields forbidden');
+	
 	try {
 
 		if (req.memberPermissions?.includes('editTasks')) {
 
 			const result = await projectService.updateTask(
-				projectId, taskId, files, sizes, fileNames, updatedTaskProps
+				projectId, taskId, files, sizes, fileNames, updatedTaskProps, filesToAdd, filesToDelete
 			);
 			return res.status(200).json({ updatedTask: result });
 
