@@ -2,7 +2,6 @@ import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
 import { AppError, FormattedProject, FrontSprintAttributes, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
-import { TaskAttributes } from '@/models/task';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
 
