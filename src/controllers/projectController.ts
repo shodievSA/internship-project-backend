@@ -510,13 +510,13 @@ async function updateTask(
 	const projectId = parseInt(req.params.projectId);
 	const taskId = parseInt(req.params.taskId);
 
-	const files = req.files as Express.Multer.File[] ?? [];
-	const sizes: number[] = files.map(file => file.size);
-	const fileNames: string[] = files.map((file) => file.originalname);
+	const filesToAdd = (req.files as Record<string, Express.Multer.File[]>)?.['filesToAdd'] ?? [];
+	const filesToDelete: number[] = req.body.filesToDelete ? JSON.parse(req.body.filesToDelete) : [];
 
-	const updatedTaskProps = req.body.updatedTaskProps;
-	const filesToAdd: Express.Multer.File[] = JSON.parse(req.body.filesToAdd ?? []);
-	const filesToDelete: number[] = JSON.parse(req.body.filesToDelete);
+	const sizes: number[] = filesToAdd.map(file => file.size);
+	const fileNames: string[] = filesToAdd.map((file) => file.originalname);
+
+	const updatedTaskProps = req.body.updatedTaskProps ? JSON.parse(req.body.updatedTaskProps) : {};
 
 	if (!updateProject || !projectId || !taskId) throw new AppError('Empty input');
 	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) throw new AppError('Invalid fields forbidden');
@@ -526,7 +526,7 @@ async function updateTask(
 		if (req.memberPermissions?.includes('editTasks')) {
 
 			const result = await projectService.updateTask(
-				projectId, taskId, files, sizes, fileNames, updatedTaskProps, filesToAdd, filesToDelete
+				projectId, taskId, sizes, fileNames, updatedTaskProps, filesToAdd, filesToDelete
 			);
 			return res.status(200).json({ updatedTask: result });
 

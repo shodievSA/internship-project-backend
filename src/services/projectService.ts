@@ -1180,7 +1180,6 @@ class ProjectService {
     async updateTask(
 		projectId: number,
 		taskId: number,
-		files: Express.Multer.File[],
 		sizes: number[],
 		fileNames: string[],
 		updatedTaskProps: any,
@@ -1252,37 +1251,33 @@ class ProjectService {
 			const editedFiles: string[] = [];
 
 			if (filesToAdd && filesToAdd.length > 0) {
-				if (files && files.length === filesToAdd.length) {
 
-					const edit = files.map(file => {
-						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
-						editedFiles.push(key);
+				const edit = filesToAdd.map(file => {
+					const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
+					editedFiles.push(key);
 
-						return sendFileToQueue({
-							key: key,
-							contentType: file.mimetype,
-							action: 'edit',
-							filePath: file.path
-						});
+					return sendFileToQueue({
+						key: key,
+						contentType: file.mimetype,
+						action: 'edit',
+						filePath: file.path
 					});
+				});
 
-					const taskFiles = editedFiles.map((key, i) =>
-						models.TaskFiles.create(
-							{
-								taskId: task.id,
-								key: key,
-								fileName: fileNames[i],
-								size: sizes[i]
-							},
-							{ transaction }
-						)
-					);
+				const taskFiles = editedFiles.map((key, i) =>
+					models.TaskFiles.create(
+						{
+							taskId: task.id,
+							key: key,
+							fileName: fileNames[i],
+							size: sizes[i]
+						},
+						{ transaction }
+					)
+				);
 
-					await Promise.all([...edit, ...taskFiles]);
-
-				} else {
-					throw new AppError("Mismatch between 'files' and 'fileAttachments.new'", 400);
-				}
+				await Promise.all([...edit, ...taskFiles]);
+				
 			}
 
 			if (filesToDelete && filesToDelete.length > 0) {
