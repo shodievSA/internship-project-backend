@@ -587,7 +587,7 @@ async function getTaskFiles(
 
 		const fileAttachments = await projectService.getTaskFiles(taskId);
 
-		return res.status(200).json({ fileURLs: fileAttachments });
+		return res.status(200).json({ fileUrls: fileAttachments });
 	
 	} catch (error) {
 		next (error);
