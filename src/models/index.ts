@@ -220,10 +220,16 @@ export function initAssociations() {
 
 	TaskFiles.belongsTo(Task, {
 		foreignKey: 'taskId',
-		as: 'task',
+		as: 'taskFiles',
 	});
 
 	//
+	Project.hasMany(Sprint, {
+		foreignKey: 'project_id',
+		as: 'sprints',
+		onDelete: 'CASCADE',
+		hooks: true
+	})
 	Project.hasMany(Sprint, {
 		foreignKey: 'project_id',
 		as: 'sprints',
@@ -295,8 +301,7 @@ export default async function initDB() {
 		console.log('Database synchronized successfully.');
 
 	} catch (error) {
-
-
+		console.error('Failed to initialize DB:', error);
 	}
 
 }

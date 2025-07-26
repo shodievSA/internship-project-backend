@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Op, Sequelize, Transaction} from 'sequelize';
+import {Op, Sequelize, Transaction, UpdateOptions} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -13,7 +13,7 @@ import {
     SprintMetaData
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
-import Task, { TaskAttributes, FileAttachments } from '@/models/task';
+import Task from '@/models/task';
 import User from '@/models/user';
 import TaskHistory from '@/models/taskHistory';
 import { MemberProductivity } from '@/types'; 
@@ -22,8 +22,10 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
-import { FileObject } from 'openai/resources';
-import { file } from 'googleapis/build/src/apis/file';
+import { TaskUpdatePayload } from '@/types';
+import { FilesMetaData } from '@/types';
+
+
 
 class ProjectService {
 
@@ -390,11 +392,12 @@ class ProjectService {
 				{ status: updatedTaskStatus },
 
 				{
-
 					where: { id: taskId },
+                    individualHooks: true, 
+                    context: { comment },  
 					transaction,
 
-				}
+				} as UpdateOptions 
 
 			);
 
@@ -525,14 +528,6 @@ class ProjectService {
 
 			}, { transaction });
 
-			await models.TaskHistory.create({ 
-
-				taskId: taskId,
-				status: updatedTaskStatus,
-				comment,
-
-			}, { transaction });
-
 			await transaction.commit();	
 
 			await sendEmailToQueue({
@@ -579,10 +574,10 @@ class ProjectService {
 
 					const projectId = project.id;
 		
-					const [members, tasks, completedTasks, isAdmin] = await Promise.all([
+					const [members, sprints, completedSprints, isAdmin] = await Promise.all([
 						models.ProjectMember.count({ where: { projectId } }),
-						models.Task.count({ where: { projectId } }),
-						models.Task.count({ where: { projectId, status: 'closed' } }),
+						models.Sprint.count({ where: { projectId } }),
+						models.Sprint.count({ where: { projectId, status: 'completed' } }),
 						models.ProjectMember.findOne({
 							where: {
 								projectId,
@@ -602,8 +597,8 @@ class ProjectService {
 						status: project.status,
 						createdAt: project.createdAt,
 						members: members,
-						totalTasks: tasks,
-						totalTasksCompleted: completedTasks,
+						totalSprints: sprints,
+						totalSprintsCompleted: completedSprints,
 						isAdmin: isAdmin
 					} as FormattedProject;
 
@@ -675,7 +670,7 @@ class ProjectService {
                 include: [
 					{
 						model: models.Sprint,
-						as : 'sprints',
+						as: 'sprints',
 						order: [["created_at", "ASC"]],
 						attributes: {
 							include: [ 
@@ -761,7 +756,11 @@ class ProjectService {
                         as: 'history',
                         separate: true,
                         order: [['created_at', 'DESC']]
-                    }
+                    },
+					{
+						model: models.TaskFiles,
+						as: 'taskFiles'
+					}
 				],
                 order: [['created_at', 'DESC']]
 			});
@@ -792,6 +791,7 @@ class ProjectService {
                     },
                     status: task.status,
                     history : task.history,
+					filesMetaData: task.taskFiles,
                     createdAt: task.createdAt,
 					updatedAt: task.updatedAt
                 });
@@ -800,7 +800,7 @@ class ProjectService {
             
             const sprints: SprintMetaData[] = [];
 
-            for(const sprint of project.sprints) { 
+            for (const sprint of project.sprints) { 
 
                 sprints.push({
                     id: sprint.id,
@@ -817,14 +817,13 @@ class ProjectService {
                     totalTasks: Number(sprint.get('taskCount')),
                     startDate: sprint.startDate,
                     endDate: sprint.endDate,
-                })
+                });
+
             }
 
             const team = await this.getTeamOfProject(projectId);
 
-            if (!team) {
-                throw new AppError("Faced error while getting team")
-            }
+            if (!team) throw new AppError("Faced error while getting team");
 
 			return {
 				metaData: metaData,
@@ -912,7 +911,7 @@ class ProjectService {
 
 				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
 
-				const upload = files.map((file) => {
+				const upload = files.map(file => {
 
 					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
 					uploadedFiles.push(key);
@@ -921,7 +920,7 @@ class ProjectService {
 						key: key,
 						contentType: file.mimetype,
 						action: 'upload',
-						file: file.path
+						filePath: file.path
 					});
 
 				});
@@ -1174,18 +1173,13 @@ class ProjectService {
 
     }
 
-    async updateTask(
-		projectId: number,
-		taskId: number,
-		files: Express.Multer.File[],
-		sizes: number[],
-		fileNames: string[],
-		updatedTaskProps: any
-    ): Promise<ProjectTask> {
+    async updateTask(taskUpdatePayload: TaskUpdatePayload): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
          try {
+
+			const { projectId, taskId, filesToAdd, filesToDelete, sizes, fileNames, updatedTaskProps } = taskUpdatePayload;
 
              const task = await models.Task.findOne({
                 where: { 
@@ -1244,50 +1238,10 @@ class ProjectService {
 
             }
 
-			const _new: FileObject[] = updatedTaskProps.fileAttachments.new;
-			const editedFiles: string[] = [];
-
-			if (_new && _new.length > 0) {
-				if (files && files.length === _new.length) {
-
-					const edit = files.map((file) => {
-						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
-						editedFiles.push(key);
-
-						return sendFileToQueue({
-							key: key,
-							contentType: file.mimetype,
-							action: 'edit',
-							file: file.path
-						});
-					});
-
-
-					const taskFiles = editedFiles.map((key, i) =>
-						models.TaskFiles.create(
-							{
-								taskId: task.id,
-								key: key,
-								fileName: fileNames[i],
-								size: sizes[i]
-							},
-							{ transaction }
-						)
-					);
-
-					await Promise.all([...edit, ...taskFiles]);
-
-				} else {
-					throw new AppError("Mismatch between 'files' and 'fileAttachments.new'", 400);
-				}
-			}
-
-			const _delete: number[] = updatedTaskProps.fileAttachments.deleted;
-
-			if (_delete && _delete.length > 0) {
+			if (filesToDelete && filesToDelete.length > 0) {
 
 				const taskFiles =  await models.TaskFiles.findAll(
-					{ where: { id: _delete }, attributes: ['key'], transaction }
+					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
 				);
 
 				await Promise.all(
@@ -1300,10 +1254,51 @@ class ProjectService {
 				);
 
 				await models.TaskFiles.destroy({
-					where: { id: _delete },
+					where: { id: filesToDelete },
 					transaction,
 				});
 
+			}
+
+			const editedFiles: string[] = [];
+
+			if (filesToAdd && filesToAdd.length > 0) {
+
+				const existingFileCount = await models.TaskFiles.count({
+					where: { taskId: task.id },
+					transaction,
+				});
+
+				if ((existingFileCount + filesToAdd.length) > 5) {
+					throw new AppError("Maximum 5 files allowed per task", 400);
+				}
+
+				const edit = filesToAdd.map(file => {
+					const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
+					editedFiles.push(key);
+
+					return sendFileToQueue({
+						key: key,
+						contentType: file.mimetype,
+						action: 'edit',
+						filePath: file.path
+					});
+				});
+
+				const taskFiles = editedFiles.map((key, i) =>
+					models.TaskFiles.create(
+						{
+							taskId: task.id,
+							key: key,
+							fileName: fileNames[i],
+							size: sizes[i]
+						},
+						{ transaction }
+					)
+				);
+
+				await Promise.all([...edit, ...taskFiles]);
+				
 			}
 
             if (
@@ -1403,29 +1398,41 @@ class ProjectService {
 
             }
 
-            await task.update(updatedTaskProps, { transaction });
+            await task.update(updatedTaskProps as TaskUpdatePayload, { transaction });
+
+			const filesMetaData: FilesMetaData[] = await models.TaskFiles.findAll({
+				where: { taskId: task.id },
+				attributes: { exclude: ['key'] },
+				transaction
+			});
 
             await transaction.commit();
 
             return { 
                 id: task.id,
-                title: updatedTaskProps.title || task.title,
-                description: updatedTaskProps.description || task.description,
-                priority: updatedTaskProps.priority || task.priority,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
                 deadline: task.deadline,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,
-                    avatarUrl: task.assignedByMember.user.avatarUrl
+                    avatarUrl: task.assignedByMember.user.avatarUrl,
+					position: task.assignedByMember.position,
+					email: task.assignedByMember.user.email
                 },
                 assignedTo: { 
                     id: task.assignedToMember.id,
                     name: task.assignedToMember.user.fullName,
                     avatarUrl: task.assignedToMember.user.avatarUrl,
+					position: task.assignedToMember.position,
+					email: task.assignedToMember.user.email
                 },
+				filesMetaData: filesMetaData,
                 status: task.status,
                 history: task.history,
-                createdAt: task.createdAt 
+                createdAt: task.createdAt,
+				updatedAt: task.updatedAt
             } as ProjectTask;
 
         } catch(error) {
@@ -1500,7 +1507,7 @@ class ProjectService {
                             break;      
                     }
                 }
-            }else { return null }
+            } else { return null }
 
             const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
 
@@ -1627,7 +1634,7 @@ class ProjectService {
 			});
 
 			const urls = await Promise.all(
-				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+				taskFiles.map(file => fileHandler.retrieveFile(file.key))
 			);
 
 			const fileAttachments: object[] = [];
@@ -1704,87 +1711,228 @@ class ProjectService {
 
     }
 
-    async getSprintsTasks( projectId: number, sprintId: number): Promise<ProjectTask[]> { 
+    async getSprintsTasks(projectId: number, sprintId: number): Promise<ProjectTask[]> { 
 
-    try{
-        
-        const sprintsTasks = await models.Task.findAll({
-            where: { 
-                projectId: projectId,
-                sprintId: sprintId
-            },
-            include: [
-                {
-                    model: models.ProjectMember,
-                    as: 'assignedByMember',
-                    include: [{ 
-                        model: models.User, 
-                        as: 'user',
-                        attributes: ['fullName', 'avatarUrl','email'] 
-                    }],
-                    attributes: ['id']
-                },
-                {
-                    model: models.ProjectMember,
-                    as: 'assignedToMember',
-                    include: [{ 
-                        model: models.User, 
-                        as: 'user',
-                        attributes: ['fullName', 'avatarUrl','email'] 
-                    }],
-                    attributes: ['id']
-                },
-                {
-                    model: models.TaskHistory,
-                    as: 'history',
-                    separate: true,
-                    order: [['created_at', 'DESC']]
-                }
-            ],
+		try {
+			
+			const sprintsTasks = await models.Task.findAll({
+				where: { 
+					projectId: projectId,
+					sprintId: sprintId
+				},
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'assignedByMember',
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl','email'] 
+						}],
+						attributes: ['id']
+					},
+					{
+						model: models.ProjectMember,
+						as: 'assignedToMember',
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl','email'] 
+						}],
+						attributes: ['id']
+					},
+					{
+						model: models.TaskHistory,
+						as: 'history',
+						separate: true,
+						order: [['created_at', 'DESC']]
+					},
+					{
+						model: models.TaskFiles,
+						as: "taskFiles"
+					}
+				],
+				order: [['created_at', 'DESC']]
+			});
 
-            order: [['created_at', 'DESC']]
-		});
+			if (!sprintsTasks) throw new AppError('Cannot find tasks');
 
-        if(!sprintsTasks) { 
-            throw new AppError('Cannot find tasks')
-        }
+			const tasks: ProjectTask[] = [];
 
-        const tasks: ProjectTask[] = [];
+			for (const task of sprintsTasks) {
 
-        for (const task of sprintsTasks) {
+				tasks.push({
+					id: task.id as number,
+					title: task.title,
+					description: task.description as string,
+					priority: task.priority,
+					deadline: task.deadline,
+					assignedBy: {
+						id: task.assignedByMember.id,
+						name: task.assignedByMember.user.fullName as string,
+						email: task.assignedByMember.user.email,
+						avatarUrl: task.assignedByMember.user.avatarUrl,
+					},
+					assignedTo: {
+						id: task.assignedToMember.id,
+						name: task.assignedToMember.user.fullName as string,
+						email: task.assignedToMember.user.email,
+						avatarUrl: task.assignedToMember.user.avatarUrl,
+					},
+					status: task.status,
+					history : task.history,
+					filesMetaData: task.taskFiles,
+					createdAt: task.createdAt,
+					updatedAt: task.updatedAt
+				});
 
-            tasks.push({
-                id: task.id as number,
-                title: task.title,
-                description: task.description as string,
-                priority: task.priority,
-                deadline: task.deadline,
-                assignedBy: {
-                    id: task.assignedByMember.id,
-                    name: task.assignedByMember.user.fullName as string,
-                    email: task.assignedByMember.user.email,
-                    avatarUrl: task.assignedByMember.user.avatarUrl,
-                },
-                assignedTo: {
-                    id: task.assignedToMember.id,
-                    name: task.assignedToMember.user.fullName as string,
-                    email: task.assignedToMember.user.email,
-                    avatarUrl: task.assignedToMember.user.avatarUrl,
-                },
-                status: task.status,
-                history : task.history,
-                createdAt: task.createdAt,
-				updatedAt: task.updatedAt
-            });
-        };
-        
-        return tasks
+			};
+			
+			return tasks;
 
-        }catch(err){
-            throw err
-        }
+		} catch(err) {
+
+			throw err;
+
+		}
 
     }
+
+    async updateSprint(
+		projectId: number, 
+		sprintId:number, 
+		updatedFields: Partial<{ 
+			title: string;
+			description:string;
+			status: 'planned' | 'active' | 'completed' | 'overdue';
+			startDate: Date;
+			endDate: Date; 
+		}>
+	): Promise<object> {
+
+		try {
+            
+			const sprint = await models.Sprint.findOne({
+				where: { 
+					id: sprintId,
+					projectId: projectId
+				},
+				attributes: {
+					include: [
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId}
+							)`),
+							'taskCount'
+						],
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId} AND t.status = 'closed'
+							)`),
+							'closedTaskCount'
+						],
+					]
+				},
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'createdByMember',
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					}
+				]
+			});
+
+			if (!sprint) throw new AppError("Sprint not found");
+
+			if (
+				updatedFields.startDate &&
+				!updatedFields.endDate &&
+				(
+					updatedFields.startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) ||
+					updatedFields.startDate.getTime() > sprint.endDate.getTime()
+				)
+			) {
+				throw new AppError('Incorrect time intervals');
+			}
+
+			if (
+				updatedFields.endDate &&
+				!updatedFields.startDate &&
+				(
+					updatedFields.endDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) ||
+					updatedFields.endDate.getTime() < sprint.startDate.getTime()
+				)
+			) {
+				throw new AppError('Incorrect time intervals');
+			}
+
+			if (
+				updatedFields.startDate && 
+				updatedFields.endDate &&
+				(updatedFields.startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000)) &&
+				updatedFields.endDate < updatedFields.startDate
+			) { 
+				throw new AppError("Incorrect time intervals");
+			}
+
+			const updatedSprint = await sprint.update(updatedFields);
+
+			return {
+				id: updatedSprint.id,
+				title: updatedSprint.title,
+				description: updatedSprint.description,
+				status: updatedSprint.status,
+				projectId: updatedSprint.projectId,
+				createdBy: {
+					fullName: updatedSprint.createdByMember.user.fullName,
+					avatarUrl: updatedSprint.createdByMember.user.avatarUrl,
+					email: updatedSprint.createdByMember.user.email
+				},
+				totalTasksCompleted: Number(updatedSprint.get('closedTaskCount')),
+				totalTasks: Number(updatedSprint.get('taskCount')),
+				startDate: updatedSprint.startDate,
+				endDate: updatedSprint.endDate,
+			};
+
+		} catch (error) {
+
+            throw error;
+
+		}
+
+	}
+
+    async deleteSprint(projectId: number, sprintId:number): Promise<void> {
+
+		try {
+
+			const deletedSprint = await models.Sprint.destroy({
+				where: { 
+                    id: sprintId,
+                    projectId: projectId
+                }
+			});
+		
+			if (deletedSprint === 0) {
+				throw new AppError('Project not found');
+			}
+
+		} catch (error) {
+
+			throw error;
+
+		}
+
+	}
+
 }
 
 export default new ProjectService();

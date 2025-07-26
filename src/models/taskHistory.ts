@@ -70,21 +70,7 @@ TaskHistory.init({
 		allowNull: false
 	}
 },
-{   hooks : {
-        afterCreate: async (record, options) => { 
-            
-            await models.Task.update( 
-
-                { status : record.status },
-                {   
-                    where : { id : record.taskId},
-                    transaction : options.transaction,
-                }
-
-            )
-        }
-
-},
+{
     sequelize,
     underscored: true,
 })

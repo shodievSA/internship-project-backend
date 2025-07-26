@@ -6,8 +6,8 @@ export interface FormattedProject {
 	createdAt: Date;
 	status: 'active' | 'paused' | 'completed';
 	members: number;
-	totalTasks: number;
-	totalTasksCompleted: number;
+	totalSprints: number;
+	totalSprintsCompleted: number;
 	isAdmin: boolean;
 }
 
@@ -20,6 +20,15 @@ export interface ProjectInvite {
 	createdAt: Date;
 	positionOffered: string;
 	roleOffered: 'manager' | 'member';
+}
+
+export interface FilesMetaData {
+	id: number;
+	taskId: number;
+	fileName: string;
+	size: number;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export interface ProjectTask { 
@@ -44,10 +53,10 @@ export interface ProjectTask {
     };
     status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
     history: TaskHistory[];
+	filesMetaData: FilesMetaData[];
     createdAt: Date;
 	updatedAt: Date;
 }
-
 
 export interface TeamMember {
 	id: number;
@@ -69,7 +78,7 @@ export interface SprintMetaData {
     id: number;
 	title: string;
 	description?: string;
-	status: 'planned' |'active' | 'closed' | 'overdue';
+	status: 'planned' |'active' | 'completed' | 'overdue';
 	projectId: number;
 	createdBy: {
         fullName: string | null
