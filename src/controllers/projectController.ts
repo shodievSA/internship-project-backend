@@ -381,7 +381,7 @@ async function getProjectDetails(
 
 		const userId: any = req.user.id;
 		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
-		
+
 		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
 			userId,
 			projectId
@@ -750,14 +750,13 @@ async function updateSprint(
             endDate = new Date(updatedSprintProps?.endDate);
         }
 
-
-
 		const updatedFields: Partial<{ 
             title: string;
             description:string;
             status: Status;
             startDate: Date | undefined;
-            endDate: Date | undefined }> = { title, description, status, startDate, endDate };
+            endDate: Date | undefined;
+		}> = { title, description, status, startDate, endDate };
 
 		if (Object.keys(updatedFields).length === 0) {
 
@@ -768,8 +767,8 @@ async function updateSprint(
 
 		if (req.memberPermissions?.includes('editProject')) {
 
-			const updatedProject = await projectService.updateSprint(projectId, sprintId, updatedFields);
-			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+			const updatedSprint = await projectService.updateSprint(projectId, sprintId, updatedFields);
+			res.status(200).json({ message: 'Project updated successfully', updatedSprint });
 
 		} else {
 
@@ -796,14 +795,16 @@ async function deleteSprint(
 
 	try {
 
-        if(req.memberPermissions?.includes('deleteProject')){
+        if (req.memberPermissions?.includes('deleteProject')) {
             
             await projectService.deleteSprint(projectId, sprintId);
     
             res.sendStatus(204);
-            return
+            
         } else { 
+
             throw new AppError("No required permission");
+
         }
 
 	} catch (error) {

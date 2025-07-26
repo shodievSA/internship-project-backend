@@ -1807,7 +1807,38 @@ class ProjectService {
 				where: { 
 					id: sprintId,
 					projectId: projectId
-				}
+				},
+				attributes: {
+					include: [
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId}
+							)`),
+							'taskCount'
+						],
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId} AND t.status = 'closed'
+							)`),
+							'closedTaskCount'
+						],
+					]
+				},
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'createdByMember',
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					}
+				]
 			});
 
 			if (!sprint) throw new AppError("Sprint not found");
@@ -1843,19 +1874,24 @@ class ProjectService {
 				throw new AppError("Incorrect time intervals");
 			}
 
-			const [count, affectedRows] = await models.Sprint.update(updatedFields, {
-				where: { 
-					id: sprintId,
-					projectId: projectId
+			const updatedSprint = await sprint.update(updatedFields);
+
+			return {
+				id: updatedSprint.id,
+				title: updatedSprint.title,
+				description: updatedSprint.description,
+				status: updatedSprint.status,
+				projectId: updatedSprint.projectId,
+				createdBy: {
+					fullName: updatedSprint.createdByMember.user.fullName,
+					avatarUrl: updatedSprint.createdByMember.user.avatarUrl,
+					email: updatedSprint.createdByMember.user.email
 				},
-				returning: true,
-			});
-			
-			if (count === 0 || affectedRows.length === 0) {
-				throw new AppError('Project not found');
-			}
-			
-			return affectedRows[0].toJSON();
+				totalTasksCompleted: Number(updatedSprint.get('closedTaskCount')),
+				totalTasks: Number(updatedSprint.get('taskCount')),
+				startDate: updatedSprint.startDate,
+				endDate: updatedSprint.endDate,
+			};
 
 		} catch (error) {
 
