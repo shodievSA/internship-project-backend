@@ -33,7 +33,6 @@ interface Models {
 	Notification: typeof Notification;
 	TaskHistory: typeof TaskHistory;
 	TaskFiles: typeof TaskFiles;
-	TaskHistory: typeof TaskHistory
 	TimeEntry: typeof TimeEntry;
 };
 
@@ -52,7 +51,6 @@ export const models: Models = {
 	Notification,
 	TaskHistory,
 	TaskFiles,
-	TaskHistory,
 	TimeEntry,
 };
 
@@ -259,29 +257,29 @@ export function initAssociations() {
 		as: 'createdByMember',
 		foreignKey: 'created_by'
 	});
-};
 
-User.hasMany(TimeEntry, {
-	foreignKey: 'user_id',
-	as: 'timeEntries',
-	onDelete: 'CASCADE'
-});
+	// Move TimeEntry and Task associations here
+	User.hasMany(TimeEntry, {
+		foreignKey: 'user_id',
+		as: 'timeEntries',
+		onDelete: 'CASCADE'
+	});
 
-TimeEntry.belongsTo(User, {
-	foreignKey: 'user_id',
-	as: 'user'
-});
+	TimeEntry.belongsTo(User, {
+		foreignKey: 'user_id',
+		as: 'user'
+	});
 
-Task.hasMany(TimeEntry, {
-	foreignKey: 'task_id',
-	as: 'timeEntries',
-	onDelete: 'CASCADE'
-});
+	Task.hasMany(TimeEntry, {
+		foreignKey: 'task_id',
+		as: 'timeEntries',
+		onDelete: 'CASCADE'
+	});
 
-TimeEntry.belongsTo(Task, {
-	foreignKey: 'task_id',
-	as: 'task'
-});
+	TimeEntry.belongsTo(Task, {
+		foreignKey: 'task_id',
+		as: 'task'
+	});
 }
 
 export default async function initDB() {

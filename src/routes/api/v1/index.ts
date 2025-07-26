@@ -7,7 +7,7 @@ import userRouter from './me';
 import projectRouter from './projects/index';
 import isAuthenticated from '../../../middlewares/isAuthenticated';
 import checkRedisAndUseLimiter from '@/middlewares/aiLimiter';
-import timerRouter from './timer';
+import timerRouter from './projects/timer';
 
 const router = Router();
 

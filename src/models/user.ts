@@ -58,7 +58,7 @@ class User extends Model<
 	declare isInvited: CreationOptional<boolean>;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
-    
+
 	declare projectMember: ProjectMember;
 	declare projectMembers: ProjectMember[];
 	declare dailyAiReport: DailyAiReport[];
@@ -93,11 +93,11 @@ User.init(
 			allowNull: true
 		},
 		accessToken: {
-			type: DataTypes.STRING(512),
+			type: DataTypes.STRING(2048),
 			allowNull: true
 		},
 		refreshToken: {
-			type: DataTypes.STRING(512),
+			type: DataTypes.STRING(2048),
 			allowNull: true
 		},
 		isInvited: {
@@ -114,9 +114,9 @@ User.init(
 			allowNull: false
 		}
 	},
-	{ 
-		sequelize, 
-		underscored: true 
+	{
+		sequelize,
+		underscored: true
 	}
 );
 
