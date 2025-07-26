@@ -732,7 +732,7 @@ async function updateSprint(
         const sprintId: number = parseInt(req.params.sprintId);
 		const updatedSprintProps = req.body.updatedSprintProps;
 
-		const allowedStatuses = ['planned', 'active', 'closed', 'overdue'] as const;
+		const allowedStatuses = ['planned', 'active', 'completed', 'overdue'] as const;
 		type Status = typeof allowedStatuses[number];
 
 		const title = updatedSprintProps.title;

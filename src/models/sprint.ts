@@ -21,7 +21,7 @@ export interface SprintAssociations {
 export interface SprintAttributes { 
 	title: string;
 	description: string;
-	status: 'planned' |'active' | 'closed' | 'overdue';
+	status: 'planned' |'active' | 'completed' | 'overdue';
 	projectId: number;
 	createdBy: number;
     startDate: Date;
@@ -37,7 +37,7 @@ class Sprint extends Model<
 	declare id: CreationOptional<number>;
 	declare title: string;
 	declare description: CreationOptional<string>;
-	declare status: CreationOptional<'planned' | 'active' | 'closed' | 'overdue'>;
+	declare status: CreationOptional<'planned' | 'active' | 'completed' | 'overdue'>;
 	declare projectId: number;
 	declare createdBy: number; // projectMemberId
     declare startDate: Date;
@@ -78,7 +78,7 @@ Sprint.init(
 			type: DataTypes.ENUM(
                 'planned',
 				'active',
-				'closed',
+				'completed',
 				'overdue',
 			),
 			allowNull: false,

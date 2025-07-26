@@ -69,7 +69,7 @@ export interface SprintMetaData {
     id: number;
 	title: string;
 	description?: string;
-	status: 'planned' |'active' | 'closed' | 'overdue';
+	status: 'planned' |'active' | 'completed' | 'overdue';
 	projectId: number;
 	createdBy: {
         fullName: string | null
