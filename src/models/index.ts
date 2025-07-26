@@ -223,13 +223,6 @@ export function initAssociations() {
 		as: 'taskFiles',
 	});
 
-	//
-	Project.hasMany(Sprint, {
-		foreignKey: 'project_id',
-		as: 'sprints',
-		onDelete: 'CASCADE',
-		hooks: true
-	})
 	Project.hasMany(Sprint, {
 		foreignKey: 'project_id',
 		as: 'sprints',
