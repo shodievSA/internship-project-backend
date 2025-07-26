@@ -22,7 +22,7 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
-import { FileObject } from 'openai/resources';
+import { TaskUpdatePayload } from '@/types';
 
 class ProjectService {
 
@@ -1178,18 +1178,14 @@ class ProjectService {
     }
 
     async updateTask(
-		projectId: number,
-		taskId: number,
-		sizes: number[],
-		fileNames: string[],
-		updatedTaskProps: any,
-		filesToAdd: Express.Multer.File[],
-		filesToDelete: number[]
+		taskUpdatePayload: TaskUpdatePayload
     ): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
          try {
+
+			const { projectId, taskId, filesToAdd, filesToDelete, sizes, fileNames, updatedTaskProps } = taskUpdatePayload;
 
              const task = await models.Task.findOne({
                 where: { 
@@ -1248,6 +1244,28 @@ class ProjectService {
 
             }
 
+			if (filesToDelete && filesToDelete.length > 0) {
+
+				const taskFiles =  await models.TaskFiles.findAll(
+					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
+				);
+
+				await Promise.all(
+					taskFiles.map(taskFile =>
+						sendFileToQueue({
+							key: taskFile.key,
+							action: 'remove',
+						})
+					)
+				);
+
+				await models.TaskFiles.destroy({
+					where: { id: filesToDelete },
+					transaction,
+				});
+
+			}
+
 			const editedFiles: string[] = [];
 
 			if (filesToAdd && filesToAdd.length > 0) {
@@ -1287,28 +1305,6 @@ class ProjectService {
 
 				await Promise.all([...edit, ...taskFiles]);
 				
-			}
-
-			if (filesToDelete && filesToDelete.length > 0) {
-
-				const taskFiles =  await models.TaskFiles.findAll(
-					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
-				);
-
-				await Promise.all(
-					taskFiles.map(taskFile =>
-						sendFileToQueue({
-							key: taskFile.key,
-							action: 'remove',
-						})
-					)
-				);
-
-				await models.TaskFiles.destroy({
-					where: { id: filesToDelete },
-					transaction,
-				});
-
 			}
 
             if (
@@ -1408,7 +1404,7 @@ class ProjectService {
 
             }
 
-            await task.update(updatedTaskProps, { transaction });
+            await task.update(updatedTaskProps as TaskUpdatePayload, { transaction });
 
 			const filesMetaData = await models.TaskFiles.findAll({
 				where: { taskId: task.id },
@@ -1516,7 +1512,7 @@ class ProjectService {
                             break;      
                     }
                 }
-            }else { return null }
+            } else { return null }
 
             const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
 

@@ -4,6 +4,8 @@ import { AppError, FormattedProject, FrontSprintAttributes, ProjectDetails } fro
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
+import { TaskUpdatePayload } from '@/types';
+import { TaskAttributes } from '@/models/task';
 
 async function leaveProject(
 	req: AuthenticatedRequest,
@@ -509,25 +511,30 @@ async function updateTask(
 
 	const projectId = parseInt(req.params.projectId);
 	const taskId = parseInt(req.params.taskId);
-
 	const filesToAdd = (req.files as Record<string, Express.Multer.File[]>)?.['filesToAdd'] ?? [];
 	const filesToDelete: number[] = req.body.filesToDelete ? JSON.parse(req.body.filesToDelete) : [];
-
 	const sizes: number[] = filesToAdd.map(file => file.size);
 	const fileNames: string[] = filesToAdd.map((file) => file.originalname);
-
-	const updatedTaskProps = req.body.updatedTaskProps ? JSON.parse(req.body.updatedTaskProps) : {};
+	const updatedTaskProps: Partial<TaskAttributes> = req.body.updatedTaskProps ? JSON.parse(req.body.updatedTaskProps) : {};
 
 	if (!updateProject || !projectId || !taskId) throw new AppError('Empty input');
 	if (!hasOnlyKeysOfB(updatedTaskProps, models.Task)) throw new AppError('Invalid fields forbidden');
+
+	const taskUpdatePayload: TaskUpdatePayload = {
+		projectId,
+		taskId,
+		filesToAdd,
+		filesToDelete,
+		sizes,
+		fileNames,
+		updatedTaskProps,
+	}
 	
 	try {
 
 		if (req.memberPermissions?.includes('editTasks')) {
 
-			const result = await projectService.updateTask(
-				projectId, taskId, sizes, fileNames, updatedTaskProps, filesToAdd, filesToDelete
-			);
+			const result = await projectService.updateTask(taskUpdatePayload);
 			return res.status(200).json({ updatedTask: result });
 
 		} else {
