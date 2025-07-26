@@ -576,7 +576,7 @@ class ProjectService {
 					const [members, sprints, completedSprints, isAdmin] = await Promise.all([
 						models.ProjectMember.count({ where: { projectId } }),
 						models.Sprint.count({ where: { projectId } }),
-						models.Sprint.count({ where: { projectId, status: 'closed' } }),
+						models.Sprint.count({ where: { projectId, status: 'completed' } }),
 						models.ProjectMember.findOne({
 							where: {
 								projectId,
@@ -669,7 +669,7 @@ class ProjectService {
                 include: [
 					{
 						model: models.Sprint,
-						as : 'sprints',
+						as: 'sprints',
 						order: [["created_at", "ASC"]],
 						attributes: {
 							include: [ 
@@ -685,7 +685,7 @@ class ProjectService {
 									Sequelize.literal(`(
 										SELECT COUNT (*)
 										FROM tasks AS t 
-										WHERE t.sprint_id = "sprints".id AND t.status = 'completed'
+										WHERE t.sprint_id = "sprints".id AND t.status = 'closed'
 									)`),
 									'closedTaskCount'
 								],
