@@ -1177,9 +1177,7 @@ class ProjectService {
 
     }
 
-    async updateTask(
-		taskUpdatePayload: TaskUpdatePayload
-    ): Promise<ProjectTask> {
+    async updateTask(taskUpdatePayload: TaskUpdatePayload): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
@@ -1415,10 +1413,10 @@ class ProjectService {
 
             return { 
                 id: task.id,
-                title: updatedTaskProps.title || task.title,
-                description: updatedTaskProps.description || task.description,
-                priority: updatedTaskProps.priority || task.priority,
-                deadline: updatedTaskProps.deadline || task.deadline,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                deadline: task.deadline,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,
