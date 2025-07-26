@@ -23,6 +23,7 @@ import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
 import { TaskUpdatePayload } from '@/types';
+import { FilesMetaData } from '@/types';
 
 class ProjectService {
 
@@ -1404,8 +1405,9 @@ class ProjectService {
 
             await task.update(updatedTaskProps as TaskUpdatePayload, { transaction });
 
-			const filesMetaData = await models.TaskFiles.findAll({
+			const filesMetaData: FilesMetaData[] = await models.TaskFiles.findAll({
 				where: { taskId: task.id },
+				attributes: { exclude: ['key'] },
 				transaction
 			});
 
