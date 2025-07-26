@@ -406,9 +406,16 @@ async function deleteProject(
 
 	try {
 
-		await projectService.deleteProject(projectId);
-
-		res.sendStatus(204);
+        if(req.memberPermissions?.includes('deleteProject')){
+            
+            await projectService.deleteProject(projectId);
+    
+            res.sendStatus(204);
+            return
+        } else { 
+            
+            throw new AppError("No required permission");
+        }
 
 	} catch (error) {
 
@@ -713,6 +720,99 @@ async function getSprintsTasks(
 
 }
 
+async function updateSprint(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	try {
+
+		const projectId: number = parseInt(req.params.projectId);
+        const sprintId: number = parseInt(req.params.sprintId);
+		const updatedSprintProps = req.body.updatedSprintProps;
+
+		const allowedStatuses = ['planned', 'active', 'closed', 'overdue'] as const;
+		type Status = typeof allowedStatuses[number];
+
+		const title = updatedSprintProps.title;
+        const description = updatedSprintProps.description
+		const status = updatedSprintProps.status;
+        let startDate: Date | undefined= undefined;
+        let endDate: Date | undefined = undefined;
+
+        if (updatedSprintProps.startDate ) { 
+            startDate = new Date(updatedSprintProps?.startDate);
+        }
+        
+        if (updatedSprintProps.endDate ) { 
+            endDate = new Date(updatedSprintProps?.endDate);
+        }
+
+
+
+		const updatedFields: Partial<{ 
+            title: string;
+            description:string;
+            status: Status;
+            startDate: Date | undefined;
+            endDate: Date | undefined }> = { title, description, status, startDate, endDate };
+
+		if (Object.keys(updatedFields).length === 0) {
+
+			res.status(400).json({ error: 'No valid fields provided for update' });
+			return;
+
+		}
+
+		if (req.memberPermissions?.includes('editProject')) {
+
+			const updatedProject = await projectService.updateSprint(projectId, sprintId, updatedFields);
+			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+
+		} else {
+
+			res.sendStatus(403);
+
+		}
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function deleteSprint(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	const projectId: number = parseInt(req.params.projectId);
+    const sprintId: number = parseInt(req.params.sprintId);
+
+	try {
+
+        if(req.memberPermissions?.includes('deleteProject')){
+            
+            await projectService.deleteSprint(projectId, sprintId);
+    
+            res.sendStatus(204);
+            return
+        } else { 
+            throw new AppError("No required permission");
+        }
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
 
 
 const projectController = {
@@ -736,6 +836,8 @@ const projectController = {
 	getTaskFiles,
     createSprint,
     getSprintsTasks,
+    updateSprint,
+    deleteSprint,
 };
 
 export default projectController;

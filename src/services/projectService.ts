@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import {Op, Sequelize, Transaction} from 'sequelize';
+import {Op, Sequelize, Transaction, UpdateOptions} from 'sequelize';
 import { 
 	FormattedProject, 
 	ProjectDetails, 
@@ -24,6 +24,8 @@ import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
 import { FileObject } from 'openai/resources';
 import { file } from 'googleapis/build/src/apis/file';
+
+
 
 class ProjectService {
 
@@ -390,11 +392,12 @@ class ProjectService {
 				{ status: updatedTaskStatus },
 
 				{
-
 					where: { id: taskId },
+                    individualHooks: true, 
+                    context: { comment },  
 					transaction,
 
-				}
+				} as UpdateOptions 
 
 			);
 
@@ -525,14 +528,6 @@ class ProjectService {
 
 			}, { transaction });
 
-			await models.TaskHistory.create({ 
-
-				taskId: taskId,
-				status: updatedTaskStatus,
-				comment,
-
-			}, { transaction });
-
 			await transaction.commit();	
 
 			await sendEmailToQueue({
@@ -579,10 +574,10 @@ class ProjectService {
 
 					const projectId = project.id;
 		
-					const [members, tasks, completedTasks, isAdmin] = await Promise.all([
+					const [members, sprints, completedSprints, isAdmin] = await Promise.all([
 						models.ProjectMember.count({ where: { projectId } }),
-						models.Task.count({ where: { projectId } }),
-						models.Task.count({ where: { projectId, status: 'closed' } }),
+						models.Sprint.count({ where: { projectId } }),
+						models.Sprint.count({ where: { projectId, status: 'closed' } }),
 						models.ProjectMember.findOne({
 							where: {
 								projectId,
@@ -602,8 +597,8 @@ class ProjectService {
 						status: project.status,
 						createdAt: project.createdAt,
 						members: members,
-						totalTasks: tasks,
-						totalTasksCompleted: completedTasks,
+						totalSprints: sprints,
+						totalSprintsCompleted: completedSprints,
 						isAdmin: isAdmin
 					} as FormattedProject;
 
@@ -1785,6 +1780,99 @@ class ProjectService {
         }
 
     }
+
+    async updateSprint(projectId: number, sprintId:number, updatedFields: Partial<{ 
+        title: string;
+        description:string;
+        status: 'planned' | 'active' | 'closed' | 'overdue';
+        startDate: Date;
+        endDate: Date }>): Promise<object> {
+
+		try {
+            
+        const sprint = await models.Sprint.findOne({
+			where: { 
+                id: sprintId,
+                projectId: projectId
+            },
+        })
+
+        if (!sprint) { throw new AppError("Sprint not found") }
+
+        if (
+			updatedFields.startDate &&
+            !updatedFields.endDate &&
+            (updatedFields.startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) ||
+            updatedFields.startDate.getTime() > sprint.endDate.getTime())
+		) {
+            throw new AppError('Incorrect time intervals');
+        }
+
+        if (
+			updatedFields.endDate &&
+            !updatedFields.startDate &&
+            (updatedFields.endDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) ||
+            updatedFields.endDate.getTime() < sprint.startDate.getTime())
+		) {
+            throw new AppError('Incorrect time intervals');
+        }
+
+        if (updatedFields.startDate && updatedFields.endDate &&
+            updatedFields.startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) &&
+            updatedFields.endDate < updatedFields.startDate
+        ) { 
+            throw new AppError("Incorrect time intervals")
+        }
+
+        const [count, affectedRows] = await models.Sprint.update(updatedFields, {
+
+            where: { 
+                id: sprintId,
+                projectId: projectId
+            },
+            returning: true,
+
+        });
+		
+        if (count === 0 || affectedRows.length === 0) {
+
+            throw new AppError('Project not found');
+            
+        }
+		
+        return affectedRows[0].toJSON();
+
+		} catch (error) {
+
+            throw error;
+
+		}
+
+	}
+
+    async deleteSprint(projectId: number, sprintId:number): Promise<void> {
+
+		try {
+
+			const deletedSprint = await models.Sprint.destroy({
+				where: { 
+                    id: sprintId,
+                    projectId: projectId
+                }
+			});
+		
+			if (deletedSprint === 0) {
+				throw new AppError('Project not found');
+			}
+
+		} catch (error) {
+
+			throw error;
+
+		}
+
+	}
+
 }
 
 export default new ProjectService();

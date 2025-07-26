@@ -6,8 +6,8 @@ export interface FormattedProject {
 	createdAt: Date;
 	status: 'active' | 'paused' | 'completed';
 	members: number;
-	totalTasks: number;
-	totalTasksCompleted: number;
+	totalSprints: number;
+	totalSprintsCompleted: number;
 	isAdmin: boolean;
 }
 

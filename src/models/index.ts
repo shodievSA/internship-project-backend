@@ -220,7 +220,7 @@ export function initAssociations() {
 		as: 'task',
 	});
 
-    //
+
     Project.hasMany(Sprint, { 
         foreignKey: 'project_id',
         as: 'sprints',
