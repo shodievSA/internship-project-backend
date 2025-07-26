@@ -209,7 +209,6 @@ export function initAssociations() {
 
 	TaskHistory.belongsTo(Task, {
 		foreignKey: 'task_id',
-		as: 'history',
 	});
 
 	Task.hasMany(TaskFiles, {
@@ -224,12 +223,6 @@ export function initAssociations() {
 	});
 
 	//
-	Project.hasMany(Sprint, {
-		foreignKey: 'project_id',
-		as: 'sprints',
-		onDelete: 'CASCADE',
-		hooks: true
-	})
 	Project.hasMany(Sprint, {
 		foreignKey: 'project_id',
 		as: 'sprints',
