@@ -4,7 +4,8 @@ import {
 	Model,
 	InferAttributes,
 	InferCreationAttributes,
-	CreationOptional
+	CreationOptional,
+    UpdateOptions
 } from 'sequelize';
 import Project from './project';
 import ProjectMember from './projectMember';
@@ -12,6 +13,7 @@ import Comment from './comment';
 import TaskHistory from './taskHistory';
 import TaskFiles from './taskFiles';
 import { FileObject } from 'openai/resources';
+import { models } from '.';
 
 export interface TaskAssociations {
 	project: Project;
@@ -151,7 +153,22 @@ Task.init(
 			allowNull: false
 		},
 	},
-	{
+	{   hooks: { 
+            afterUpdate: async (task, options) => { 
+                
+                if ( task.previous("status") !== task.status) {
+                    const comment = (options as UpdateOptions & { context: {comment?: string} })?.context.comment;
+                    await models.TaskHistory.create(
+                        { 
+                        taskId: task.id,
+                        status: task.status,
+                        comment: comment
+                        },
+                        {transaction: options.transaction}
+                    )
+                }
+            }
+    },
 		sequelize,
 		underscored: true
 	}
