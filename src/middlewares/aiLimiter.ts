@@ -3,21 +3,11 @@
 
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
-import {createClient} from "redis";
+import { redisClient } from "@/clients/redis";
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "@/types";
 
 const DAILY_LIMIT = 10; 
-
-// should be changed for prod
-const redisClient = createClient({
-    socket: { 
-        host: process.env.REDIS_HOST || "127.0.0.1",
-        port: parseInt( process.env.REDIS_PORT || "6379"),
-    }, 
-
-    //password: process.env.REDIS_PASSWORD,  // For prod redis server
-})
     
 redisClient.connect().catch((err) => console.log(err));
 

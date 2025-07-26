@@ -6,10 +6,10 @@ import { rmTaskFileUploads } from '@/utils/rmTaskFileUploads';
 
 type FileUploadPayload = {
 
-    key: string;
-    contentType?: string;
+    key: string | string[];
+    contentType?: string | string[];
     action: 'upload' | 'edit' | 'remove';
-    file?: string | string[];
+    filePath?: string | string[];
 
 };
 
@@ -26,46 +26,63 @@ export function consumeFileQueue(channel: Channel): void {
                 key,
                 contentType,
                 action,
-                file
+                filePath
 
             }: FileUploadPayload = JSON.parse(msg.content.toString());
 
             if (action === 'upload') {
 
-                const stream = fs.createReadStream(file as string);
-                await fileHandler.uploadfile(key, stream, contentType!);
+                const keys = Array.isArray(key) ? key : [key];
+                const paths = Array.isArray(filePath) ? filePath : [filePath];
+                const contentTypes = Array.isArray(contentType) ? contentType : [contentType];
+
+                const files = keys.map((k, i) => ({
+
+                    key: k,
+                    stream: fs.createReadStream(paths[i]!),
+                    contentType: contentTypes[i]!,
+
+                }));
+
+                await fileHandler.uploadfile(files);
 
             } else if (action === 'edit') {
 
-                const stream = fs.createReadStream(file as string);
-                await fileHandler.editFile(key, stream, contentType!);
+                const keys = Array.isArray(key) ? key : [key];
+                const paths = Array.isArray(filePath) ? filePath : [filePath];
+                const contentTypes = Array.isArray(contentType) ? contentType : [contentType];
+
+                const files = keys.map((k, i) => ({
+
+                    key: k,
+                    stream: fs.createReadStream(paths[i]!),
+                    contentType: contentTypes[i]!,
+                    
+                }));
+
+                await fileHandler.editFile(files);
 
             } else if (action === 'remove') {
 
-                await fileHandler.removeFile(key);
+                await fileHandler.removeFile(key as string);
 
-            } else {
-
-                throw new AppError(`Unknown file action: ${action}`, 400);
-                
             }
 
             channel.ack(msg);
 
-            if (file) {
+            if (filePath) {
 
-                if (Array.isArray(file)) {
+                if (Array.isArray(filePath)) {
 
-                    await rmTaskFileUploads(file);
+                    await rmTaskFileUploads(filePath);
 
                 } else {
 
-                    await rmTaskFileUploads([file]);
+                    await rmTaskFileUploads([filePath]);
 
                 }
 
             }
-
             
         } catch (error) {
 

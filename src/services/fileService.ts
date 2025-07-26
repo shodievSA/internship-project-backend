@@ -12,6 +12,14 @@ enum FileAction {
 
 }
 
+type FilePayload = {
+
+    key: string;
+    stream: Readable;
+    contentType: string;
+
+};
+
 class FileHandler {
 
     private readonly s3: S3Client;
@@ -24,18 +32,20 @@ class FileHandler {
 
     }
 
-    async uploadfile(key: string, file: Readable, contentType: string) {
+    async uploadfile(
+        files: FilePayload[],
+    ): Promise<void> {
 
-       return this._fileHandler(key, file, contentType, FileAction.Upload);
+       return this._fileHandler(files, FileAction.Upload);
 
     }
 
-    async retrieveFiles(key: string) {
+    async retrieveFile(key: string): Promise<string> {
 
         try {
 
             const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-            const url = await getSignedUrl(s3, cmd, { expiresIn: 3600 });
+            const url = await getSignedUrl(this.s3, cmd, { expiresIn: 3600 });
 
             return url;
             
@@ -47,13 +57,15 @@ class FileHandler {
 
     }
 
-    async editFile(key: string, file: Readable, contentType: string) {
+    async editFile(
+        files: FilePayload[],
+    ): Promise<void> {
 
-        return this._fileHandler(key, file, contentType, FileAction.Edit);
+        return this._fileHandler(files, FileAction.Edit);
        
     }
 
-    async removeFile(key: string) {
+    async removeFile(key: string): Promise<void> {
 
         try {
 
@@ -69,20 +81,27 @@ class FileHandler {
 
     }
 
-    private async _fileHandler(key: string, file: Readable, contentType: string, action: FileAction) {
+    private async _fileHandler(
+        files: FilePayload[],
+        action: FileAction
+    ): Promise<void> {
 
         try {
 
-            const cmd = new PutObjectCommand({
+            for (const { key, stream, contentType } of files) {
 
-                Bucket: this.bucket,
-                Key: key,
-                Body: file,
-                ContentType: contentType,
+                const cmd = new PutObjectCommand({
 
-            });
+                    Bucket: this.bucket,
+                    Key: key,
+                    Body: stream,
+                    ContentType: contentType,
 
-            await this.s3.send(cmd);
+                });
+
+                await this.s3.send(cmd);
+
+            }
 
         } catch (error: unknown) {
 
@@ -90,7 +109,9 @@ class FileHandler {
             throw new AppError(`Failed to ${action} file: ${msg}`, 500);
 
         }
+        
     }
+
 }
 
 const fileHandler = new FileHandler();

@@ -7,7 +7,7 @@ const router = Router({ mergeParams: true });
 
 router.post('/', upload.array('fileAttachments'), projectController.createTask as RequestHandler);
 router.patch('/:taskId/status', projectController.changeTaskStatus as RequestHandler);
-router.patch('/:taskId', upload.array('fileAttachments'), projectController.updateTask as RequestHandler);
+router.patch('/:taskId', upload.fields([{ name: 'filesToAdd', maxCount: 10 }]), projectController.updateTask as RequestHandler);
 router.delete('/:taskId', projectController.deleteTask as RequestHandler);
 router.get('/:taskId/files', projectController.getTaskFiles as RequestHandler);
 

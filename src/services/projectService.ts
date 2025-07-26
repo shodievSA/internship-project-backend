@@ -22,7 +22,7 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
-import { FileObject } from 'openai/resources';
+import { TaskUpdatePayload } from '@/types';
 
 
 
@@ -910,7 +910,7 @@ class ProjectService {
 
 				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
 
-				const upload = files.map((file) => {
+				const upload = files.map(file => {
 
 					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
 					uploadedFiles.push(key);
@@ -919,7 +919,7 @@ class ProjectService {
 						key: key,
 						contentType: file.mimetype,
 						action: 'upload',
-						file: file.path
+						filePath: file.path
 					});
 
 				});
@@ -1172,18 +1172,13 @@ class ProjectService {
 
     }
 
-    async updateTask(
-		projectId: number,
-		taskId: number,
-		files: Express.Multer.File[],
-		sizes: number[],
-		fileNames: string[],
-		updatedTaskProps: any
-    ): Promise<ProjectTask> {
+    async updateTask(taskUpdatePayload: TaskUpdatePayload): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
         
          try {
+
+			const { projectId, taskId, filesToAdd, filesToDelete, sizes, fileNames, updatedTaskProps } = taskUpdatePayload;
 
              const task = await models.Task.findOne({
                 where: { 
@@ -1242,50 +1237,10 @@ class ProjectService {
 
             }
 
-			const _new: FileObject[] = updatedTaskProps.fileAttachments.new;
-			const editedFiles: string[] = [];
-
-			if (_new && _new.length > 0) {
-				if (files && files.length === _new.length) {
-
-					const edit = files.map((file) => {
-						const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
-						editedFiles.push(key);
-
-						return sendFileToQueue({
-							key: key,
-							contentType: file.mimetype,
-							action: 'edit',
-							file: file.path
-						});
-					});
-
-
-					const taskFiles = editedFiles.map((key, i) =>
-						models.TaskFiles.create(
-							{
-								taskId: task.id,
-								key: key,
-								fileName: fileNames[i],
-								size: sizes[i]
-							},
-							{ transaction }
-						)
-					);
-
-					await Promise.all([...edit, ...taskFiles]);
-
-				} else {
-					throw new AppError("Mismatch between 'files' and 'fileAttachments.new'", 400);
-				}
-			}
-
-			const _delete: number[] = updatedTaskProps.fileAttachments.deleted;
-
-			if (_delete && _delete.length > 0) {
+			if (filesToDelete && filesToDelete.length > 0) {
 
 				const taskFiles =  await models.TaskFiles.findAll(
-					{ where: { id: _delete }, attributes: ['key'], transaction }
+					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
 				);
 
 				await Promise.all(
@@ -1298,10 +1253,51 @@ class ProjectService {
 				);
 
 				await models.TaskFiles.destroy({
-					where: { id: _delete },
+					where: { id: filesToDelete },
 					transaction,
 				});
 
+			}
+
+			const editedFiles: string[] = [];
+
+			if (filesToAdd && filesToAdd.length > 0) {
+
+				const existingFileCount = await models.TaskFiles.count({
+					where: { taskId: task.id },
+					transaction,
+				});
+
+				if ((existingFileCount + filesToAdd.length) > 5) {
+					throw new AppError("Maximum 5 files allowed per task", 400);
+				}
+
+				const edit = filesToAdd.map(file => {
+					const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
+					editedFiles.push(key);
+
+					return sendFileToQueue({
+						key: key,
+						contentType: file.mimetype,
+						action: 'edit',
+						filePath: file.path
+					});
+				});
+
+				const taskFiles = editedFiles.map((key, i) =>
+					models.TaskFiles.create(
+						{
+							taskId: task.id,
+							key: key,
+							fileName: fileNames[i],
+							size: sizes[i]
+						},
+						{ transaction }
+					)
+				);
+
+				await Promise.all([...edit, ...taskFiles]);
+				
 			}
 
             if (
@@ -1401,29 +1397,40 @@ class ProjectService {
 
             }
 
-            await task.update(updatedTaskProps, { transaction });
+            await task.update(updatedTaskProps as TaskUpdatePayload, { transaction });
+
+			const filesMetaData = await models.TaskFiles.findAll({
+				where: { taskId: task.id },
+				transaction
+			});
 
             await transaction.commit();
 
             return { 
                 id: task.id,
-                title: updatedTaskProps.title || task.title,
-                description: updatedTaskProps.description || task.description,
-                priority: updatedTaskProps.priority || task.priority,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
                 deadline: task.deadline,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,
-                    avatarUrl: task.assignedByMember.user.avatarUrl
+                    avatarUrl: task.assignedByMember.user.avatarUrl,
+					position: task.assignedByMember.position,
+					email: task.assignedByMember.user.email
                 },
                 assignedTo: { 
                     id: task.assignedToMember.id,
                     name: task.assignedToMember.user.fullName,
                     avatarUrl: task.assignedToMember.user.avatarUrl,
+					position: task.assignedToMember.position,
+					email: task.assignedToMember.user.email
                 },
+				filesMetaData: filesMetaData,
                 status: task.status,
                 history: task.history,
-                createdAt: task.createdAt 
+                createdAt: task.createdAt,
+				updatedAt: task.updatedAt
             } as ProjectTask;
 
         } catch(error) {
@@ -1498,7 +1505,7 @@ class ProjectService {
                             break;      
                     }
                 }
-            }else { return null }
+            } else { return null }
 
             const avgCompletionTimeInHours: number = memberCompletedTasksCount > 0 ? Number((totalTime / memberCompletedTasksCount).toFixed(1)) : 0;
 
@@ -1625,7 +1632,7 @@ class ProjectService {
 			});
 
 			const urls = await Promise.all(
-				taskFiles.map(file => fileHandler.retrieveFiles(file.key))
+				taskFiles.map(file => fileHandler.retrieveFile(file.key))
 			);
 
 			const fileAttachments: object[] = [];

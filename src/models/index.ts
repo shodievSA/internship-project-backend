@@ -268,8 +268,7 @@ export default async function initDB() {
 		console.log('Database synchronized successfully.');
 
 	} catch (error) {
-
-
+		console.error('Failed to initialize DB:', error);
 	}
 
 }
