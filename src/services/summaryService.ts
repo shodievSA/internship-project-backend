@@ -1,5 +1,6 @@
 import { models } from '../models';
 import { AppError } from '../types/customError';
+import { SprintProgressResponse, PriorityBreakdownResponse, RecentActivityResponse } from '../types/summary';
 
 export interface StatusOverviewResponse {
     totalWorkItems: number;
@@ -29,11 +30,11 @@ export interface TeamWorkloadResponse {
 class SummaryService {
     async getStatusOverview(projectId: number): Promise<StatusOverviewResponse> {
         try {
-            // Get all planned and active sprints
+            // Get all active sprints
             const sprints = await models.Sprint.findAll({
                 where: { 
                     projectId, 
-                    status: ['planned', 'active'] 
+                    status: ['active'] 
                 },
                 include: [{
                     model: models.Task,
@@ -42,7 +43,7 @@ class SummaryService {
                 }]
             });
 
-            // Combine all tasks from planned and active sprints
+            // Combine all tasks from active sprints
             const allTasks = sprints.flatMap(sprint => sprint.tasks);
             
             const statusCounts = {
@@ -64,13 +65,11 @@ class SummaryService {
 
     async getTeamWorkload(projectId: number): Promise<TeamWorkloadResponse> {
         try {
-            console.log(`[getTeamWorkload] Starting request for projectId: ${projectId}`);
-            
-            // Get all planned and active sprints
+            // Get all active sprints
             const activeSprints = await models.Sprint.findAll({
                 where: { 
                     projectId, 
-                    status: ['planned', 'active'] 
+                    status: ['active'] 
                 },
                 include: [{
                     model: models.Task,
@@ -87,24 +86,11 @@ class SummaryService {
                 }]
             });
 
-            console.log(`[getTeamWorkload] Found ${activeSprints.length} active sprints for project ${projectId}`);
-
             // Combine all tasks from active sprints
             const allTasks = activeSprints.flatMap(sprint => sprint.tasks);
             const totalTasks = allTasks.length;
 
-            console.log(`[getTeamWorkload] Total tasks found: ${totalTasks}`);
-            console.log(`[getTeamWorkload] Tasks data:`, allTasks.map(task => ({
-                id: task?.id,
-                status: task?.status,
-                assignedToMember: task?.assignedToMember ? {
-                    id: task.assignedToMember.id,
-                    userName: task.assignedToMember.user?.fullName
-                } : null
-            })));
-
             if (totalTasks === 0) {
-                console.log(`[getTeamWorkload] No tasks found, returning empty response`);
                 return {
                     assignees: [],
                     unassigned: {
@@ -138,9 +124,6 @@ class SummaryService {
                 }
             });
 
-            console.log(`[getTeamWorkload] Assignee map:`, Array.from(assigneeMap.entries()));
-            console.log(`[getTeamWorkload] Unassigned count: ${unassignedCount}`);
-
             // Calculate work distribution percentages
             const assignees = Array.from(assigneeMap.values()).map(assignee => ({
                 ...assignee,
@@ -155,13 +138,202 @@ class SummaryService {
                 }
             };
 
-            console.log(`[getTeamWorkload] Final result:`, result);
             return result;
         } catch (error) {
-            console.error(`[getTeamWorkload] Error:`, error);
             throw new AppError('Failed to get team workload');
+        }
+    }
+
+    async getSprintProgress(projectId: number): Promise<SprintProgressResponse> {
+        try {
+            // Get all active sprints
+            const sprints = await models.Sprint.findAll({
+                where: { 
+                    projectId, 
+                    status: ['active'] 
+                },
+                include: [{
+                    model: models.Task,
+                    as: 'tasks',
+                    attributes: ['id', 'status']
+                }],
+                order: [['created_at', 'ASC']]
+            });
+
+            const sprintProgress = sprints.map(sprint => {
+                const tasks = sprint.tasks || [];
+                const totalTasks = tasks.length;
+
+                // Count tasks by status
+                const completedTasks = tasks.filter(task => task.status === 'closed').length;
+                const activeTasks = tasks.filter(task => 
+                    task.status === 'ongoing' || task.status === 'under review'
+                ).length;
+                // Blocked/Stuck tasks = tasks that are rejected or overdue (not actively being worked on)
+                const blockedTasks = tasks.filter(task => 
+                    task.status === 'rejected' || task.status === 'overdue'
+                ).length;
+
+                // Calculate percentages
+                const donePercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                const inProgressPercentage = totalTasks > 0 ? Math.round((activeTasks / totalTasks) * 100) : 0;
+                const toDoPercentage = totalTasks > 0 ? Math.round((blockedTasks / totalTasks) * 100) : 0;
+
+                return {
+                    id: sprint.id,
+                    title: sprint.title,
+                    description: sprint.description,
+                    progress: {
+                        completed: completedTasks,
+                        active: activeTasks,
+                        blocked: blockedTasks,
+                        total: totalTasks
+                    },
+                    progressPercentage: {
+                        completed: donePercentage,
+                        active: inProgressPercentage,
+                        blocked: toDoPercentage
+                    },
+                    taskBreakdown: {
+                        active: activeTasks,
+                        blocked: blockedTasks
+                    }
+                };
+            });
+
+            return { sprints: sprintProgress };
+        } catch (error) {
+            throw new AppError('Failed to get sprint progress');
+        }
+    }
+
+    async getPriorityBreakdown(projectId: number): Promise<PriorityBreakdownResponse> {
+        try {
+            // Get all tasks from active sprints
+            const sprints = await models.Sprint.findAll({
+                where: { 
+                    projectId, 
+                    status: ['active'] 
+                },
+                include: [{
+                    model: models.Task,
+                    as: 'tasks',
+                    attributes: ['id', 'priority']
+                }]
+            });
+
+            // Combine all tasks from active sprints
+            const allTasks = sprints.flatMap(sprint => sprint.tasks);
+            const totalTasks = allTasks.length;
+
+            // Count tasks by priority
+            const priorityCounts = {
+                high: allTasks.filter(task => task && task.priority === 'high').length,
+                middle: allTasks.filter(task => task && task.priority === 'middle').length,
+                low: allTasks.filter(task => task && task.priority === 'low').length
+            };
+
+            // Map to chart format (matching your actual task priorities)
+            const priorities = [
+                {
+                    level: 'high' as const,
+                    icon: '^',
+                    count: priorityCounts.high,
+                    percentage: totalTasks > 0 ? Math.round((priorityCounts.high / totalTasks) * 100) : 0
+                },
+                {
+                    level: 'middle' as const,
+                    icon: '=',
+                    count: priorityCounts.middle,
+                    percentage: totalTasks > 0 ? Math.round((priorityCounts.middle / totalTasks) * 100) : 0
+                },
+                {
+                    level: 'low' as const,
+                    icon: 'v',
+                    count: priorityCounts.low,
+                    percentage: totalTasks > 0 ? Math.round((priorityCounts.low / totalTasks) * 100) : 0
+                }
+            ];
+
+            return {
+                priorities,
+                totalTasks
+            };
+        } catch (error) {
+            throw new AppError('Failed to get priority breakdown');
+        }
+    }
+
+    async getRecentActivity(projectId: number): Promise<RecentActivityResponse> {
+        try {
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            // Get all active sprints and their tasks for this project
+            const activeSprints = await models.Sprint.findAll({
+                where: { 
+                    projectId, 
+                    status: ['active'] 
+                },
+                include: [{
+                    model: models.Task,
+                    as: 'tasks',
+                    attributes: ['id', 'status', 'createdAt', 'updatedAt', 'deadline']
+                }]
+            });
+
+            // Combine all tasks from active sprints
+            const allTasks = activeSprints.flatMap(sprint => sprint.tasks || []);
+
+            // Count completed tasks in last 7 days
+            const completedTasks = allTasks.filter(task => 
+                task.status === 'closed' && 
+                task.updatedAt >= thirtyDaysAgo
+            ).length;
+
+            // Count updated tasks in last 7 days (status changes only)
+            const updatedTasks = allTasks.filter(task => 
+                task.updatedAt >= thirtyDaysAgo
+            ).length;
+
+            // Count created tasks in last 7 days
+            const createdTasks = allTasks.filter(task => {
+                const isWithin30Days = task.createdAt >= thirtyDaysAgo;
+                return isWithin30Days;
+            }).length;
+
+            // Count tasks due soon (next 7 days) that are not completed
+            const dueSoonTasks = allTasks.filter(task => 
+                task.deadline <= sevenDaysFromNow && 
+                task.deadline >= now && 
+                task.status !== 'closed'
+            ).length;
+
+            return {
+                recentActivity: {
+                    completed: {
+                        count: completedTasks,
+                        period: 'last30days'
+                    },
+                    updated: {
+                        count: updatedTasks,
+                        period: 'last30days'
+                    },
+                    created: {
+                        count: createdTasks,
+                        period: 'last30days'
+                    },
+                    dueSoon: {
+                        count: dueSoonTasks,
+                        period: 'next7days'
+                    }
+                }
+            };
+        } catch (error) {
+            throw new AppError('Failed to get recent activity');
         }
     }
 }
 
-export default new SummaryService(); 
+export default new SummaryService();

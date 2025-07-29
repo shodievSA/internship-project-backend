@@ -78,6 +78,110 @@ class SummaryController {
             next(error);
         }
     }
+
+    /**
+     * Get Sprint Progress
+     * 
+     * Retrieves progress data for all sprints in a project.
+     * Shows task status breakdown for each sprint with progress percentages.
+     * 
+     * @param req - Express request object with projectId in params
+     * @param res - Express response object
+     * @param next - Express next function for error handling
+     * 
+     * @returns JSON response with:
+     * - sprints: Array of sprints with their progress data including:
+     *   - progress: Task counts by status (done, inProgress, toDo, total)
+     *   - progressPercentage: Percentages for each status
+     *   - taskBreakdown: Detailed breakdown for tooltips
+     * 
+     * Used for: Sprint Progress component in dashboard
+     */
+    async getSprintProgress(req: Request, res: Response, next: NextFunction) {
+        try {
+            const projectId = parseInt(req.params.projectId);
+            
+            if (!projectId || isNaN(projectId)) {
+                return res.status(400).json({ 
+                    error: 'Invalid project ID' 
+                });
+            }
+
+            const sprintProgress = await summaryService.getSprintProgress(projectId);
+            res.status(200).json(sprintProgress);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get Priority Breakdown
+     * 
+     * Retrieves priority distribution for all tasks in active sprints of a project.
+     * Shows how tasks are distributed across different priority levels.
+     * 
+     * @param req - Express request object with projectId in params
+     * @param res - Express response object
+     * @param next - Express next function for error handling
+     * 
+     * @returns JSON response with:
+     * - priorities: Array of priority levels with counts and percentages
+     * - totalTasks: Total number of tasks across all active sprints
+     * 
+     * Used for: Priority Breakdown bar chart in dashboard
+     */
+    async getPriorityBreakdown(req: Request, res: Response, next: NextFunction) {
+        try {
+            const projectId = parseInt(req.params.projectId);
+            
+            if (!projectId || isNaN(projectId)) {
+                return res.status(400).json({ 
+                    error: 'Invalid project ID' 
+                });
+            }
+
+            const priorityBreakdown = await summaryService.getPriorityBreakdown(projectId);
+            res.status(200).json(priorityBreakdown);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Get Recent Activity
+     * 
+     * Retrieves recent activity metrics for a project over the last 7 days.
+     * Shows completed, updated, created, and due soon task counts.
+     * 
+     * @param req - Express request object with projectId in params
+     * @param res - Express response object
+     * @param next - Express next function for error handling
+     * 
+     * @returns JSON response with:
+     * - recentActivity: Object containing activity counts for different metrics
+     *   - completed: Tasks completed in last 7 days
+     *   - updated: Tasks updated in last 7 days
+     *   - created: Tasks created in last 7 days
+     *   - dueSoon: Tasks due in next 7 days
+     * 
+     * Used for: Recent Activity summary cards in dashboard
+     */
+    async getRecentActivity(req: Request, res: Response, next: NextFunction) {
+        try {
+            const projectId = parseInt(req.params.projectId);
+            
+            if (!projectId || isNaN(projectId)) {
+                return res.status(400).json({ 
+                    error: 'Invalid project ID' 
+                });
+            }
+
+            const recentActivity = await summaryService.getRecentActivity(projectId);
+            res.status(200).json(recentActivity);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default new SummaryController(); 
