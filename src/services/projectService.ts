@@ -1618,7 +1618,7 @@ class ProjectService {
                     avatarUrl: projectN.avatarUrl,
                     position: projectN.projectMember.position,
                     role: projectN.projectMember.role as string
-                }
+			}
             });
 
         return team
