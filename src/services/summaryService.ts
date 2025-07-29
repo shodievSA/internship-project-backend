@@ -267,7 +267,7 @@ class SummaryService {
     async getRecentActivity(projectId: number): Promise<RecentActivityResponse> {
         try {
             const now = new Date();
-            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
             // Get all active sprints and their tasks for this project
@@ -289,18 +289,18 @@ class SummaryService {
             // Count completed tasks in last 7 days
             const completedTasks = allTasks.filter(task => 
                 task.status === 'closed' && 
-                task.updatedAt >= thirtyDaysAgo
+                task.updatedAt >= sevenDaysAgo
             ).length;
 
             // Count updated tasks in last 7 days (status changes only)
             const updatedTasks = allTasks.filter(task => 
-                task.updatedAt >= thirtyDaysAgo
+                task.updatedAt >= sevenDaysAgo
             ).length;
 
             // Count created tasks in last 7 days
             const createdTasks = allTasks.filter(task => {
-                const isWithin30Days = task.createdAt >= thirtyDaysAgo;
-                return isWithin30Days;
+                const isWithin7Days = task.createdAt >= sevenDaysAgo;
+                return isWithin7Days;
             }).length;
 
             // Count tasks due soon (next 7 days) that are not completed
@@ -314,15 +314,15 @@ class SummaryService {
                 recentActivity: {
                     completed: {
                         count: completedTasks,
-                        period: 'last30days'
+                        period: 'last7days'
                     },
                     updated: {
                         count: updatedTasks,
-                        period: 'last30days'
+                        period: 'last7days'
                     },
                     created: {
                         count: createdTasks,
-                        period: 'last30days'
+                        period: 'last7days'
                     },
                     dueSoon: {
                         count: dueSoonTasks,
