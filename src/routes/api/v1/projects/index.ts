@@ -7,6 +7,7 @@ import taskRouter from './tasks'
 import inviteRouter from './invites';
 import sprintRouter from './sprints'
 import timerRouter from './timer';
+import summaryRouter from './summary';
 
 const {
 	createProject,
@@ -26,6 +27,7 @@ router.use('/:projectId/members', getMemberPermissions, memberRouter);
 router.use('/:projectId/tasks', getMemberPermissions, taskRouter);
 router.use('/:projectId/sprints', getMemberPermissions, sprintRouter);
 router.use('/:projectId/timer', timerRouter);
+router.use('/:projectId/summary', getMemberPermissions, summaryRouter);
 
 
 router.get('/:projectId', getProjectDetails as RequestHandler);
