@@ -80,6 +80,11 @@ export function initAssociations() {
 		as: 'user'
 	});
 
+	ProjectMember.belongsTo(Project, {
+		foreignKey: 'project_id',
+		as: 'project'
+	});
+
 	User.hasMany(DailyAiReport, {
 		foreignKey: 'user_id',
 		onDelete: 'CASCADE',

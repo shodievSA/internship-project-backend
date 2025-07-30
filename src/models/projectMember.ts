@@ -10,6 +10,7 @@ import User from './user';
 
 export interface ProjectMemberAssociations {
   	user: User;
+    project: any;
     role: Function
 }
 
@@ -27,6 +28,7 @@ class ProjectMember extends Model<
 	declare updatedAt: CreationOptional<Date>;
     
 	declare user: User;
+	declare project: any;
 
     get role (): string { 
         const roles: Record<number, string > = {

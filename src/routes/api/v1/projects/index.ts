@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { isProjectUpdateValid } from '@/middlewares/areUpdatedPropsValid';
 import memberRouter from './members';
 import projectController from '../../../../controllers/projectController';
+import memberProductivityController from '../../../../controllers/memberProductivityController';
 import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
 import taskRouter from './tasks'
 import inviteRouter from './invites';
@@ -28,8 +29,7 @@ router.use('/:projectId/tasks', getMemberPermissions, taskRouter);
 router.use('/:projectId/sprints', getMemberPermissions, sprintRouter);
 router.use('/:projectId/timer', timerRouter);
 router.use('/:projectId/summary', getMemberPermissions, summaryRouter);
-
-
+router.get('/:projectId/my-productivity', getMemberPermissions, memberProductivityController.getMyProductivityData as RequestHandler);
 router.get('/:projectId', getProjectDetails as RequestHandler);
 router.patch('/:projectId', getMemberPermissions, isProjectUpdateValid, updateProject as RequestHandler);
 router.delete('/:projectId', getMemberPermissions, deleteProject as RequestHandler);
