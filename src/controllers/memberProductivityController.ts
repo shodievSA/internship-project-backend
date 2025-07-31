@@ -4,16 +4,8 @@ import { AppError } from '@/types';
 
 const getMyProductivityData = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log('Raw projectId from params:', req.params.projectId, 'Type:', typeof req.params.projectId);
-    console.log('All params:', req.params);
-    console.log('All query:', req.query);
-    console.log('Request URL:', req.url);
-    console.log('Request path:', req.path);
-    console.log('Request method:', req.method);
-
     // Parse and validate projectId
     const projectId = parseInt(req.params.projectId);
-    console.log('Parsed projectId:', projectId, 'Is NaN:', isNaN(projectId));
 
     if (isNaN(projectId)) {
       res.status(400).json({
@@ -39,12 +31,6 @@ const getMyProductivityData = async (req: Request, res: Response): Promise<void>
       filters.timeRange = req.query.timeRange;
     }
 
-    console.log('Productivity request:', {
-      userId,
-      projectId,
-      filters
-    });
-
     // Get productivity data
     const productivityData = await memberProductivityService.getMemberProductivity(
       userId,
@@ -58,8 +44,6 @@ const getMyProductivityData = async (req: Request, res: Response): Promise<void>
     });
 
   } catch (error) {
-    console.error('Productivity error:', error);
-    
     if (error instanceof AppError) {
       res.status(error.statusCode).json({
         success: false,

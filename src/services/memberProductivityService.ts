@@ -23,34 +23,90 @@ class MemberProductivityService {
     }
   }
 
+  private convertTimeRangeToDateRange(timeRange?: string): { startDate: string; endDate: string } | undefined {
+    if (!timeRange) return undefined;
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999); // End of today
+
+    let startDate: Date;
+
+    switch (timeRange) {
+      case 'day':
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0); // Start of today
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7); // 7 days ago
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30); // 30 days ago
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'all':
+      default:
+        return undefined; // No date range filter for 'all'
+    }
+
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+  }
+
   private async getTaskPerformanceMetrics(
     memberId: number,
     projectId: number,
     filters?: MemberProductivityFilters
   ): Promise<TaskPerformanceMetrics> {
-    const whereClause: any = {
+    // Base where clause for project and member
+    const baseWhereClause: any = {
       projectId: projectId
     };
 
-    if (filters?.dateRange) {
-      whereClause.createdAt = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
-    const tasks = await models.Task.findAll({
-      where: whereClause,
+    // Get all tasks for the member in the project
+    const allTasks = await models.Task.findAll({
+      where: baseWhereClause,
       include: [{
         model: models.ProjectMember,
         as: 'assignedToMember',
         where: { userId: memberId },
         attributes: []
       }],
-      attributes: ['status', 'priority']
+      attributes: ['id', 'status', 'priority', 'createdAt', 'updatedAt', 'deadline']
     });
+
+    // Filter tasks based on date range if provided
+    let tasks = allTasks;
+    if (filters?.dateRange) {
+      const startDate = new Date(filters.dateRange.startDate);
+      const endDate = new Date(filters.dateRange.endDate);
+      
+      tasks = allTasks.filter(task => {
+        // For task performance metrics, we consider:
+        // - Tasks assigned within the date range (createdAt)
+        // - Tasks that were updated within the date range (updatedAt)
+        // - Tasks with deadlines within the date range (deadline)
+        
+        const taskCreatedAt = new Date(task.createdAt);
+        const taskUpdatedAt = new Date(task.updatedAt);
+        const taskDeadline = new Date(task.deadline);
+        
+        // Include task if:
+        // 1. It was created within the date range, OR
+        // 2. It was updated within the date range, OR
+        // 3. It has a deadline within the date range
+        return (
+          (taskCreatedAt >= startDate && taskCreatedAt <= endDate) ||
+          (taskUpdatedAt >= startDate && taskUpdatedAt <= endDate) ||
+          (taskDeadline >= startDate && taskDeadline <= endDate)
+        );
+      });
+    }
 
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(task => task.status === 'closed').length;
@@ -404,7 +460,17 @@ class MemberProductivityService {
         throw new AppError('Invalid member ID or project ID', 400);
       }
       
-      console.log('Service: Getting productivity for member:', memberId, 'project:', projectId);
+      // Convert timeRange to dateRange if provided
+      let processedFilters = filters;
+      if (filters?.timeRange && !filters?.dateRange) {
+        const dateRange = this.convertTimeRangeToDateRange(filters.timeRange);
+        if (dateRange) {
+          processedFilters = {
+            ...filters,
+            dateRange
+          };
+        }
+      }
       
       // Get member information
       const projectMember = await models.ProjectMember.findOne({
@@ -430,15 +496,11 @@ class MemberProductivityService {
         throw new AppError('Member not found in this project', 404);
       }
 
-      console.log('Service: Found project member:', projectMember.user.fullName);
-
       // Get task performance metrics
-      const taskPerformance = await this.getTaskPerformanceMetrics(memberId, projectId, filters);
-      console.log('Service: Task performance calculated');
+      const taskPerformance = await this.getTaskPerformanceMetrics(memberId, projectId, processedFilters);
 
       // Get time tracking analytics
-      const timeTracking = await this.getTimeTrackingAnalytics(memberId, projectId, filters);
-      console.log('Service: Time tracking calculated');
+      const timeTracking = await this.getTimeTrackingAnalytics(memberId, projectId, processedFilters);
 
       return {
         memberId: projectMember.user.id,
@@ -454,7 +516,6 @@ class MemberProductivityService {
         lastUpdated: new Date()
       };
     } catch (error) {
-      console.error('Service error:', error);
       throw error;
     }
   }
