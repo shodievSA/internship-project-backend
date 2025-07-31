@@ -15,6 +15,7 @@ import {
 	NewNotification
 } from '@/types/dailyReport';
 import DailyAiReport from '@/models/dailyAiReport';
+import aiService from './aiService';
 
 async function markOverdueTasks() {
 
@@ -207,15 +208,22 @@ async function generateReport() {
 				newNotifications.push(notification);
 
 			}
+            const report = {
+                tasksDueToday,
+                tasksDueTomorrow,
+                tasksDueThisWeek,
+                tasksForReview,
+                newNotifications
+                
+				}
+           
+            const summary = await aiService.CreateSummary(report)
 
 			await DailyAiReport.create({
 				userId: user.id,
 				report: {
-					tasksDueToday,
-					tasksDueTomorrow,
-					tasksDueThisWeek,
-					tasksForReview,
-					newNotifications
+                    ...report,
+                    summary
 				}
 			});
 

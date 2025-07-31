@@ -1386,7 +1386,7 @@ class ProjectService {
                     userId: task.assignedToMember.user.id,
                     message:`Project: ${task.project.title}.
                     Your task: ${task.title} was updated by authority`
-                },
+                    },
                     {transaction}
                 )
 

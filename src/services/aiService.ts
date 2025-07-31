@@ -1,5 +1,7 @@
+import { models } from '@/models';
 import { AppError } from '@/types';
 import { OpenAI } from 'openai';
+import { DailyReport } from '@/types/dailyReport'; 
 
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
@@ -40,6 +42,23 @@ const createTitleFunction = {
   },
 };
 
+const createSummaryFunction = {
+  name: 'generate_summary',
+  description:
+    'Generates a concise and meaningful summary based on the provided task description.',
+  parameters: {
+    type: 'object',
+    properties: {
+      summary: {
+        type: 'string',
+        description:
+          'The generated summary.',
+      },
+    },
+    required: ['summary'],
+  },
+};
+
 const enhanceDescriptionPrompt = `You are a professional technical writer and task clarity expert.
 Your job is to rewrite the following text to make it:
 -Easy to understand for anyone, even WITHOUT a technical background
@@ -63,6 +82,48 @@ Follow these guidelines:
 -Ensure the title stands alone without needing extra explanation
 Return only the title. Do not include explanations.
 **Do not add any markdown into your response such as asterisk!. Return plain text only!**`;
+
+const CreateSummaryPrompt = `
+You are a smart assistant tasked with generating a concise, well-structured **daily report summary** in **Markdown format** based on a user's task and notification data.
+
+The goal is to summarize the user's upcoming and reviewable tasks, and new notifications, in an **official**, clear, and readable format suitable for daily consumption.
+Keep it short but include **all** key points.
+
+---
+## Requirements for the Summary:
+
+1. **Output format must be Markdown**. You may use:
+   - Headings (##, ###)
+   - Bullet points or numbered lists
+   - Bold (**text**) and italics (_text_) for emphasis
+   - Tables (if relevant)
+   - Emojis (e.g., ⚠️) to highlight important or urgent tasks (optional but helpful)
+
+2. Use a formal, concise writing style — similar to internal company updates or product release notes.
+
+3. Structure the report with the following sections:
+   - ## Tasks Due Today
+   - ## Tasks Due Tomorrow
+   - ## Tasks Due This Week
+   - ## Tasks for Review
+   - ## New Notifications
+
+4. If a section has no items, explicitly state that (e.g., "_No tasks due today_").
+
+5. For each task, include relevant context:
+   - Task title and description
+   - Priority level ("high", "middle", or "low")
+   - Deadline (in readable format)
+   - Assigned by or assigned to (depending on context)
+   - Project name (from which it originated)
+
+6. Use short, readable summaries. Avoid repeating raw data unless necessary.
+
+7. Don't include any AI commentary or assumptions — base everything strictly on the input.
+
+---
+Below is the input data in JSON format:
+`;
 
 class aiService {
   public async Enhance(text: string) {
@@ -136,6 +197,43 @@ class aiService {
 
     return parsed.title;
   }
+
+
+  public async CreateSummary(report: DailyReport ){
+
+    const result = await openai.chat.completions.create({
+    model: 'anthropic/claude-sonnet-4',
+    messages: [
+        { 
+            role: 'system', 
+            content: CreateSummaryPrompt + '\n```json\n' + JSON.stringify(report,null, 2) + '\n```'
+        },
+        { role: 'user', content: 'Generate a daily summary report.' },
+    ],
+    temperature: 0.7,
+    tools: [
+        {
+        type: 'function',
+        function: createSummaryFunction,
+        },
+    ],
+    tool_choice: {
+        type: 'function',
+        function: { name: 'generate_summary' },
+    },
+    });
+    const args = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+
+    if (!args) {
+
+        throw new AppError('AI tool did not return expected result');
+    }
+
+    const parsed = JSON.parse(args);
+
+    return parsed.summary;
+        
+    }
 }
 
 export default new aiService();

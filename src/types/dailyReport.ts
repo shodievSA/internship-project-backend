@@ -44,4 +44,5 @@ export interface DailyReport {
 	tasksDueThisWeek: TaskDueThisWeek[];
 	tasksForReview: TaskForReview[];
 	newNotifications: NewNotification[];
+    summary?: string;
 }
