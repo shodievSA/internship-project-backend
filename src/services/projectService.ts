@@ -126,8 +126,8 @@ class ProjectService {
 				status: project.status,
 				createdAt: project.createdAt,
 				members: 1,
-				totalTasks: 0,
-				totalTasksCompleted: 0,
+				totalSprints: 0,
+				totalSprintsCompleted: 0,
 				isAdmin: true
 			};
 
