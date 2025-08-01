@@ -10,7 +10,8 @@ import {
 	AppError, 
 	TeamMember,
     FrontSprintAttributes,
-    SprintMetaData
+    SprintMetaData,
+	ProjectMetaData
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
@@ -714,13 +715,6 @@ class ProjectService {
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 			if (!currentMember) throw new AppError("Couldn't find current project member");
-
-			const metaData = {
-				id: project.id,
-				title: project.title,
-				status: project.status,
-				createdAt: project.createdAt
-			};
 		
 			const projectTasks = await models.Task.findAll({
 				where: { 
@@ -798,13 +792,19 @@ class ProjectService {
 
 			};
             
+            const projectMetaData: ProjectMetaData = {
+				id: project.id,
+				title: project.title,
+				status: project.status,
+				createdAt: project.createdAt,
+				activeSprintId: null
+			};
             const sprints: SprintMetaData[] = [];
-            let activeSprintId: number = 0 
 
             for (const sprint of project.sprints) { 
 
-                if (sprint.status === "active"){ 
-                    activeSprintId = sprint.id
+                if (sprint.status === "active") { 
+                    projectMetaData.activeSprintId = sprint.id;
                 }
 
                 sprints.push({
@@ -826,19 +826,17 @@ class ProjectService {
 
             }
 
-
             const team = await this.getTeamOfProject(projectId);
 
             if (!team) throw new AppError("Faced error while getting team");
 
 			return {
-				metaData: metaData,
+				metaData: projectMetaData,
 				tasks: tasks,
                 sprints: sprints,
                 team: team,
 				currentMemberId: currentMember.id,
 				currentMemberRole: currentMember.role as "admin" | "manager" | "member",
-                activeSprintId: activeSprintId
 			};
 
 		} catch(err) {  

@@ -72,6 +72,7 @@ export interface ProjectMetaData {
 	title: string;
 	status: 'active' | 'paused' | 'completed';
 	createdAt: Date;
+	activeSprintId: number | null;
 }
 
 export interface SprintMetaData { 
@@ -98,5 +99,4 @@ export interface ProjectDetails {
     currentMemberId: number;
     currentMemberRole : "admin" | "manager" | "member";
 	team: TeamMember[];
-    activeSprintId: number;
 }
