@@ -5,6 +5,8 @@ import { upload } from "@/middlewares/fileUploads";
 const {
     createSprint,
     getSprintsTasks,
+    getAllSprints,
+    getDefaultSprint,
     updateSprint,
     deleteSprint,
 	createTask
@@ -12,6 +14,8 @@ const {
 
 const router = Router({ mergeParams: true });
 
+router.get('/', getAllSprints as RequestHandler);
+router.get('/default', getDefaultSprint as RequestHandler);
 router.post('/:sprintId/tasks', upload.array('fileAttachments'), createTask as RequestHandler);
 router.get('/:sprintId', getSprintsTasks as RequestHandler)
 router.post('/', createSprint as RequestHandler);

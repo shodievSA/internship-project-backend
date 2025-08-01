@@ -23,41 +23,6 @@ class MemberProductivityService {
     }
   }
 
-  private convertTimeRangeToDateRange(timeRange?: string): { startDate: string; endDate: string } | undefined {
-    if (!timeRange) return undefined;
-
-    const now = new Date();
-    const endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999); // End of today
-
-    let startDate: Date;
-
-    switch (timeRange) {
-      case 'day':
-        startDate = new Date(now);
-        startDate.setHours(0, 0, 0, 0); // Start of today
-        break;
-      case 'week':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7); // 7 days ago
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'month':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30); // 30 days ago
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'all':
-      default:
-        return undefined; // No date range filter for 'all'
-    }
-
-    return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
-    };
-  }
-
   private async getTaskPerformanceMetrics(
     memberId: number,
     projectId: number,
@@ -68,8 +33,13 @@ class MemberProductivityService {
       projectId: projectId
     };
 
+    // Add sprint filtering if provided (null means all sprints)
+    if (filters?.sprintId !== undefined && filters?.sprintId !== null) {
+      baseWhereClause.sprintId = filters.sprintId;
+    }
+
     // Get all tasks for the member in the project
-    const allTasks = await models.Task.findAll({
+    const tasks = await models.Task.findAll({
       where: baseWhereClause,
       include: [{
         model: models.ProjectMember,
@@ -79,34 +49,6 @@ class MemberProductivityService {
       }],
       attributes: ['id', 'status', 'priority', 'createdAt', 'updatedAt', 'deadline']
     });
-
-    // Filter tasks based on date range if provided
-    let tasks = allTasks;
-    if (filters?.dateRange) {
-      const startDate = new Date(filters.dateRange.startDate);
-      const endDate = new Date(filters.dateRange.endDate);
-      
-      tasks = allTasks.filter(task => {
-        // For task performance metrics, we consider:
-        // - Tasks assigned within the date range (createdAt)
-        // - Tasks that were updated within the date range (updatedAt)
-        // - Tasks with deadlines within the date range (deadline)
-        
-        const taskCreatedAt = new Date(task.createdAt);
-        const taskUpdatedAt = new Date(task.updatedAt);
-        const taskDeadline = new Date(task.deadline);
-        
-        // Include task if:
-        // 1. It was created within the date range, OR
-        // 2. It was updated within the date range, OR
-        // 3. It has a deadline within the date range
-        return (
-          (taskCreatedAt >= startDate && taskCreatedAt <= endDate) ||
-          (taskUpdatedAt >= startDate && taskUpdatedAt <= endDate) ||
-          (taskDeadline >= startDate && taskDeadline <= endDate)
-        );
-      });
-    }
 
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(task => task.status === 'closed').length;
@@ -140,26 +82,16 @@ class MemberProductivityService {
     projectId: number,
     filters?: MemberProductivityFilters
   ): Promise<TimeTrackingAnalytics> {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
     // Get all time entries for the member
     const timeEntries = await models.TimeEntry.findAll({
-      where: whereClause,
+      where: { userId: memberId },
       include: [{
         model: models.Task,
         as: 'task',
-        where: { projectId },
+        where: { 
+          projectId,
+          ...(filters?.sprintId !== undefined && filters?.sprintId !== null && { sprintId: filters.sprintId })
+        },
         attributes: ['id', 'title']
       }],
       attributes: [
@@ -182,185 +114,16 @@ class MemberProductivityService {
       ? completedSessions.reduce((total, entry) => total + (entry.duration || 0), 0) / completedSessions.length
       : 0;
 
-    // Daily time distribution
-    const dailyTimeDistribution = await this.getDailyTimeDistribution(memberId, projectId, filters);
-
-    // Weekly time distribution
-    const weeklyTimeDistribution = await this.getWeeklyTimeDistribution(memberId, projectId, filters);
-
-    // Monthly time distribution
-    const monthlyTimeDistribution = await this.getMonthlyTimeDistribution(memberId, projectId, filters);
-
-    // Time per task
+    // Get time per task
     const timePerTask = await this.getTimePerTask(memberId, projectId, filters);
-
-    // Productivity hours
-    const productivityHours = await this.getProductivityHours(memberId, projectId, filters);
 
     return {
       totalTimeLogged,
       totalTimeLoggedFormatted: this.formatDuration(totalTimeLogged),
       averageSessionDuration,
       averageSessionDurationFormatted: this.formatDuration(averageSessionDuration),
-      dailyTimeDistribution,
-      weeklyTimeDistribution,
-      monthlyTimeDistribution,
-      timePerTask,
-      productivityHours
+      timePerTask
     };
-  }
-
-  private async getDailyTimeDistribution(
-    memberId: number,
-    projectId: number,
-    filters?: MemberProductivityFilters
-  ) {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
-    const dailyStats = await models.TimeEntry.findAll({
-      where: whereClause,
-      include: [{
-        model: models.Task,
-        as: 'task',
-        where: { projectId },
-        attributes: []
-      }],
-      attributes: [
-        [fn('DATE', col('start_time')), 'date'],
-        [fn('SUM', col('duration')), 'totalTime'],
-        [fn('COUNT', col('TimeEntry.id')), 'sessions']
-      ],
-      group: [fn('DATE', col('start_time'))],
-      order: [[fn('DATE', col('start_time')), 'DESC']],
-      limit: 30 // Last 30 days
-    });
-
-    return dailyStats.map(stat => {
-      const dateValue = (stat as any).getDataValue('date');
-      const totalTimeValue = (stat as any).getDataValue('totalTime');
-      const sessionsValue = (stat as any).getDataValue('sessions');
-      
-      return {
-        date: dateValue ? String(dateValue) : '',
-        totalTime: parseInt(String(totalTimeValue || '0')),
-        sessions: parseInt(String(sessionsValue || '0'))
-      };
-    });
-  }
-
-  private async getWeeklyTimeDistribution(
-    memberId: number,
-    projectId: number,
-    filters?: MemberProductivityFilters
-  ) {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
-    const weeklyStats = await models.TimeEntry.findAll({
-      where: whereClause,
-      include: [{
-        model: models.Task,
-        as: 'task',
-        where: { projectId },
-        attributes: []
-      }],
-      attributes: [
-        [fn('TO_CHAR', col('start_time'), literal("'IYYY-IW'")), 'week'],
-        [fn('SUM', col('duration')), 'totalTime'],
-        [fn('COUNT', fn('DISTINCT', fn('DATE', col('start_time')))), 'daysWorked']
-      ],
-      group: [fn('TO_CHAR', col('start_time'), literal("'IYYY-IW'"))],
-      order: [[fn('TO_CHAR', col('start_time'), literal("'IYYY-IW'")), 'DESC']],
-      limit: 12 // Last 12 weeks
-    });
-
-    return weeklyStats.map(stat => {
-      const weekValue = (stat as any).getDataValue('week');
-      const totalTimeValue = (stat as any).getDataValue('totalTime');
-      const daysWorkedValue = (stat as any).getDataValue('daysWorked');
-      
-      const totalTime = parseInt(String(totalTimeValue || '0')) || 0;
-      const daysWorked = parseInt(String(daysWorkedValue || '1')) || 1;
-      
-      return {
-        week: weekValue ? String(weekValue) : '',
-        totalTime,
-        averageDailyTime: totalTime / daysWorked
-      };
-    });
-  }
-
-  private async getMonthlyTimeDistribution(
-    memberId: number,
-    projectId: number,
-    filters?: MemberProductivityFilters
-  ) {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
-    const monthlyStats = await models.TimeEntry.findAll({
-      where: whereClause,
-      include: [{
-        model: models.Task,
-        as: 'task',
-        where: { projectId },
-        attributes: []
-      }],
-      attributes: [
-        [fn('TO_CHAR', col('start_time'), literal("'YYYY-MM'")), 'month'],
-        [fn('SUM', col('duration')), 'totalTime'],
-        [fn('COUNT', fn('DISTINCT', fn('DATE', col('start_time')))), 'daysWorked']
-      ],
-      group: [fn('TO_CHAR', col('start_time'), literal("'YYYY-MM'"))],
-      order: [[fn('TO_CHAR', col('start_time'), literal("'YYYY-MM'")), 'DESC']],
-      limit: 12 // Last 12 months
-    });
-
-    return monthlyStats.map(stat => {
-      const monthValue = (stat as any).getDataValue('month');
-      const totalTimeValue = (stat as any).getDataValue('totalTime');
-      const daysWorkedValue = (stat as any).getDataValue('daysWorked');
-      
-      const totalTime = parseInt(String(totalTimeValue || '0')) || 0;
-      const daysWorked = parseInt(String(daysWorkedValue || '1')) || 1;
-      
-      return {
-        month: monthValue ? String(monthValue) : '',
-        totalTime,
-        averageDailyTime: totalTime / daysWorked
-      };
-    });
   }
 
   private async getTimePerTask(
@@ -368,25 +131,15 @@ class MemberProductivityService {
     projectId: number,
     filters?: MemberProductivityFilters
   ) {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
     const taskStats = await models.TimeEntry.findAll({
-      where: whereClause,
+      where: { userId: memberId },
       include: [{
         model: models.Task,
         as: 'task',
-        where: { projectId },
+        where: { 
+          projectId,
+          ...(filters?.sprintId !== undefined && filters?.sprintId !== null && { sprintId: filters.sprintId })
+        },
         attributes: ['id', 'title']
       }],
       attributes: [
@@ -407,46 +160,61 @@ class MemberProductivityService {
     }));
   }
 
-  private async getProductivityHours(
+  private async getSessionCount(
     memberId: number,
     projectId: number,
     filters?: MemberProductivityFilters
-  ) {
-    const whereClause: any = {
-      userId: memberId
-    };
-
-    if (filters?.dateRange) {
-      whereClause.start_time = {
-        [Op.between]: [
-          new Date(filters.dateRange.startDate),
-          new Date(filters.dateRange.endDate)
-        ]
-      };
-    }
-
-    const hourStats = await models.TimeEntry.findAll({
-      where: whereClause,
+  ): Promise<number> {
+    const sessionCount = await models.TimeEntry.count({
+      where: { userId: memberId },
       include: [{
         model: models.Task,
         as: 'task',
-        where: { projectId },
+        where: { 
+          projectId,
+          ...(filters?.sprintId !== undefined && filters?.sprintId !== null && { sprintId: filters.sprintId })
+        },
         attributes: []
-      }],
-      attributes: [
-        [fn('EXTRACT', literal('HOUR FROM start_time')), 'hour'],
-        [fn('SUM', col('duration')), 'totalTime'],
-        [fn('COUNT', col('TimeEntry.id')), 'sessions']
-      ],
-      group: [fn('EXTRACT', literal('HOUR FROM start_time'))],
-      order: [[fn('EXTRACT', literal('HOUR FROM start_time')), 'ASC']]
+      }]
     });
 
-    return hourStats.map(stat => ({
-      hour: parseInt(String((stat as any).getDataValue('hour') || '0')),
-      totalTime: parseInt(String((stat as any).getDataValue('totalTime') || '0')),
-      sessions: parseInt(String((stat as any).getDataValue('sessions') || '0'))
-    }));
+    return sessionCount;
+  }
+
+  private getDateInfo(): {
+    day: string;
+    month: string;
+    dayOfWeek: string;
+    relativeDate: string;
+    fullDate: string;
+  } {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    const day = now.getDate().toString();
+    const month = now.toLocaleDateString('en-US', { month: 'short' });
+    const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    // Check if it's yesterday
+    const isYesterday = now.getDate() === yesterday.getDate() && 
+                       now.getMonth() === yesterday.getMonth() && 
+                       now.getFullYear() === yesterday.getFullYear();
+    
+    const relativeDate = isYesterday ? 'Yesterday' : 'Today';
+    const fullDate = now.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+
+    return {
+      day,
+      month,
+      dayOfWeek,
+      relativeDate,
+      fullDate
+    };
   }
 
   getMemberProductivity = async (
@@ -458,18 +226,6 @@ class MemberProductivityService {
       // Validate parameters
       if (!memberId || isNaN(memberId) || !projectId || isNaN(projectId)) {
         throw new AppError('Invalid member ID or project ID', 400);
-      }
-      
-      // Convert timeRange to dateRange if provided
-      let processedFilters = filters;
-      if (filters?.timeRange && !filters?.dateRange) {
-        const dateRange = this.convertTimeRangeToDateRange(filters.timeRange);
-        if (dateRange) {
-          processedFilters = {
-            ...filters,
-            dateRange
-          };
-        }
       }
       
       // Get member information
@@ -497,10 +253,16 @@ class MemberProductivityService {
       }
 
       // Get task performance metrics
-      const taskPerformance = await this.getTaskPerformanceMetrics(memberId, projectId, processedFilters);
+      const taskPerformance = await this.getTaskPerformanceMetrics(memberId, projectId, filters);
 
       // Get time tracking analytics
-      const timeTracking = await this.getTimeTrackingAnalytics(memberId, projectId, processedFilters);
+      const timeTracking = await this.getTimeTrackingAnalytics(memberId, projectId, filters);
+
+      // Get session count
+      const sessionCount = await this.getSessionCount(memberId, projectId, filters);
+
+      // Get date information
+      const dateInfo = this.getDateInfo();
 
       return {
         memberId: projectMember.user.id,
@@ -513,8 +275,97 @@ class MemberProductivityService {
         busyLevel: projectMember.busyLevel,
         taskPerformance,
         timeTracking,
+        dateInfo,
+        sessionCount,
         lastUpdated: new Date()
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  getDefaultSprint = async (projectId: number): Promise<{
+    id: number;
+    title: string;
+    description: string | null;
+    status: 'planned' | 'active' | 'completed' | 'overdue';
+    startDate: Date;
+    endDate: Date;
+  } | null> => {
+    try {
+      // First, try to find an active sprint
+      const activeSprint = await models.Sprint.findOne({
+        where: { 
+          projectId: projectId,
+          status: 'active'
+        },
+        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        order: [['created_at', 'DESC']] // If multiple active sprints, get the most recently created one
+      });
+
+      if (activeSprint) {
+        return {
+          id: activeSprint.id,
+          title: activeSprint.title,
+          description: activeSprint.description,
+          status: activeSprint.status,
+          startDate: activeSprint.startDate,
+          endDate: activeSprint.endDate
+        };
+      }
+
+      // If no active sprint, get the sprint with the latest end date
+      const latestSprint = await models.Sprint.findOne({
+        where: { 
+          projectId: projectId
+        },
+        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        order: [['endDate', 'DESC']]
+      });
+
+      if (latestSprint) {
+        return {
+          id: latestSprint.id,
+          title: latestSprint.title,
+          description: latestSprint.description,
+          status: latestSprint.status,
+          startDate: latestSprint.startDate,
+          endDate: latestSprint.endDate
+        };
+      }
+
+      return null; // No sprints found
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  getAllSprints = async (projectId: number): Promise<Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    status: 'planned' | 'active' | 'completed' | 'overdue';
+    startDate: Date;
+    endDate: Date;
+  }>> => {
+    try {
+      const sprints = await models.Sprint.findAll({
+        where: { 
+          projectId: projectId
+        },
+        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        order: [['created_at', 'ASC']]
+      });
+
+      return sprints.map(sprint => ({
+        id: sprint.id,
+        title: sprint.title,
+        description: sprint.description,
+        status: sprint.status,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate
+      }));
+
     } catch (error) {
       throw error;
     }

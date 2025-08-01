@@ -18,31 +18,11 @@ export interface TimeTrackingAnalytics {
   totalTimeLoggedFormatted: string; // formatted as "Xh Ym Zs"
   averageSessionDuration: number; // in seconds
   averageSessionDurationFormatted: string;
-  dailyTimeDistribution: {
-    date: string;
-    totalTime: number;
-    sessions: number;
-  }[];
-  weeklyTimeDistribution: {
-    week: string;
-    totalTime: number;
-    averageDailyTime: number;
-  }[];
-  monthlyTimeDistribution: {
-    month: string;
-    totalTime: number;
-    averageDailyTime: number;
-  }[];
   timePerTask: {
     taskId: number;
     taskTitle: string;
     totalTime: number;
     averageTimePerSession: number;
-  }[];
-  productivityHours: {
-    hour: number;
-    totalTime: number;
-    sessions: number;
   }[];
 }
 
@@ -57,17 +37,21 @@ export interface MemberProductivityData {
   busyLevel: 'free' | 'low' | 'medium' | 'high';
   taskPerformance: TaskPerformanceMetrics;
   timeTracking: TimeTrackingAnalytics;
+  dateInfo: {
+    day: string;
+    month: string;
+    dayOfWeek: string;
+    relativeDate: string;
+    fullDate: string;
+  };
+  sessionCount: number;
   lastUpdated: Date;
 }
 
 export interface MemberProductivityFilters {
   projectId?: number;
   memberId?: number;
-  dateRange?: {
-    startDate: string;
-    endDate: string;
-  };
-  timeRange?: 'day' | 'week' | 'month' | 'all';
+  sprintId?: number; // Add sprint filtering support - null means all sprints
 }
 
 export interface MemberProductivityResponse {
