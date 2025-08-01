@@ -799,8 +799,13 @@ class ProjectService {
 			};
             
             const sprints: SprintMetaData[] = [];
+            let activeSprintId: number = 0 
 
             for (const sprint of project.sprints) { 
+
+                if (sprint.status === "active"){ 
+                    activeSprintId = sprint.id
+                }
 
                 sprints.push({
                     id: sprint.id,
@@ -821,6 +826,7 @@ class ProjectService {
 
             }
 
+
             const team = await this.getTeamOfProject(projectId);
 
             if (!team) throw new AppError("Faced error while getting team");
@@ -831,7 +837,8 @@ class ProjectService {
                 sprints: sprints,
                 team: team,
 				currentMemberId: currentMember.id,
-				currentMemberRole: currentMember.role as "admin" | "manager" | "member"
+				currentMemberRole: currentMember.role as "admin" | "manager" | "member",
+                activeSprintId: activeSprintId
 			};
 
 		} catch(err) {  

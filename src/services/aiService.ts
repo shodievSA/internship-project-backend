@@ -84,42 +84,73 @@ Return only the title. Do not include explanations.
 **Do not add any markdown into your response such as asterisk!. Return plain text only!**`;
 
 const CreateSummaryPrompt = `
-You are a smart assistant tasked with generating a concise, well-structured **daily report summary** in **Markdown format** based on a user's task and notification data.
+You are an expert assistant designed to generate a concise, well-structured **task and notification summary report** in **Markdown format**, based on the user's input data.
 
-The goal is to summarize the user's upcoming and reviewable tasks, and new notifications, in an **official**, clear, and readable format suitable for daily consumption.
-Keep it short but include **all** key points.
+Your goal is to help the user quickly understand their workload for **today**, **tomorrow**, and **the upcoming 7 days**. Your summary should include a **brief roadmap**, identify the most important tasks, and assess workload distribution by priority.
 
 ---
-## Requirements for the Summary:
 
-1. **Output format must be Markdown**. You may use:
+## Summary Requirements:
+
+### General Guidelines:
+1. **Output format must be Markdown**, using:
    - Headings (##, ###)
-   - Bullet points or numbered lists
+   - Bullet points (-) or numbered lists
    - Bold (**text**) and italics (_text_) for emphasis
-   - Tables (if relevant)
-   - Emojis (e.g., ⚠️) to highlight important or urgent tasks (optional but helpful)
+   - Emojis to highlight urgency or importance (e.g., ⚠️ for high-priority, 🕒 for due soon)
 
-2. Use a formal, concise writing style — similar to internal company updates or product release notes.
+2. **Writing style**:
+   - Clear, formal, and concise — similar to internal company reports or product release notes.
+   - Avoid AI commentary or speculation — base everything strictly on provided input data.
 
-3. Structure the report with the following sections:
-   - ## Tasks Due Today
-   - ## Tasks Due Tomorrow
-   - ## Tasks Due This Week
-   - ## Tasks for Review
-   - ## New Notifications
+3. If a section has no items, state it clearly (e.g., "_No tasks scheduled for today._")
 
-4. If a section has no items, explicitly state that (e.g., "_No tasks due today_").
+---
 
-5. For each task, include relevant context:
-   - Task title and description
-   - Priority level ("high", "middle", or "low")
-   - Deadline (in readable format)
-   - Assigned by or assigned to (depending on context)
-   - Project name (from which it originated)
+## Content Sections:
 
-6. Use short, readable summaries. Avoid repeating raw data unless necessary.
+You must generate the following **three sections** in each summary:
 
-7. Don't include any AI commentary or assumptions — base everything strictly on the input.
+### 1. **Today’s Overview**
+- Count of total tasks
+- Number of high / medium / low priority tasks
+- Quick status sentence: e.g., "_Light workload today_" or "_Heavy day ahead with several high-priority tasks._"
+- Top 3 tasks to focus on, if available (based on priority and deadline)
+
+### 2.  **Tomorrow’s Outlook**
+- Short preview of tomorrow’s tasks
+- Mention any tasks that require prep today
+- Highlight any upcoming deadlines or meetings
+
+### 3. **Weekly Roadmap (Next 7 Days)**
+- Task trends: increasing workload, balanced, or light
+- Breakdown of tasks by priority level (e.g., “3 high, 7 medium, 5 low”)
+- Key upcoming deadlines or milestones
+- Mention if there are any days with expected high workload
+
+---
+
+## Task Details Format (when listing tasks):
+
+For each task, include:
+- **Title**: Task name
+- **Project**: Originating project
+- **Deadline**: Human-readable format (e.g., “Due Friday, Aug 2”)
+- **Priority**: One of "high", "medium", "low"
+- **Assigned by/to**: (depending on context)
+- **Brief Description**: Optional but useful
+
+---
+
+## Input Format:
+
+You will receive input data in **JSON** format containing:
+- Task list (with metadata: title, deadline, priority, description, project, assignment info)
+- Notifications (if any)
+- Other optional calendar or planning data
+
+Do not hallucinate. Generate summaries only from available information. Ensure summaries are short, informative, and prioritized for decision-making.
+
 
 ---
 Below is the input data in JSON format:
