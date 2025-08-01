@@ -96,6 +96,7 @@ export interface ProjectDetails {
     tasks: ProjectTask[];
     sprints: SprintMetaData[];
     currentMemberId: number;
-    currentMemberRole : "admin" | "manager" | "member"
-	team: TeamMember[]
+    currentMemberRole : "admin" | "manager" | "member";
+	team: TeamMember[];
+    activeSprintId: number;
 }
