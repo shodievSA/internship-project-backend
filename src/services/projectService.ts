@@ -721,10 +721,44 @@ class ProjectService {
 				status: project.status,
 				createdAt: project.createdAt
 			};
-		
-			const projectTasks = await models.Task.findAll({
+            
+            const sprints: SprintMetaData[] = [];
+
+            let activeSprintId: number | null = null
+
+            for (const sprint of project.sprints) { 
+
+                if (sprint.status === "active"){ 
+                    activeSprintId = sprint.id
+                }
+
+                sprints.push({
+                    id: sprint.id,
+                    title: sprint.title,
+                    description: sprint.description,
+                    status: sprint.status,
+                    projectId: sprint.projectId,
+                    createdBy: {
+                        fullName: sprint.createdByMember.user.fullName,
+                        avatarUrl: sprint.createdByMember.user.avatarUrl,
+                        email: sprint.createdByMember.user.email
+                    },
+                    totalTasksCompleted: Number(sprint.get('closedTaskCount')),
+                    totalTasks: Number(sprint.get('taskCount')),
+                    startDate: sprint.startDate,
+                    endDate: sprint.endDate,
+                });
+
+            }
+            let projectTasks: Task[] = []
+
+            if (activeSprintId) { 
+
+                projectTasks = await models.Task.findAll({
 				where: { 
                     projectId: projectId,
+                    sprintId: activeSprintId,
+
                     [Op.or]: [
                         { assignedBy: currentMember.id },
                         { assignedTo: currentMember.id }
@@ -765,6 +799,8 @@ class ProjectService {
                 order: [['created_at', 'DESC']]
 			});
 
+            } 
+
 			const tasks: ProjectTask[] = [];
 
 			for (const task of projectTasks) {
@@ -775,6 +811,7 @@ class ProjectService {
                     description: task.description as string,
                     priority: task.priority,
                     deadline: task.deadline,
+                    sprintId: task.sprintId,
                     assignedBy: {
                         name: task.assignedByMember.user.fullName as string,
                         avatarUrl: task.assignedByMember.user.avatarUrl,
@@ -797,35 +834,6 @@ class ProjectService {
                 });
 
 			};
-            
-            const sprints: SprintMetaData[] = [];
-            let activeSprintId: number = 0 
-
-            for (const sprint of project.sprints) { 
-
-                if (sprint.status === "active"){ 
-                    activeSprintId = sprint.id
-                }
-
-                sprints.push({
-                    id: sprint.id,
-                    title: sprint.title,
-                    description: sprint.description,
-                    status: sprint.status,
-                    projectId: sprint.projectId,
-                    createdBy: {
-                        fullName: sprint.createdByMember.user.fullName,
-                        avatarUrl: sprint.createdByMember.user.avatarUrl,
-                        email: sprint.createdByMember.user.email
-                    },
-                    totalTasksCompleted: Number(sprint.get('closedTaskCount')),
-                    totalTasks: Number(sprint.get('taskCount')),
-                    startDate: sprint.startDate,
-                    endDate: sprint.endDate,
-                });
-
-            }
-
 
             const team = await this.getTeamOfProject(projectId);
 
@@ -838,7 +846,7 @@ class ProjectService {
                 team: team,
 				currentMemberId: currentMember.id,
 				currentMemberRole: currentMember.role as "admin" | "manager" | "member",
-                activeSprintId: activeSprintId
+                activeSprintId: activeSprintId!,
 			};
 
 		} catch(err) {  
@@ -1774,6 +1782,7 @@ class ProjectService {
 					description: task.description as string,
 					priority: task.priority,
 					deadline: task.deadline,
+                    sprintId: task.sprintId,
 					assignedBy: {
 						id: task.assignedByMember.id,
 						name: task.assignedByMember.user.fullName as string,
@@ -1818,7 +1827,19 @@ class ProjectService {
 	): Promise<object> {
 
 		try {
-            
+            if (updatedFields.status === 'active' ) { 
+                const activeSprint = await models.Sprint.findOne({
+                    where:{ 
+                        projectId: projectId, 
+                        status: "active",
+                    },
+                    attributes: ["id"]
+                });
+
+                if ( activeSprint && activeSprint.id != sprintId) { 
+                    throw new AppError("Looks like you have another active sprint")
+                }
+            }
 			const sprint = await models.Sprint.findOne({
 				where: { 
 					id: sprintId,

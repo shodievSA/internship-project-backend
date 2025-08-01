@@ -37,6 +37,7 @@ export interface ProjectTask {
     description: string;
     priority: 'low' | 'high' | 'middle';
     deadline: Date;
+    sprintId: number;
     assignedBy: {
 		id: number,
         name: string,
