@@ -755,49 +755,49 @@ class ProjectService {
             if (activeSprintId) { 
 
                 projectTasks = await models.Task.findAll({
-				where: { 
-                    projectId: projectId,
-                    sprintId: activeSprintId,
+                    where: { 
+                        projectId: projectId,
+                        sprintId: activeSprintId,
 
-                    [Op.or]: [
-                        { assignedBy: currentMember.id },
-                        { assignedTo: currentMember.id }
-                    ]
-                },
-				include: [
-					{
-						model: models.ProjectMember,
-						as: 'assignedByMember',
-						attributes: ['id', 'position'],
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl', 'email'] 
-						}],
-					},
-					{
-						model: models.ProjectMember,
-						as: 'assignedToMember',
-						attributes: ['id', 'position'],
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl', 'email'] 
-						}],
-					},
-                    {
-                        model: models.TaskHistory,
-                        as: 'history',
-                        separate: true,
-                        order: [['created_at', 'DESC']]
+                        [Op.or]: [
+                            { assignedBy: currentMember.id },
+                            { assignedTo: currentMember.id }
+                        ]
                     },
-					{
-						model: models.TaskFiles,
-						as: 'taskFiles'
-					}
-				],
-                order: [['created_at', 'DESC']]
-			});
+                    include: [
+                        {
+                            model: models.ProjectMember,
+                            as: 'assignedByMember',
+                            attributes: ['id', 'position'],
+                            include: [{ 
+                                model: models.User, 
+                                as: 'user',
+                                attributes: ['fullName', 'avatarUrl', 'email'] 
+                            }],
+                        },
+                        {
+                            model: models.ProjectMember,
+                            as: 'assignedToMember',
+                            attributes: ['id', 'position'],
+                            include: [{ 
+                                model: models.User, 
+                                as: 'user',
+                                attributes: ['fullName', 'avatarUrl', 'email'] 
+                            }],
+                        },
+                        {
+                            model: models.TaskHistory,
+                            as: 'history',
+                            separate: true,
+                            order: [['created_at', 'DESC']]
+                        },
+                        {
+                            model: models.TaskFiles,
+                            as: 'taskFiles'
+                        }
+                    ],
+                    order: [['created_at', 'DESC']]
+			    });
 
             } 
 
@@ -1827,7 +1827,10 @@ class ProjectService {
 	): Promise<object> {
 
 		try {
-            if (updatedFields.status === 'active' ) { 
+            if (
+                updatedFields.status &&
+                updatedFields.status === 'active' 
+            ) { 
                 const activeSprint = await models.Sprint.findOne({
                     where:{ 
                         projectId: projectId, 
