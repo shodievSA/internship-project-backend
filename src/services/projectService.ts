@@ -269,68 +269,94 @@ class ProjectService {
 
 	}
 
-	async invitationStatus(inviteStatus: 'accepted' | 'rejected', inviteId: number): Promise<object> {
+	async updateInviteStatus(
+		inviteStatus: 'accepted' | 'rejected', 
+		inviteId: number
+	): Promise<object> {
 		
 		const transaction: Transaction = await sequelize.transaction();
 
 		try {
 
-			const [count] = await models.Invite.update(
+			const [count] = await models.Invite.update({ status: inviteStatus }, {
+				where: { id: inviteId },
+				transaction
+			});
 
-				{ status: inviteStatus },
+			if (count === 0) throw new AppError('Project invitation not found');
 
-				{
-					where: { id: inviteId },
-					transaction,
-				}
-				
-			);
+			const invite = await models.Invite.findByPk(inviteId, { 
+				include: { 
+					model: models.User, 
+					as: 'inviter', 
+					attributes: ['email']
+				}, 
+				transaction 
+			});
 
-			if (count === 0) {
-				throw new AppError('Project invitation not found');
-			}
+			if (!invite) throw new AppError('Project invitation not found after update');			
 
-			const invite = await models.Invite.findByPk(inviteId, { include: { model: models.User, as: 'inviter', attributes: ['email']}, transaction });
+			const { 
+				projectId, 
+				invitedUserId, 
+				positionOffered, 
+				roleOffered 
+			} = invite;
 
-			if (!invite) {
+			const [user, project] = await Promise.all([
+				models.User.findByPk(invitedUserId, { transaction }),
+				models.Project.findByPk(projectId, { transaction })
+			]);
 
-				throw new AppError('Project invitation not found after update');
+			if (!user) throw new AppError(`Couldn't find user with id ${invitedUserId}`);
+			if (!project) throw new AppError(`Couldn't find project with id ${projectId}`);
 
-			}			
-
-			const { projectId, invitedUserId, positionOffered, roleOffered } = invite;
-
-			const [ user, project ] = await Promise.all(
-				[
-					models.User.findByPk(invitedUserId, { transaction }),
-					models.Project.findByPk(projectId, { attributes: ['title'], transaction })
-				]
-			);
-
-			const roleId = roleOffered === 'manager' ? 2 : 3;
+			const roleId = (roleOffered === 'manager') ? 2 : 3;
 
 			if (inviteStatus === 'accepted') {
+
 				const newMember = await models.ProjectMember.create(
-
 					{
-
 						userId: invitedUserId,
-						projectId,
-						roleId,
+						projectId: projectId,
+						roleId: roleId,
 						position: positionOffered,
-
 					},
-
 					{ transaction }
-
 				);
 
-				await models.Notification.create({
+				const [members, sprints, completedSprints, isAdmin] = await Promise.all([
+					models.ProjectMember.count({ where: { projectId } }),
+					models.Sprint.count({ where: { projectId } }),
+					models.Sprint.count({ where: { projectId, status: 'completed' } }),
+					models.ProjectMember.findOne({
+						where: {
+							projectId: projectId,
+							userId: user.id,
+							roleId: await models.Role.findOne({
+								where: { name: 'admin' },
+								attributes: ['id'],
+							}).then((role) => role?.id),
+						},
+						raw: true,
+					}).then((member) => !!member)
+				]);
 
+				const projectMetaData = {
+					id: project.id,
+					title: project.title,
+					status: project.status,
+					createdAt: project.createdAt,
+					members: members,
+					totalSprints: sprints,
+					totalSprintsCompleted: completedSprints,
+					isAdmin: isAdmin
+				} as FormattedProject;
+
+				await models.Notification.create({
 					title: 'Project invitation accepted',
 					message: `${user!.fullName} has joined the project!`,
 					userId: invite.invitedBy
-
 				}, { transaction });
 
 				await transaction.commit();
@@ -342,11 +368,11 @@ class ProjectService {
 				});
 
 				return {
-
 					invitation: invite.toJSON(),
-					newMember,
-
+					newMember: newMember,
+					projectMetaData: projectMetaData
 				};
+
 			}
 
 			if (inviteStatus === 'rejected') {
@@ -360,10 +386,9 @@ class ProjectService {
 				});
 
 				return {
-
 					invitation: invite.toJSON(),
-
 				};
+
 			}
 
 			throw new AppError('Invalid status');

@@ -150,7 +150,7 @@ async function inviteToProject(
 
 }
 
-async function invitationStatus(
+async function updateInviteStatus(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
@@ -178,9 +178,14 @@ async function invitationStatus(
 			return;
 
 		} else {
-			const invitationStatus = await projectService.invitationStatus(inviteStatus, inviteId);
 
-			res.status(200).json({ message: 'Project invitation status changed successfully', invitationStatus });
+			const inviteInfo = await projectService.updateInviteStatus(inviteStatus, inviteId);
+
+			res.status(200).json({ 
+				message: 'Project invitation status changed successfully', 
+				inviteInfo: inviteInfo 
+			});
+
 		}
 
 	} catch (error) {
@@ -823,7 +828,7 @@ const projectController = {
 	leaveProject,
 	createProject,
 	inviteToProject,
-	invitationStatus,
+	updateInviteStatus,
 	updateProject,
 	changeTeamMemberRole,
 	changeTaskStatus,
