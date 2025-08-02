@@ -818,7 +818,50 @@ async function deleteSprint(
 
 }
 
+async function getAllSprints(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
 
+	const projectId: number = parseInt(req.params.projectId);
+
+	try {
+
+		if (!projectId || isNaN(projectId)) {
+			res.status(400).json({ error: 'Invalid project ID' });
+			return;
+		}
+
+		const sprints = await projectService.getAllSprints(projectId);
+		res.status(200).json({ sprints });
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function getDefaultSprint(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+	const projectId: number = parseInt(req.params.projectId);
+	try {
+		if (!projectId || isNaN(projectId)) {
+			res.status(400).json({ error: 'Invalid project ID' });
+			return;
+		}
+		
+		const defaultSprint = await projectService.getDefaultSprint(projectId);
+		res.status(200).json({ defaultSprint });
+	} catch (error) {
+		next(error);
+	}
+}
 
 const projectController = {
 	leaveProject,
@@ -841,6 +884,8 @@ const projectController = {
 	getTaskFiles,
     createSprint,
     getSprintsTasks,
+    getAllSprints,
+    getDefaultSprint,
     updateSprint,
     deleteSprint,
 };

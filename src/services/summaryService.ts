@@ -28,14 +28,20 @@ export interface TeamWorkloadResponse {
 }
 
 class SummaryService {
-    async getStatusOverview(projectId: number): Promise<StatusOverviewResponse> {
+    async getStatusOverview(projectId: number, sprintId?: number): Promise<StatusOverviewResponse> {
         try {
-            // Get all active sprints
+            // Build where clause for sprints
+            const sprintWhereClause: any = { projectId };
+            if (sprintId) {
+                sprintWhereClause.id = sprintId;
+            } else {
+                // If no sprintId provided, get all sprints regardless of status
+                sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+            }
+
+            // Get sprints based on filter
             const sprints = await models.Sprint.findAll({
-                where: { 
-                    projectId, 
-                    status: ['active'] 
-                },
+                where: sprintWhereClause,
                 include: [{
                     model: models.Task,
                     as: 'tasks',
@@ -43,7 +49,7 @@ class SummaryService {
                 }]
             });
 
-            // Combine all tasks from active sprints
+            // Combine all tasks from sprints
             const allTasks = sprints.flatMap(sprint => sprint.tasks);
             
             const statusCounts = {
@@ -63,14 +69,20 @@ class SummaryService {
         }
     }
 
-    async getTeamWorkload(projectId: number): Promise<TeamWorkloadResponse> {
+    async getTeamWorkload(projectId: number, sprintId?: number): Promise<TeamWorkloadResponse> {
         try {
-            // Get all active sprints
-            const activeSprints = await models.Sprint.findAll({
-                where: { 
-                    projectId, 
-                    status: ['active'] 
-                },
+            // Build where clause for sprints
+            const sprintWhereClause: any = { projectId };
+            if (sprintId) {
+                sprintWhereClause.id = sprintId;
+            } else {
+                // If no sprintId provided, get all sprints regardless of status
+                sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+            }
+
+            // Get sprints based on filter
+            const sprints = await models.Sprint.findAll({
+                where: sprintWhereClause,
                 include: [{
                     model: models.Task,
                     as: 'tasks',
@@ -86,8 +98,8 @@ class SummaryService {
                 }]
             });
 
-            // Combine all tasks from active sprints
-            const allTasks = activeSprints.flatMap(sprint => sprint.tasks);
+            // Combine all tasks from sprints
+            const allTasks = sprints.flatMap(sprint => sprint.tasks);
             const totalTasks = allTasks.length;
 
             if (totalTasks === 0) {
@@ -144,14 +156,20 @@ class SummaryService {
         }
     }
 
-    async getSprintProgress(projectId: number): Promise<SprintProgressResponse> {
+    async getSprintProgress(projectId: number, sprintId?: number): Promise<SprintProgressResponse> {
         try {
-            // Get all active sprints
+            // Build where clause for sprints
+            const sprintWhereClause: any = { projectId };
+            if (sprintId) {
+                sprintWhereClause.id = sprintId;
+            } else {
+                // If no sprintId provided, get all sprints regardless of status
+                sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+            }
+
+            // Get sprints based on filter
             const sprints = await models.Sprint.findAll({
-                where: { 
-                    projectId, 
-                    status: ['active'] 
-                },
+                where: sprintWhereClause,
                 include: [{
                     model: models.Task,
                     as: 'tasks',
@@ -207,14 +225,20 @@ class SummaryService {
         }
     }
 
-    async getPriorityBreakdown(projectId: number): Promise<PriorityBreakdownResponse> {
+    async getPriorityBreakdown(projectId: number, sprintId?: number): Promise<PriorityBreakdownResponse> {
         try {
-            // Get all tasks from active sprints
+            // Build where clause for sprints
+            const sprintWhereClause: any = { projectId };
+            if (sprintId) {
+                sprintWhereClause.id = sprintId;
+            } else {
+                // If no sprintId provided, get all sprints regardless of status
+                sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+            }
+
+            // Get sprints based on filter
             const sprints = await models.Sprint.findAll({
-                where: { 
-                    projectId, 
-                    status: ['active'] 
-                },
+                where: sprintWhereClause,
                 include: [{
                     model: models.Task,
                     as: 'tasks',
@@ -222,7 +246,7 @@ class SummaryService {
                 }]
             });
 
-            // Combine all tasks from active sprints
+            // Combine all tasks from sprints
             const allTasks = sprints.flatMap(sprint => sprint.tasks);
             const totalTasks = allTasks.length;
 
@@ -264,18 +288,24 @@ class SummaryService {
         }
     }
 
-    async getRecentActivity(projectId: number): Promise<RecentActivityResponse> {
+    async getRecentActivity(projectId: number, sprintId?: number): Promise<RecentActivityResponse> {
         try {
             const now = new Date();
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-            // Get all active sprints and their tasks for this project
-            const activeSprints = await models.Sprint.findAll({
-                where: { 
-                    projectId, 
-                    status: ['active'] 
-                },
+            // Build where clause for sprints
+            const sprintWhereClause: any = { projectId };
+            if (sprintId) {
+                sprintWhereClause.id = sprintId;
+            } else {
+                // If no sprintId provided, get all sprints regardless of status
+                sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+            }
+
+            // Get sprints based on filter
+            const sprints = await models.Sprint.findAll({
+                where: sprintWhereClause,
                 include: [{
                     model: models.Task,
                     as: 'tasks',
@@ -283,8 +313,8 @@ class SummaryService {
                 }]
             });
 
-            // Combine all tasks from active sprints
-            const allTasks = activeSprints.flatMap(sprint => sprint.tasks || []);
+            // Combine all tasks from sprints
+            const allTasks = sprints.flatMap(sprint => sprint.tasks || []);
 
             // Count completed tasks in last 7 days
             const completedTasks = allTasks.filter(task => 
