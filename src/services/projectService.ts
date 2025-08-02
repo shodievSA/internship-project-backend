@@ -741,82 +741,6 @@ class ProjectService {
             
 			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 			if (!currentMember) throw new AppError("Couldn't find current project member");
-		
-			const projectTasks = await models.Task.findAll({
-				where: { 
-                    projectId: projectId,
-                    [Op.or]: [
-                        { assignedBy: currentMember.id },
-                        { assignedTo: currentMember.id }
-                    ]
-                },
-				include: [
-					{
-						model: models.ProjectMember,
-						as: 'assignedByMember',
-						attributes: ['id', 'position'],
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl', 'email'] 
-						}],
-					},
-					{
-						model: models.ProjectMember,
-						as: 'assignedToMember',
-						attributes: ['id', 'position'],
-						include: [{ 
-							model: models.User, 
-                            as: 'user',
-							attributes: ['fullName', 'avatarUrl', 'email'] 
-						}],
-					},
-                    {
-                        model: models.TaskHistory,
-                        as: 'history',
-                        separate: true,
-                        order: [['created_at', 'DESC']]
-                    },
-					{
-						model: models.TaskFiles,
-						as: 'taskFiles'
-					}
-				],
-                order: [['created_at', 'DESC']]
-			});
-
-			const tasks: ProjectTask[] = [];
-
-			for (const task of projectTasks) {
-
-                tasks.push({
-                    id: task.id as number,
-                    title: task.title,
-                    description: task.description as string,
-                    priority: task.priority,
-                    deadline: task.deadline,
-                    assignedBy: {
-                        name: task.assignedByMember.user.fullName as string,
-                        avatarUrl: task.assignedByMember.user.avatarUrl,
-						id: task.assignedByMember.id,
-						position: task.assignedByMember.position,
-						email: task.assignedByMember.user.email
-                    },
-                    assignedTo: {
-                        name: task.assignedToMember.user.fullName as string,
-                        avatarUrl: task.assignedToMember.user.avatarUrl,
-						id: task.assignedToMember.id,
-						position: task.assignedToMember.position,
-						email: task.assignedToMember.user.email
-                    },
-                    status: task.status,
-                    history : task.history,
-					filesMetaData: task.taskFiles,
-                    createdAt: task.createdAt,
-					updatedAt: task.updatedAt
-                });
-
-			};
             
             const projectMetaData: ProjectMetaData = {
 				id: project.id,
@@ -825,6 +749,7 @@ class ProjectService {
 				createdAt: project.createdAt,
 				activeSprintId: null
 			};
+			
             const sprints: SprintMetaData[] = [];
 
             for (const sprint of project.sprints) { 
@@ -851,6 +776,91 @@ class ProjectService {
                 });
 
             }
+
+            let rawProjectTasks: Task[] = [];
+
+            if (projectMetaData.activeSprintId) { 
+
+                rawProjectTasks = await models.Task.findAll({
+                    where: { 
+                        projectId: projectId,
+                        sprintId: projectMetaData.activeSprintId,
+
+                        [Op.or]: [
+                            { assignedBy: currentMember.id },
+                            { assignedTo: currentMember.id }
+                        ]
+                    },
+                    include: [
+                        {
+                            model: models.ProjectMember,
+                            as: 'assignedByMember',
+                            attributes: ['id', 'position'],
+                            include: [{ 
+                                model: models.User, 
+                                as: 'user',
+                                attributes: ['fullName', 'avatarUrl', 'email'] 
+                            }],
+                        },
+                        {
+                            model: models.ProjectMember,
+                            as: 'assignedToMember',
+                            attributes: ['id', 'position'],
+                            include: [{ 
+                                model: models.User, 
+                                as: 'user',
+                                attributes: ['fullName', 'avatarUrl', 'email'] 
+                            }],
+                        },
+                        {
+                            model: models.TaskHistory,
+                            as: 'history',
+                            separate: true,
+                            order: [['created_at', 'DESC']]
+                        },
+                        {
+                            model: models.TaskFiles,
+                            as: 'taskFiles'
+                        }
+                    ],
+                    order: [['created_at', 'DESC']]
+			    });
+
+            } 
+
+			const tasks: ProjectTask[] = [];
+
+			for (const task of rawProjectTasks) {
+
+                tasks.push({
+                    id: task.id as number,
+                    title: task.title,
+                    description: task.description as string,
+                    priority: task.priority,
+                    deadline: task.deadline,
+                    sprintId: task.sprintId,
+                    assignedBy: {
+                        name: task.assignedByMember.user.fullName as string,
+                        avatarUrl: task.assignedByMember.user.avatarUrl,
+						id: task.assignedByMember.id,
+						position: task.assignedByMember.position,
+						email: task.assignedByMember.user.email
+                    },
+                    assignedTo: {
+                        name: task.assignedToMember.user.fullName as string,
+                        avatarUrl: task.assignedToMember.user.avatarUrl,
+						id: task.assignedToMember.id,
+						position: task.assignedToMember.position,
+						email: task.assignedToMember.user.email
+                    },
+                    status: task.status,
+                    history : task.history,
+					filesMetaData: task.taskFiles,
+                    createdAt: task.createdAt,
+					updatedAt: task.updatedAt
+                });
+
+			};
 
             const team = await this.getTeamOfProject(projectId);
 
@@ -1851,6 +1861,7 @@ class ProjectService {
 					description: task.description as string,
 					priority: task.priority,
 					deadline: task.deadline,
+                    sprintId: task.sprintId,
 					assignedBy: {
 						id: task.assignedByMember.id,
 						name: task.assignedByMember.user.fullName as string,
@@ -1898,7 +1909,22 @@ class ProjectService {
 	): Promise<object> {
 
 		try {
-            
+            if (
+                updatedFields.status &&
+                updatedFields.status === 'active' 
+            ) { 
+                const activeSprint = await models.Sprint.findOne({
+                    where:{ 
+                        projectId: projectId, 
+                        status: "active",
+                    },
+                    attributes: ["id"]
+                });
+
+                if ( activeSprint && activeSprint.id != sprintId) { 
+                    throw new AppError("Looks like you have another active sprint")
+                }
+            }
 			const sprint = await models.Sprint.findOne({
 				where: { 
 					id: sprintId,
