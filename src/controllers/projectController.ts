@@ -709,12 +709,11 @@ async function getSprintsTasks(
 		const projectId = parseInt(req.params.projectId);
         const sprintId = parseInt(req.params.sprintId);
 
-        if (!projectId || !sprintId) { 
-            throw new AppError('Empty input')
-        }
-		const tasks = await projectService.getSprintsTasks( projectId, sprintId );
+        if (!projectId || !sprintId) throw new AppError('Empty input');
+		
+		const sprintDetails = await projectService.getSprintDetails(projectId, sprintId);
 
-		res.status(200).json({ sprintTasks: tasks });
+		res.status(200).json({ tasks: sprintDetails.tasks, metaData: sprintDetails.metaData });
 
 	} catch (error) {
 

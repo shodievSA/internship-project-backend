@@ -1,4 +1,3 @@
-import { models } from '@/models';
 import { AppError } from '@/types';
 import { OpenAI } from 'openai';
 import { DailyReport } from '@/types/dailyReport'; 
@@ -84,76 +83,12 @@ Return only the title. Do not include explanations.
 **Do not add any markdown into your response such as asterisk!. Return plain text only!**`;
 
 const CreateSummaryPrompt = `
-You are an expert assistant designed to generate a concise, well-structured **task and notification summary report** in **Markdown format**, based on the user's input data.
-
-Your goal is to help the user quickly understand their workload for **today**, **tomorrow**, and **the upcoming 7 days**. Your summary should include a **brief roadmap**, identify the most important tasks, and assess workload distribution by priority.
-
----
-
-## Summary Requirements:
-
-### General Guidelines:
-1. **Output format must be Markdown**, using:
-   - Headings (##, ###)
-   - Bullet points (-) or numbered lists
-   - Bold (**text**) and italics (_text_) for emphasis
-   - Emojis to highlight urgency or importance (e.g., ⚠️ for high-priority, 🕒 for due soon)
-
-2. **Writing style**:
-   - Clear, formal, and concise — similar to internal company reports or product release notes.
-   - Avoid AI commentary or speculation — base everything strictly on provided input data.
-
-3. If a section has no items, state it clearly (e.g., "_No tasks scheduled for today._")
-
----
-
-## Content Sections:
-
-You must generate the following **three sections** in each summary:
-
-### 1. **Today’s Overview**
-- Count of total tasks
-- Number of high / medium / low priority tasks
-- Quick status sentence: e.g., "_Light workload today_" or "_Heavy day ahead with several high-priority tasks._"
-- Top 3 tasks to focus on, if available (based on priority and deadline)
-
-### 2.  **Tomorrow’s Outlook**
-- Short preview of tomorrow’s tasks
-- Mention any tasks that require prep today
-- Highlight any upcoming deadlines or meetings
-
-### 3. **Weekly Roadmap (Next 7 Days)**
-- Task trends: increasing workload, balanced, or light
-- Breakdown of tasks by priority level (e.g., “3 high, 7 medium, 5 low”)
-- Key upcoming deadlines or milestones
-- Mention if there are any days with expected high workload
-
----
-
-## Task Details Format (when listing tasks):
-
-For each task, include:
-- **Title**: Task name
-- **Project**: Originating project
-- **Deadline**: Human-readable format (e.g., “Due Friday, Aug 2”)
-- **Priority**: One of "high", "medium", "low"
-- **Assigned by/to**: (depending on context)
-- **Brief Description**: Optional but useful
-
----
-
-## Input Format:
-
-You will receive input data in **JSON** format containing:
-- Task list (with metadata: title, deadline, priority, description, project, assignment info)
-- Notifications (if any)
-- Other optional calendar or planning data
-
-Do not hallucinate. Generate summaries only from available information. Ensure summaries are short, informative, and prioritized for decision-making.
-
-
----
-Below is the input data in JSON format:
+You are a smart assistant that helps users of a project management system by giving them a general
+overview of what they need to work on. Your job is to generate a brief report highlighting the user's 
+upcoming tasks and recent notifications which they might have missed. The data, represented as JSON, will 
+include the following: tasks due today, tasks due tomorrow, tasks due later this week and recent notifications.
+Keep in mind that your report shouldn't contain any markdown, headings, titles or subtitles and should
+immediately focus on the user's work plan. Finally, keep your tone friendly and informal.
 `;
 
 class aiService {
@@ -230,41 +165,43 @@ class aiService {
   }
 
 
-  public async CreateSummary(report: DailyReport ){
+  public async CreateSummary(report: DailyReport ) {
 
     const result = await openai.chat.completions.create({
-    model: 'anthropic/claude-sonnet-4',
-    messages: [
-        { 
-            role: 'system', 
-            content: CreateSummaryPrompt + '\n```json\n' + JSON.stringify(report,null, 2) + '\n```'
-        },
-        { role: 'user', content: 'Generate a daily summary report.' },
-    ],
-    temperature: 0.7,
-    tools: [
-        {
-        type: 'function',
-        function: createSummaryFunction,
-        },
-    ],
-    tool_choice: {
-        type: 'function',
-        function: { name: 'generate_summary' },
-    },
+		model: 'anthropic/claude-sonnet-4',
+		messages: [
+			{ 
+				role: 'system', 
+				content: CreateSummaryPrompt
+			},
+			{ 
+				role: 'user', 
+				content: 'Generate a summary report based on the following data:' + '\n\n```json\n' + JSON.stringify(report, null, 2) + '\n```'
+			}
+		],
+		temperature: 0.7,
+		tools: [
+			{
+				type: 'function',
+				function: createSummaryFunction
+			},
+		],
+		tool_choice: {
+			type: 'function',
+			function: { name: 'generate_summary' },
+		}
     });
+
     const args = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
 
-    if (!args) {
-
-        throw new AppError('AI tool did not return expected result');
-    }
+    if (!args) throw new AppError('AI tool did not return expected result');
 
     const parsed = JSON.parse(args);
 
     return parsed.summary;
         
     }
+
 }
 
 export default new aiService();

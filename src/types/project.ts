@@ -100,3 +100,8 @@ export interface ProjectDetails {
     currentMemberRole : "admin" | "manager" | "member";
 	team: TeamMember[];
 }
+
+export interface SprintDetails {
+	metaData: SprintMetaData;
+	tasks: ProjectTask[];
+}

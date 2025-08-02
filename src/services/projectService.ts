@@ -11,7 +11,8 @@ import {
 	TeamMember,
     FrontSprintAttributes,
     SprintMetaData,
-	ProjectMetaData
+	ProjectMetaData,
+	SprintDetails
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
@@ -1716,9 +1717,62 @@ class ProjectService {
 
     }
 
-    async getSprintsTasks(projectId: number, sprintId: number): Promise<ProjectTask[]> { 
+    async getSprintDetails(projectId: number, sprintId: number): Promise<SprintDetails> { 
 
 		try {
+
+			const sprint = await models.Sprint.findByPk(sprintId, {				
+				attributes: {
+					include: [ 
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId}
+							)`),
+							'taskCount'
+						],
+						[
+							Sequelize.literal(`(
+								SELECT COUNT (*)
+								FROM tasks AS t 
+								WHERE t.sprint_id = ${sprintId} AND t.status = 'closed'
+							)`),
+							'closedTaskCount'
+						],
+					]
+				},
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'createdByMember',
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					}
+				]
+			});
+
+			if (!sprint) throw new AppError(`Can't find sprint with id - ${sprintId}`);
+
+			const sprintMetaData: SprintMetaData = {
+				id: sprint.id,
+				title: sprint.title,
+				description: sprint.description,
+				status: sprint.status,
+				projectId: sprint.projectId,
+				createdBy: {
+					fullName: sprint.createdByMember.user.fullName,
+					avatarUrl: sprint.createdByMember.user.avatarUrl,
+					email: sprint.createdByMember.user.email
+				},
+				totalTasksCompleted: Number(sprint.get('closedTaskCount')),
+				totalTasks: Number(sprint.get('taskCount')),
+				startDate: sprint.startDate,
+				endDate: sprint.endDate,
+			};
 			
 			const sprintsTasks = await models.Task.findAll({
 				where: { 
@@ -1793,7 +1847,10 @@ class ProjectService {
 
 			};
 			
-			return tasks;
+			return {
+				metaData: sprintMetaData,
+				tasks: tasks
+			};
 
 		} catch(err) {
 
