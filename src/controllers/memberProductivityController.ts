@@ -25,11 +25,17 @@ const getMyProductivityData = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Prepare filters
+    // Prepare filters - only sprint filtering
     const filters: any = {};
-    if (req.query.timeRange) {
-      filters.timeRange = req.query.timeRange;
+    
+    // Add sprint filtering if provided
+    if (req.query.sprintId) {
+      const sprintId = parseInt(req.query.sprintId as string);
+      if (!isNaN(sprintId)) {
+        filters.sprintId = sprintId;
+      }
     }
+    // If no sprintId provided, it means "all sprints" (sprintId will be undefined)
 
     // Get productivity data
     const productivityData = await memberProductivityService.getMemberProductivity(
@@ -58,6 +64,7 @@ const getMyProductivityData = async (req: Request, res: Response): Promise<void>
   }
 };
 
+
 export default {
-  getMyProductivityData
+  getMyProductivityData,
 }; 

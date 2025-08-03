@@ -2046,6 +2046,93 @@ class ProjectService {
 
 	}
 
+    async getAllSprints(projectId: number): Promise<Array<{
+        id: number;
+        title: string;
+        description: string | null;
+        status: 'planned' | 'active' | 'completed' | 'overdue';
+        startDate: Date;
+        endDate: Date;
+    }>> {
+        try {
+            const sprints = await models.Sprint.findAll({
+                where: { 
+                    projectId: projectId
+                },
+                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                order: [['created_at', 'ASC']]
+            });
+
+            return sprints.map(sprint => ({
+                id: sprint.id,
+                title: sprint.title,
+                description: sprint.description,
+                status: sprint.status,
+                startDate: sprint.startDate,
+                endDate: sprint.endDate
+            }));
+
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getDefaultSprint(projectId: number): Promise<{
+        id: number;
+        title: string;
+        description: string | null;
+        status: 'planned' | 'active' | 'completed' | 'overdue';
+        startDate: Date;
+        endDate: Date;
+    } | null> {
+        try {
+            // First, try to find an active sprint
+            const activeSprint = await models.Sprint.findOne({
+                where: { 
+                    projectId: projectId,
+                    status: 'active'
+                },
+                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                order: [['created_at', 'DESC']] // If multiple active sprints, get the most recently created one
+            });
+
+            if (activeSprint) {
+                return {
+                    id: activeSprint.id,
+                    title: activeSprint.title,
+                    description: activeSprint.description,
+                    status: activeSprint.status,
+                    startDate: activeSprint.startDate,
+                    endDate: activeSprint.endDate
+                };
+            }
+
+            // If no active sprint, get the sprint with the latest end date
+            const latestSprint = await models.Sprint.findOne({
+                where: { 
+                    projectId: projectId
+                },
+                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                order: [['endDate', 'DESC']]
+            });
+
+            if (latestSprint) {
+                return {
+                    id: latestSprint.id,
+                    title: latestSprint.title,
+                    description: latestSprint.description,
+                    status: latestSprint.status,
+                    startDate: latestSprint.startDate,
+                    endDate: latestSprint.endDate
+                };
+            }
+
+            return null; // No sprints found
+        } catch (error) {
+            throw error;
+        }
+    }
+
 }
 
 export default new ProjectService();
