@@ -1,4 +1,9 @@
 dist
+nginx
 node_modules
 taskfileUploads
 .env
+.dockerignore
+.gitlab-ci.yml
+Dockerfile
+docker-compose.yml
