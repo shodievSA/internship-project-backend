@@ -585,9 +585,9 @@ class ProjectService {
 		const user = await models.User.findByPk(userId, {
 			include: [{ 
 				model: models.Project,
-				as: 'projects'
+				as: 'projects',
 			}],
-			order: [[ 'createdAt', 'DESC' ]]
+			order: [[{ model: models.Project, as: 'projects' }, 'createdAt', 'DESC']]
 		});
 
 		if (!user) {
