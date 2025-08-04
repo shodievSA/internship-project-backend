@@ -933,6 +933,11 @@ class ProjectService {
 		const deadline: Date = new Date(task.deadline);
 		const uploadedFiles: string[] = [];
 
+		const sprint = await models.Sprint.findOne({ where: { id: task.sprintId }});
+
+		if (deadline > sprint!.endDate) throw new AppError('Task deadline cannot exceed the sprint end date');
+		if (deadline < sprint!.startDate) throw new AppError('Task deadline cannot precede the sprint start date');
+
 		if (Number.isNaN(deadline.getTime())) {
 			throw new AppError('Invalid deadline format', 400);
 		}
