@@ -951,6 +951,7 @@ class ProjectService {
 		let assignedTo: any;
 		let project: any;
 		let newTaskHistory: any;
+		let filesMetaData: any = [];
 
 		const transaction = await sequelize.transaction();
 
@@ -1011,7 +1012,7 @@ class ProjectService {
 
 				await Promise.all(upload);
 
-				await Promise.all(
+				filesMetaData = await Promise.all(
 					uploadedFiles.map((key, i) =>
 						models.TaskFiles.create({ 
 							taskId: newTask.id, 
@@ -1066,15 +1067,18 @@ class ProjectService {
 				id: assignedBy.id,
 				name: assignedBy.user.fullName,
 				avatarUrl: assignedBy.user.avatarUrl,
-				position: assignedBy.position
+				position: assignedBy.position,
+				email: assignedBy.user.email
 			},
 			assignedTo: {
 				id: assignedTo.id,
 				name: assignedTo.user.fullName,
 				avatarUrl: assignedTo.user.avatarUrl,
-				position: assignedTo.position
+				position: assignedTo.position,
+				email: assignedTo.user.email
 			},
 			history: newTaskHistory,
+			filesMetaData: filesMetaData
 		} as ProjectTask;
 
 	}
