@@ -11,6 +11,7 @@ import ProjectMember from './projectMember';
 import Task from './task';
 import User from './user';
 import Sprint from './sprint';
+import { HasManyGetAssociationsMixin } from 'sequelize';
 
 export interface ProjectAssociations {
 	projectMember: ProjectMember[];
@@ -35,6 +36,8 @@ class Project extends Model<
 	declare tasks: Task[];
 	declare users: User[];
     declare sprints: Sprint[];
+
+	declare getTasks: HasManyGetAssociationsMixin<Task>;
 }
  
 Project.init(

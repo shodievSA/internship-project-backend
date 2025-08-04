@@ -377,6 +377,12 @@ class ProjectService {
 
 			if (inviteStatus === 'rejected') {
 
+				await models.Notification.create({
+					title: 'Project invitation rejected',
+					message: `${user!.fullName} has rejected the project invitation!`,
+					userId: invite.invitedBy
+				}, { transaction });
+
 				await transaction.commit();
 
 				await sendEmailToQueue({
@@ -670,7 +676,36 @@ class ProjectService {
 
 	async deleteProject(projectId: number): Promise<void> {
 
+		const transaction: Transaction = await sequelize.transaction();
+
 		try {
+
+			const project = await models.Project.findByPk(projectId, { attributes: ['id'], transaction });
+
+			if (!project) throw new AppError('Project not found');
+
+			const tasks = await project.getTasks({
+				attributes: ['id'],
+				transaction
+			});
+
+			for (const task of tasks) {
+
+				const files = await task.getTaskFiles({
+					attributes: ['key'],
+					transaction
+				});
+
+				await Promise.all(
+					files.map(file => {
+						sendFileToQueue({
+							key: file.key,
+							action: 'remove'
+						});
+					})
+				)
+				
+			}
 
 			const deletedProjectCount = await models.Project.destroy({
 				where: { id: projectId }
@@ -680,8 +715,11 @@ class ProjectService {
 				throw new AppError('Project not found');
 			}
 
+			await transaction.commit();
+
 		} catch (error) {
 
+			await transaction.rollback();
 			throw error;
 
 		}
@@ -1184,6 +1222,8 @@ class ProjectService {
 
     async deleteTask(userId: number, projectId: number, taskId: number): Promise<void> {
 
+		const transaction: Transaction = await sequelize.transaction();
+
         try {
 
 			const assignedBy = await models.ProjectMember.findOne({
@@ -1192,6 +1232,25 @@ class ProjectService {
 			});
 
 			if (!assignedBy) throw new Error("");
+
+			const files = await models.TaskFiles.findAll({
+				where: { taskId: taskId },
+				attributes: ['key'],
+				transaction
+			});
+
+			if (files.length > 0) {
+
+				for (const file of files) {
+
+					await sendFileToQueue({
+						key: file.key,
+						action: 'remove'
+					});
+					
+				}
+
+			}
 
             const isDeleted = await models.Task.destroy({
                 where : { 
@@ -1206,8 +1265,11 @@ class ProjectService {
                 throw new AppError('Failed to delete or no such task');
             }
 
-        } catch(error) {
+			await transaction.commit();
 
+        } catch(error) {
+			
+			await transaction.rollback();
             throw error;
 
         }
@@ -2025,7 +2087,36 @@ class ProjectService {
 
     async deleteSprint(projectId: number, sprintId:number): Promise<void> {
 
+		const transaction: Transaction = await sequelize.transaction();
+
 		try {
+
+			const project = await models.Project.findByPk(projectId, { attributes: ['id'], transaction });
+			if (!project) throw new AppError('Project not found');
+
+			const sprint = await models.Sprint.findOne({
+				where: { id: sprintId, projectId: projectId },
+				attributes: ['id'],
+				transaction
+			});
+			if (!sprint) throw new AppError('Sprint not found');
+
+			const tasks = await sprint.getTasks({ attributes: ['id'], transaction });
+
+			for (const task of tasks) {
+
+				const files = await task.getTaskFiles({ attributes: ['key'], transaction });
+
+				await Promise.all(
+					files.map(file => {
+						sendFileToQueue({
+							key: file.key,
+							action: 'remove'
+						})
+					})
+				);
+				
+			}
 
 			const deletedSprint = await models.Sprint.destroy({
 				where: { 
@@ -2038,8 +2129,11 @@ class ProjectService {
 				throw new AppError('Project not found');
 			}
 
+			await transaction.commit();
+
 		} catch (error) {
 
+			await transaction.rollback();
 			throw error;
 
 		}
