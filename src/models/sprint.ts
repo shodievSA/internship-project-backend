@@ -9,6 +9,7 @@ import {
 import Project from './project';
 import ProjectMember from './projectMember';
 import Task from './task';
+import { HasManyGetAssociationsMixin } from 'sequelize';
 
 export interface SprintAssociations {
 	project: Project;
@@ -48,6 +49,8 @@ class Sprint extends Model<
     declare tasks?: Task[];
     declare taskCount?: number;
     declare closedTaskCount?: number
+
+	declare getTasks: HasManyGetAssociationsMixin<Task>;
 }
 
 Sprint.init(

@@ -14,6 +14,7 @@ import TaskHistory from './taskHistory';
 import TaskFiles from './taskFiles';
 import { FileObject } from 'openai/resources';
 import { models } from '.';
+import { HasManyGetAssociationsMixin } from 'sequelize';
 
 export interface TaskAssociations {
 	project: Project;
@@ -68,6 +69,8 @@ class Task extends Model<
 	declare comments: Comment[];
     declare history: TaskHistory[];
 	declare taskFiles: TaskFiles[];
+
+	declare getTaskFiles: HasManyGetAssociationsMixin<TaskFiles>;
 }
 
 Task.init(
