@@ -55,7 +55,8 @@ Comment.init(
 			references: {
 				model: 'project_members',
 				key: 'id'
-			}
+			},
+			onDelete: "CASCADE"
 		},
 		createdAt: {
 			type: DataTypes.DATE,
