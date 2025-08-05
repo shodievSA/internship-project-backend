@@ -708,7 +708,8 @@ class ProjectService {
 			}
 
 			const deletedProjectCount = await models.Project.destroy({
-				where: { id: projectId }
+				where: { id: projectId },
+				transaction
 			});
 		
 			if (deletedProjectCount === 0) {
@@ -1237,7 +1238,8 @@ class ProjectService {
 
 			const assignedBy = await models.ProjectMember.findOne({
 				where: { userId: userId },
-				attributes: ['id']
+				attributes: ['id'],
+				transaction
 			});
 
 			if (!assignedBy) throw new Error("");
@@ -1268,6 +1270,7 @@ class ProjectService {
                     assignedBy: assignedBy.id
                 },
                 force: true,
+				transaction
             });
     
             if (!isDeleted) { 
@@ -2094,7 +2097,7 @@ class ProjectService {
 
 	}
 
-    async deleteSprint(projectId: number, sprintId:number): Promise<void> {
+    async deleteSprint(projectId: number, sprintId: number): Promise<void> {
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -2131,7 +2134,8 @@ class ProjectService {
 				where: { 
                     id: sprintId,
                     projectId: projectId
-                }
+                },
+				transaction
 			});
 		
 			if (deletedSprint === 0) {
