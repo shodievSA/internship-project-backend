@@ -455,14 +455,14 @@ class ProjectService {
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
-						attributes: ['roleId', 'position'],
+						attributes: ['roleId', 'position', 'id'],
 						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
-						attributes: ['roleId', 'position'],
+						attributes: ['roleId', 'position', 'id'],
 						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
 					{
@@ -497,14 +497,18 @@ class ProjectService {
 				deadline: task.deadline,
 				createdAt: task.createdAt,
 				assignedBy: {
-					name: task.assignedByMember?.user?.fullName || null,
-					avatarUrl: task.assignedByMember?.user?.avatarUrl || null,
-					id: task.assignedByMember.id
+					name: task.assignedByMember.user.fullName,
+					avatarUrl: task.assignedByMember.user.avatarUrl,
+					id: task.assignedByMember.id,
+					position: task.assignedByMember.position,
+					email: task.assignedByMember.user.email
 				},
 				assignedTo: {
-					name: task.assignedToMember?.user?.fullName || null,
-					avatarUrl: task.assignedToMember?.user?.avatarUrl || null,
-					id: task.assignedToMember.id
+					name: task.assignedToMember.user.fullName,
+					avatarUrl: task.assignedToMember.user.avatarUrl,
+					id: task.assignedToMember.id,
+					position: task.assignedToMember.position,
+					email: task.assignedToMember.user.email
 				},
 				status: task.status,
 				history: task.history
