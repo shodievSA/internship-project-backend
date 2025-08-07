@@ -496,6 +496,7 @@ class ProjectService {
 				priority: task.priority,
 				deadline: task.deadline,
 				createdAt: task.createdAt,
+				updatedAt: task.updatedAt,
 				assignedBy: {
 					name: task.assignedByMember.user.fullName,
 					avatarUrl: task.assignedByMember.user.avatarUrl,
