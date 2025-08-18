@@ -1,12 +1,12 @@
 import { RequestHandler, Router } from "express";
 import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
-import projectController from "@/controllers/projectController";
+import teamMemberController from "@/controllers/teamMemberController";
 
 const {
 	inviteToProject,
     updateInviteStatus,
     getProjectInvites,
-} = projectController;
+} = teamMemberController;
 
 const router = Router({ mergeParams: true });
 

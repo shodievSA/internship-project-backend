@@ -1,14 +1,16 @@
 import { Router, RequestHandler } from "express";
 import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
+import teamMemberController from "../../../../controllers/teamMemberController";
 import projectController from "../../../../controllers/projectController";
 
 const {
 	changeTeamMemberRole,
-	leaveProject,
 	removeTeamMember,
     getMemberProductivity,
     getTeamOfProject
-} = projectController;
+} = teamMemberController;
+
+const { leaveProject } = projectController;
 
 const router = Router({ mergeParams: true });
 

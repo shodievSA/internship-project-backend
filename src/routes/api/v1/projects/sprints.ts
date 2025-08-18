@@ -1,5 +1,6 @@
 import { RequestHandler, Router } from "express";
-import projectController from "@/controllers/projectController";
+import sprintController from "@/controllers/sprintController";
+import taskController from "@/controllers/taskController";
 import { upload } from "@/middlewares/fileUploads";
 
 const {
@@ -9,8 +10,9 @@ const {
     getDefaultSprint,
     updateSprint,
     deleteSprint,
-	createTask
-} = projectController;
+} = sprintController;
+
+const { createTask } = taskController;
 
 const router = Router({ mergeParams: true });
 
