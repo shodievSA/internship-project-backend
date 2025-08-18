@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import projectService from '../services/projectService';
+import taskService from '../services/taskService';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
@@ -39,7 +39,7 @@ async function changeTaskStatus(
 
 	try {
 
-		const updatedTask = await projectService.changeTaskStatus(projectId, taskId, updatedTaskStatus, comment, fullname);
+		const updatedTask = await taskService.changeTaskStatus(projectId, taskId, updatedTaskStatus, comment, fullname);
 		res.status(200).json({ message: 'Task status changed successfully', updatedTask });
 
 	} catch (error) {
@@ -95,7 +95,7 @@ async function createTask(
 
 		if (req.memberPermissions?.includes('assignTasks')) { 
 
-			const newTask = await projectService.createTask(
+			const newTask = await taskService.createTask(
 				task, userId, projectId, fileNames, sizes, files
 			);
 			return res.status(201).json({ newTask });
@@ -122,7 +122,7 @@ async function deleteTask(
 
 		if (req.memberPermissions?.includes('deleteTasks')) {
 
-			await projectService.deleteTask(req.user.id, projectId, taskId)
+			await taskService.deleteTask(req.user.id, projectId, taskId)
 			res.sendStatus(204)
 			return
 		}
@@ -165,7 +165,7 @@ async function updateTask(
 
 		if (req.memberPermissions?.includes('editTasks')) {
 
-			const result = await projectService.updateTask(taskUpdatePayload);
+			const result = await taskService.updateTask(taskUpdatePayload);
 			return res.status(200).json({ updatedTask: result });
 
 		} else {
@@ -194,7 +194,7 @@ async function getTaskFiles(
 
 		if (!taskId ) throw new AppError('taskId is missing');
 
-		const fileAttachments = await projectService.getTaskFiles(taskId);
+		const fileAttachments = await taskService.getTaskFiles(taskId);
 
 		return res.status(200).json({ fileUrls: fileAttachments });
 	

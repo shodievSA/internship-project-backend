@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import projectService from '../services/projectService';
+import teamMemberService from '../services/teamMemberService';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
@@ -39,7 +39,7 @@ async function inviteToProject(
 
 		if (req.memberPermissions?.includes('invitePeople')) {
 
-			const { invite } = await projectService.inviteToProject(
+			const { invite } = await teamMemberService.inviteToProject(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
@@ -92,7 +92,7 @@ async function updateInviteStatus(
 
 		} else {
 
-			const inviteInfo = await projectService.updateInviteStatus(inviteStatus, inviteId);
+			const inviteInfo = await teamMemberService.updateInviteStatus(inviteStatus, inviteId);
 
 			res.status(200).json({ 
 				message: 'Project invitation status changed successfully', 
@@ -136,7 +136,7 @@ async function changeTeamMemberRole(
 			return;
 		}
 
-		const updatedTeamMember = await projectService.updateTeamMemberRole(projectId, memberId, newRole);
+		const updatedTeamMember = await teamMemberService.updateTeamMemberRole(projectId, memberId, newRole);
 
 		res.status(200).json({ updatedTeamMember });
 
@@ -167,7 +167,7 @@ async function removeTeamMember(
 
 		try {
 
-			await projectService.removeTeamMember(projectId, memberId, userId);
+			await teamMemberService.removeTeamMember(projectId, memberId, userId);
 
 			res.sendStatus(204);
 
@@ -198,7 +198,7 @@ async function getMemberProductivity(
 
         if ( req.memberPermissions?.includes('viewMemberProductivity')){
     
-            const result = await projectService.getMemberProductivity(projectId, memberId);
+            const result = await teamMemberService.getMemberProductivity(projectId, memberId);
             return res.status(200).json({productivityData: result})
         }
         else{
@@ -224,7 +224,7 @@ async function getProjectInvites(
 
         if ( req.memberPermissions?.includes('getProjectInvites')) {
     
-            const invites = await projectService.getProjectInvites(projectId);
+            const invites = await teamMemberService.getProjectInvites(projectId);
             return res.status(200).json({ projectInvites: invites });
 
         } else {
@@ -254,7 +254,7 @@ async function getTeamOfProject(
 
     try {
         
-        const team = await projectService.getTeamOfProject(projectId);
+        const team = await teamMemberService.getTeamOfProject(projectId);
         return res.status(200).json({ team: team });
 
     } catch(error) { 

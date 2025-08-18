@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
+import teamMemberService from '../services/teamMemberService';
 import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
@@ -22,7 +23,7 @@ async function leaveProject(
 
 		try {
 
-			await projectService.leaveProject(projectId, userId);
+			await teamMemberService.leaveProject(projectId, userId);
 
 			res.sendStatus(204);
 

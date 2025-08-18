@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import projectService from '../services/projectService';
+import sprintService from '../services/sprintService';
 import { AppError, FrontSprintAttributes } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
@@ -23,7 +23,7 @@ async function createSprint(
 
         if (req.memberPermissions?.includes('assignTasks')) {
 
-            const sprint = await projectService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
+            const sprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
             return res.status(200).json({ newSprint: sprint });
 
         }
@@ -51,7 +51,7 @@ async function getSprintsTasks(
 
         if (!projectId || !sprintId) throw new AppError('Empty input');
 		
-		const sprintDetails = await projectService.getSprintDetails(projectId, sprintId);
+		const sprintDetails = await sprintService.getSprintDetails(projectId, sprintId);
 
 		res.status(200).json({ tasks: sprintDetails.tasks, metaData: sprintDetails.metaData });
 
@@ -109,7 +109,7 @@ async function updateSprint(
 
 		if (req.memberPermissions?.includes('editProject')) {
 
-			const updatedSprint = await projectService.updateSprint(projectId, sprintId, updatedFields);
+			const updatedSprint = await sprintService.updateSprint(projectId, sprintId, updatedFields);
 			res.status(200).json({ message: 'Project updated successfully', updatedSprint });
 
 		} else {
@@ -139,7 +139,7 @@ async function deleteSprint(
 
         if (req.memberPermissions?.includes('deleteProject')) {
             
-            await projectService.deleteSprint(projectId, sprintId);
+            await sprintService.deleteSprint(projectId, sprintId);
     
             res.sendStatus(204);
             
@@ -172,7 +172,7 @@ async function getAllSprints(
 			return;
 		}
 
-		const sprints = await projectService.getAllSprints(projectId);
+		const sprints = await sprintService.getAllSprints(projectId);
 		res.status(200).json({ sprints });
 
 	} catch (error) {
@@ -195,7 +195,7 @@ async function getDefaultSprint(
 			return;
 		}
 		
-		const defaultSprint = await projectService.getDefaultSprint(projectId);
+		const defaultSprint = await sprintService.getDefaultSprint(projectId);
 		res.status(200).json({ defaultSprint });
 	} catch (error) {
 		next(error);
