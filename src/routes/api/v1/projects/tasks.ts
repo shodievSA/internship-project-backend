@@ -1,15 +1,15 @@
-import projectController from "../../../../controllers/projectController";
+import taskController from "../../../../controllers/taskController";
 import { RequestHandler, Router } from "express";
 import { commentController } from '../../../../controllers/commentController';
 import { upload } from '@/middlewares/fileUploads';
 
 const router = Router({ mergeParams: true });
 
-router.post('/', upload.array('fileAttachments'), projectController.createTask as RequestHandler);
-router.patch('/:taskId/status', projectController.changeTaskStatus as RequestHandler);
-router.patch('/:taskId', upload.fields([{ name: 'filesToAdd', maxCount: 10 }]), projectController.updateTask as RequestHandler);
-router.delete('/:taskId', projectController.deleteTask as RequestHandler);
-router.get('/:taskId/files', projectController.getTaskFiles as RequestHandler);
+router.post('/', upload.array('fileAttachments'), taskController.createTask as RequestHandler);
+router.patch('/:taskId/status', taskController.changeTaskStatus as RequestHandler);
+router.patch('/:taskId', upload.fields([{ name: 'filesToAdd', maxCount: 10 }]), taskController.updateTask as RequestHandler);
+router.delete('/:taskId', taskController.deleteTask as RequestHandler);
+router.get('/:taskId/files', taskController.getTaskFiles as RequestHandler);
 
 // Comment endpoints
 router.get('/:taskId/comments', commentController.getAll as RequestHandler);

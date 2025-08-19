@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import userService from '../services/userService';
+import teamMemberService from '../services/teamMemberService';
 import { UserData } from '@/types';
 
 const {
@@ -159,6 +160,52 @@ async function getDailyReport(
 
 }
 
+async function updateUserInviteStatus(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	const inviteStatus: 'accepted' | 'rejected' = req.body.status;
+	const inviteId: number = parseInt(req.params.inviteId);
+
+	try {
+
+		if (!inviteStatus) {
+
+			res.status(400).json({
+				error: 'inviteStatus is missing'
+			});
+
+			return;
+
+		} else if (!inviteId) {
+
+			res.status(400).json({
+				error: 'inviteId is missing'
+			});
+
+			return;
+
+		} else {
+
+			const inviteInfo = await userService.updateUserInviteStatus(inviteStatus, inviteId);
+
+			res.status(200).json({ 
+				message: 'Project invitation status changed successfully', 
+				inviteInfo: inviteInfo 
+			});
+
+		}
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
 const userController = {
     getMe,
     getMailContacts,
@@ -166,7 +213,8 @@ const userController = {
     getInvitations,
     deleteNotifications,
     updateNotifications,
-	getDailyReport
+	getDailyReport,
+	updateUserInviteStatus
 }
 
 export default userController;
