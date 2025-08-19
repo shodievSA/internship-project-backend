@@ -1,4 +1,4 @@
-import { notificationConnectionsMap } from "..";
+import { notificationConnectionsMap } from "../upgradeHandler";
 import type { WebSocket as WSWebSocket } from "ws";
 
 interface IdentifyUserMsg {

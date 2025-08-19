@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { commentService, deleteAndBroadcastComment, updateAndBroadcastComment } from "../services/commentService";
-import { taskConnectionsMap } from "../index";
+import { taskConnectionsMap } from "../upgradeHandler";
 import type { WebSocket as WSWebSocket } from "ws";
 import { saveAndBroadcastComment } from "../services/commentService";
 

@@ -8,7 +8,7 @@ import {
 } from 'sequelize';
 import User from './user';
 import Project from './project';
-import { notificationConnectionsMap } from '..';
+import { notificationConnectionsMap } from '../upgradeHandler';
 
 export interface NotificationAssociations {
   	user: User;

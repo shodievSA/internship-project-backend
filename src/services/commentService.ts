@@ -1,5 +1,5 @@
 import { models } from '../models';
-import { taskConnectionsMap } from '../index';
+import { taskConnectionsMap } from '../upgradeHandler';
 import type { WebSocket as WSWebSocket } from 'ws';
 import { GmailType } from './gmaiService';
 import { sendEmailToQueue } from '@/queues';
