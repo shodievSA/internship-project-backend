@@ -3,111 +3,9 @@ import teamMemberService from '../services/teamMemberService';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
-async function inviteToProject(
-	req: AuthenticatedRequest,
-	res: Response,
-	next: NextFunction
-): Promise<void> {
-
-	const { receiverEmail, positionOffered, roleOffered } = req.body as {
-		receiverEmail: string,
-		positionOffered: string,
-		roleOffered: 'manager' | 'member',
-	};
-
-	const projectId: number = parseInt(req.params.projectId);
-
-	try {
-
-		if (!receiverEmail || !positionOffered || !roleOffered) {
-
-			res.status(400).json({
-				error: 'receiverEmail, positionOffered, and roleOffered are required',
-			});
-
-			return;
-
-		}
-
-		if (!projectId) {
-			res.status(400).json({
-				error: 'projectId is missing',
-			});
-
-			return;
-		}
-
-		if (req.memberPermissions?.includes('invitePeople')) {
-
-			const { invite } = await teamMemberService.inviteToProject(
-				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
-			);
-
-			res.status(201).json({
-				message: 'Project invitation sent successfully',
-				invite: invite,
-			});
-
-		} else {
-
-			res.sendStatus(403);
-
-		}
 
 
-	} catch (error) {
 
-		next(error);
-
-	}
-
-}
-
-async function updateInviteStatus(
-	req: AuthenticatedRequest,
-	res: Response,
-	next: NextFunction
-): Promise<void> {
-
-	const inviteStatus: 'accepted' | 'rejected' = req.body.status;
-	const inviteId: number = parseInt(req.params.inviteId);
-
-	try {
-
-		if (!inviteStatus) {
-
-			res.status(400).json({
-				error: 'inviteStatus is missing'
-			});
-
-			return;
-
-		} else if (!inviteId) {
-
-			res.status(400).json({
-				error: 'inviteId is missing'
-			});
-
-			return;
-
-		} else {
-
-			const inviteInfo = await teamMemberService.updateInviteStatus(inviteStatus, inviteId);
-
-			res.status(200).json({ 
-				message: 'Project invitation status changed successfully', 
-				inviteInfo: inviteInfo 
-			});
-
-		}
-
-	} catch (error) {
-
-		next(error);
-
-	}
-
-}
 
 async function changeTeamMemberRole(
 	req: AuthenticatedRequest,
@@ -210,69 +108,14 @@ async function getMemberProductivity(
 	}
 }
 
-async function getProjectInvites(
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction
-) {
-    
-    const projectId = parseInt(req.params.projectId);
 
-    if (!projectId) throw new AppError('Empty input');
-    
-    try {
 
-        if ( req.memberPermissions?.includes('getProjectInvites')) {
-    
-            const invites = await teamMemberService.getProjectInvites(projectId);
-            return res.status(200).json({ projectInvites: invites });
 
-        } else {
-            
-            throw new AppError('No permission to edit task');
-
-        }
-
-    } catch(error) { 
-
-    	next (error);
-
-    }
-
-}
-
-async function getTeamOfProject(
-    req : AuthenticatedRequest,
-    res : Response,
-    next: NextFunction  
-) {
-    
-    const projectId = parseInt(req.params.projectId);
-	const userId = req.user.id;
-
-    if (!projectId) throw new AppError('Empty input');
-
-    try {
-        
-        const team = await teamMemberService.getTeamOfProject(projectId);
-        return res.status(200).json({ team: team });
-
-    } catch(error) { 
-	
-		next(error);
-
-    }
-
-}
 
 const teamMemberController = {
-	inviteToProject,
-	updateInviteStatus,
 	changeTeamMemberRole,
 	removeTeamMember,
 	getMemberProductivity,
-	getProjectInvites,
-	getTeamOfProject,
 };
 
 export default teamMemberController;

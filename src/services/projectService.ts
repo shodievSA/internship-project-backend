@@ -1,5 +1,6 @@
 import Project from '@/models/project';
 import Task from '@/models/task';
+import User from '@/models/user';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import {
 	AppError,
@@ -7,13 +8,15 @@ import {
 	ProjectDetails,
 	ProjectMetaData,
 	ProjectTask,
-	SprintMetaData
+	SprintMetaData,
+	InviteType,
+	ProjectInvite,
+	TeamMember
 } from '@/types';
 import { Op, Sequelize, Transaction } from 'sequelize';
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { GmailType } from '../services/gmaiService';
-import teamMemberService from './teamMemberService';
 
 
 
@@ -453,7 +456,7 @@ class ProjectService {
 
 			};
 
-            const team = await teamMemberService.getTeamOfProject(projectId);
+            const team = await this.getProjectTeam(projectId);
 
             if (!team) throw new AppError("Faced error while getting team");
 
@@ -473,6 +476,195 @@ class ProjectService {
 		}
 
 	}
+
+	async sendProjectInvite(
+		invitedBy: number,
+		projectId: number,
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member'
+	): Promise<InviteType> {
+
+		const transaction: Transaction = await sequelize.transaction();
+
+		try {
+			
+			const userExists = await models.User.findOne({
+				where: { email: receiverEmail }
+			});
+
+			if (userExists) {
+
+				const userId = userExists.id;
+
+				return createInvite(userId, invitedBy);
+
+			} else {
+
+				const newUser = await models.User.create({
+
+					email: receiverEmail,
+					isInvited: true,
+
+				}, { transaction });
+
+				if (newUser) {
+
+					const userId = newUser.id;
+
+					return createInvite(userId, invitedBy);
+
+				}
+
+				throw new AppError('Unexpected state: no user');
+
+			}
+
+			async function createInvite(userId: number, invitedBy: number): Promise<InviteType> {
+				
+				try {
+
+					const [_, isCreated] = await models.Invite.findOrCreate({ 
+						where: { 
+							invitedUserId: userId,
+							projectId: projectId,
+							status: "pending"
+						},
+						defaults: {
+							projectId: projectId,
+							invitedUserId: userId,
+							positionOffered: positionOffered,
+							roleOffered: roleOffered,
+							invitedBy: invitedBy
+						},
+						transaction
+					});
+
+                    if (!isCreated) { 
+                        throw new AppError('The invite has already been send')
+                    }
+
+					const fullProdInvite = await models.Invite.findOne({
+						where: { 
+                            projectId: projectId,
+                            invitedUserId : userId,
+							status: "pending"
+                         },
+						include: [
+							{
+								model: models.Project,
+								as: 'project',
+                                attributes: ['title'],
+							}, 
+
+                            {
+                                model : models.User,
+                                as : 'user'
+                            }
+						],
+						transaction
+					});
+
+					await transaction.commit();
+
+					await sendEmailToQueue({
+						type: GmailType.PROJECT_INVITE,
+						receiverEmail: receiverEmail,
+						params: [fullProdInvite!.project.title, roleOffered, positionOffered]
+					});
+
+					return { 
+                        invite:{
+                            id : fullProdInvite?.id as number,
+                            status : fullProdInvite?.status,
+                            receiverName : fullProdInvite?.user.fullName,
+                            receiverEmail: fullProdInvite?.user.email as string,
+                            receiverAvatarUrl : fullProdInvite?.user.avatarUrl,
+                            positionOffered : fullProdInvite?.positionOffered as string,
+                            roleOffered : fullProdInvite?.roleOffered,
+                            createdAt : fullProdInvite?.createdAt as Date,
+                        }
+                    };
+
+				} catch (error) {
+
+                    await transaction.rollback();
+                    throw error;
+					
+				}
+
+			}
+
+		} catch (error) {
+
+            await transaction.rollback();
+            throw error;
+
+		}
+
+	}
+
+	async getProjectInvites(projectId: number): Promise<ProjectInvite[]> {
+        
+        const projectInvites = await models.Invite.findAll({
+            where: { projectId },
+            include: [{
+                model: models.User,
+                as: 'user'
+            }],
+            order: [['created_at', 'DESC']]
+		});
+
+		const invites: ProjectInvite[] = [];
+
+        for (const invite of projectInvites) {
+
+            invites.push({
+                id: invite.id as number,
+                status: invite.status,
+                receiverEmail: invite.user.email,
+                receiverName: invite.user.fullName,
+                receiverAvatarUrl: invite.user.avatarUrl,
+                createdAt: invite.createdAt as Date,
+                positionOffered: invite.positionOffered as string,
+                roleOffered: invite.roleOffered,
+            });
+
+        }
+
+        return invites
+    }
+
+    async getProjectTeam(projectId: number): Promise<TeamMember[]> {
+
+        const project = await models.Project.findByPk(projectId, {
+            include: [{
+                model: models.User,
+                as: 'users',
+                attributes: ['fullName', 'email', 'avatarUrl'],
+                through: {
+                    as: 'projectMember',
+                    attributes: ['id', 'userId', 'position', 'roleId'],
+                },
+            }]
+        });
+
+        if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+
+            const team = project.users.map((projectN: User) => {
+
+                return {
+                    id: projectN.projectMember.id as number,
+                    name: projectN.fullName,
+                    email: projectN.email,
+                    avatarUrl: projectN.avatarUrl,
+                    position: projectN.projectMember.position,
+                    role: projectN.projectMember.role as string
+		}
+            });
+
+        return team
+    }
 
 }
 

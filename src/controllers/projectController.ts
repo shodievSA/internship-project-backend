@@ -214,6 +214,121 @@ async function deleteProject(
 
 }
 
+async function sendProjectInvite(
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> {
+
+	const { receiverEmail, positionOffered, roleOffered } = req.body as {
+		receiverEmail: string,
+		positionOffered: string,
+		roleOffered: 'manager' | 'member',
+	};
+
+	const projectId: number = parseInt(req.params.projectId);
+
+	try {
+
+		if (!receiverEmail || !positionOffered || !roleOffered) {
+
+			res.status(400).json({
+				error: 'receiverEmail, positionOffered, and roleOffered are required',
+			});
+
+			return;
+
+		}
+
+		if (!projectId) {
+			res.status(400).json({
+				error: 'projectId is missing',
+			});
+
+			return;
+		}
+
+		if (req.memberPermissions?.includes('invitePeople')) {
+
+			const { invite } = await projectService.sendProjectInvite(
+				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
+			);
+
+			res.status(201).json({
+				message: 'Project invitation sent successfully',
+				invite: invite,
+			});
+
+		} else {
+
+			res.sendStatus(403);
+
+		}
+
+
+	} catch (error) {
+
+		next(error);
+
+	}
+
+}
+
+async function getProjectInvites(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction
+) {
+    
+    const projectId = parseInt(req.params.projectId);
+
+    if (!projectId) throw new AppError('Empty input');
+    
+    try {
+
+        if ( req.memberPermissions?.includes('getProjectInvites')) {
+    
+            const invites = await projectService.getProjectInvites(projectId);
+            return res.status(200).json({ projectInvites: invites });
+
+        } else {
+            
+            throw new AppError('No permission to get project invites');
+
+        }
+
+    } catch(error) { 
+
+    	next (error);
+
+    }
+
+}
+
+async function getProjectTeam(
+    req : AuthenticatedRequest,
+    res : Response,
+    next: NextFunction  
+) {
+    
+    const projectId = parseInt(req.params.projectId);
+	const userId = req.user.id;
+
+    if (!projectId) throw new AppError('Empty input');
+
+    try {
+        
+        const team = await projectService.getProjectTeam(projectId);
+        return res.status(200).json({ team: team });
+
+    } catch(error) { 
+	
+		next(error);
+
+    }
+
+}
+
 
 
 
@@ -225,6 +340,9 @@ const projectController = {
 	getProjects,
 	getProjectDetails,
 	deleteProject,
+	sendProjectInvite,
+	getProjectInvites,
+	getProjectTeam,
 };
 
 export default projectController;

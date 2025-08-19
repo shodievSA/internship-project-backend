@@ -9,6 +9,8 @@ import sequelize from '@/clients/sequelize';
 import { Op, Transaction } from 'sequelize';
 import { DateTime } from 'luxon';
 import DailyAiReport from '@/models/dailyAiReport';
+import { GmailType } from '../services/gmaiService';
+import { sendEmailToQueue } from '@/queues';
 
 async function getUserData(userId: number): Promise<UserData | null> {
 
@@ -304,6 +306,145 @@ async function getDailyReport(userId: number) {
 
 }
 
+async function updateUserInviteStatus(
+	inviteStatus: 'accepted' | 'rejected', 
+	inviteId: number
+): Promise<object> {
+	
+	const transaction: Transaction = await sequelize.transaction();
+
+	try {
+
+		const [count] = await models.Invite.update({ status: inviteStatus }, {
+			where: { id: inviteId },
+			transaction
+		});
+
+		if (count === 0) throw new AppError('Project invitation not found');
+
+		const invite = await models.Invite.findByPk(inviteId, { 
+			include: { 
+				model: models.User, 
+				as: 'inviter', 
+				attributes: ['email']
+			}, 
+			transaction 
+		});
+
+		if (!invite) throw new AppError('Project invitation not found after update');			
+
+		const { 
+			projectId, 
+			invitedUserId, 
+			positionOffered, 
+			roleOffered 
+		} = invite;
+
+		const [user, project] = await Promise.all([
+			models.User.findByPk(invitedUserId, { transaction }),
+			models.Project.findByPk(projectId, { transaction })
+		]);
+
+		if (!user) throw new AppError(`Couldn't find user with id ${invitedUserId}`);
+		if (!project) throw new AppError(`Couldn't find project with id ${projectId}`);
+
+		const roleId = (roleOffered === 'manager') ? 2 : 3;
+
+		if (inviteStatus === 'accepted') {
+
+			const newMember = await models.ProjectMember.create(
+				{
+					userId: invitedUserId,
+					projectId: projectId,
+					roleId: roleId,
+					position: positionOffered,
+				},
+				{ transaction }
+			);
+
+			const [members, sprints, completedSprints, isAdmin] = await Promise.all([
+				models.ProjectMember.count({ where: { projectId } }),
+				models.Sprint.count({ where: { projectId } }),
+				models.Sprint.count({ where: { projectId, status: 'completed' } }),
+				models.ProjectMember.findOne({
+					where: {
+						projectId: projectId,
+						userId: user.id,
+						roleId: await models.Role.findOne({
+							where: { name: 'admin' },
+							attributes: ['id'],
+						}).then((role) => role?.id),
+					},
+					raw: true,
+				}).then((member) => !!member)
+			]);
+
+			const projectMetaData = {
+				id: project.id,
+				title: project.title,
+				status: project.status,
+				createdAt: project.createdAt,
+				members: members,
+				totalSprints: sprints,
+				totalSprintsCompleted: completedSprints,
+				isAdmin: isAdmin
+			};
+
+			await models.Notification.create({
+				title: 'Project invitation accepted',
+				message: `${user!.fullName} has joined the project!`,
+				userId: invite.invitedBy
+			}, { transaction });
+
+			await transaction.commit();
+
+			await sendEmailToQueue({
+				type: GmailType.PROJECT_INVITE_ACCEPT,
+				receiverEmail: invite.inviter.email,
+				params: [project!.title, roleOffered, positionOffered, projectId]
+			});
+
+			return {
+				invitation: invite.toJSON(),
+				newMember: newMember,
+				projectMetaData: projectMetaData
+			};
+
+		}
+
+		if (inviteStatus === 'rejected') {
+
+			await models.Notification.create({
+				title: 'Project invitation rejected',
+				message: `${user!.fullName} has rejected the project invitation!`,
+				userId: invite.invitedBy
+			}, { transaction });
+
+			await transaction.commit();
+
+			await sendEmailToQueue({
+				type: GmailType.PROJECT_INVITE_REJECT,
+				receiverEmail: invite.inviter.email,
+				params: [project!.title, roleOffered, positionOffered, projectId]
+			});
+
+			return {
+				invitation: invite.toJSON(),
+			};
+
+		}
+
+		throw new AppError('Invalid status');
+
+	} catch (error) {
+
+		if (!(transaction as any).finished) await transaction.rollback();
+		throw error;
+
+	}
+
+}
+
 const userService = { 
     getUserData,
     getContacts,
@@ -311,7 +452,8 @@ const userService = {
     getInvites,
     deleteNotification,
     updateNotification,
-	getDailyReport
+	getDailyReport,
+	updateUserInviteStatus
 }
 
 export default userService;

@@ -7,14 +7,16 @@ const {
 	changeTeamMemberRole,
 	removeTeamMember,
     getMemberProductivity,
-    getTeamOfProject
 } = teamMemberController;
 
-const { leaveProject } = projectController;
+const { 
+    leaveProject,
+    getProjectTeam 
+} = projectController;
 
 const router = Router({ mergeParams: true });
 
-router.get('/', getTeamOfProject as RequestHandler)
+router.get('/', getProjectTeam as RequestHandler)
 router.get('/:memberId', getMemberProductivity as RequestHandler);
 router.patch('/:memberId', changeTeamMemberRole as RequestHandler);
 router.delete('/me', leaveProject as RequestHandler);
