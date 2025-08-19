@@ -314,7 +314,6 @@ class MemberProductivityService {
         };
       }
 
-      // If no active sprint, get the sprint with the latest end date
       const latestSprint = await models.Sprint.findOne({
         where: { 
           projectId: projectId
