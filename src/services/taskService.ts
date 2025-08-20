@@ -41,7 +41,7 @@ class TaskService {
 				} as UpdateOptions 
 			);
 
-			if (affectedRows === 0) throw new AppError("Failed to find the task", 400, true);
+			if (affectedRows === 0) throw new AppError(`Failed to find the task with id ${taskId}`, 400, true);
 
 			const task = await models.Task.findOne({
 				where: { id: taskId },
@@ -142,7 +142,7 @@ class TaskService {
 			
 				default:
 					const _exhaustiveCheck: never = updatedTaskStatus;
-					throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
+					throw new AppError(`Unsupported task status: ${_exhaustiveCheck}`, 400, true);
 			}
 
 			await models.Notification.create(
@@ -364,7 +364,7 @@ class TaskService {
 			}
 
             const isDeleted = await models.Task.destroy({
-                where : { 
+                where: { 
                     id: taskId,
                     projectId: projectId,
                     assignedBy: assignedBy.id
@@ -377,7 +377,7 @@ class TaskService {
 
 			await transaction.commit();
 
-        } catch(err) {
+        } catch (err) {
 			
 			await transaction.rollback();
             throw err;
@@ -440,9 +440,7 @@ class TaskService {
                         order: [['created_at', 'DESC']]
                     }
 				], 
-                    
                 transaction,
-                    
             });
                     
             if (!task) throw new AppError(`Failed to find the task with id ${taskId}`, 404, true);
@@ -492,7 +490,7 @@ class TaskService {
 
 				if ((existingFileCount + filesToAdd.length) > 5) {
 
-					throw new AppError("Max 5 files is allowed per task", 400, true);
+					throw new AppError("You can upload up to 5 files per task", 400, true);
 
 				}
 
@@ -656,7 +654,7 @@ class TaskService {
 				updatedAt: task.updatedAt
             } as ProjectTask;
 
-        } catch(err) {
+        } catch (err) {
 
             await transaction.rollback();
             throw err;

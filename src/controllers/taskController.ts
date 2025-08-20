@@ -35,7 +35,7 @@ async function changeTaskStatus(
 			updatedTask: updatedTask 
 		});
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -78,7 +78,9 @@ async function createTask(
 			};
 
 			if (!hasOnlyKeysOfB(task, models.Task)) {
+
 				throw new AppError('Invalid fields have been provided in the request body', 400, true);
+
 			}
 
 			const projectId: number = parseInt(req.params.projectId);
@@ -94,7 +96,7 @@ async function createTask(
 
 		}
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -121,7 +123,7 @@ async function deleteTask(
 
 			await taskService.deleteTask(req.user.id, projectId, taskId);
 
-			res.status(204).json({ message: "The task has been deleted successfully!" });
+			res.status(200).json({ message: "The task has been deleted successfully!" });
 
 		}
 
@@ -179,7 +181,7 @@ async function updateTask(
 
 		}
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -205,7 +207,7 @@ async function getTaskFiles(
 	
 	} catch (err) {
 
-		next (err);
+		next(err);
 
 	}
 	

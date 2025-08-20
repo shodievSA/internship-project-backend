@@ -23,7 +23,7 @@ async function leaveProject(
 	
 			await teamMemberService.leaveProject(projectId, userId);
 	
-			res.status(204).json({ message: "You have left the project successfully!" });
+			res.status(200).json({ message: "You have left the project successfully!" });
 
 		}
 
@@ -173,7 +173,7 @@ async function deleteProject(
             
             await projectService.deleteProject(projectId);
     
-            res.status(204).json({ message: "The project has been deleted successfully"});
+            res.status(200).json({ message: "The project has been deleted successfully"});
 
         }
 
@@ -221,7 +221,7 @@ async function sendProjectInvite(
 
 		}
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -253,7 +253,7 @@ async function getProjectInvites(
 
 		}
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -277,7 +277,7 @@ async function getProjectTeam(
 
         return res.status(200).json({ team });
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
