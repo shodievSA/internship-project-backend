@@ -12,16 +12,20 @@ async function leaveProject(
 
 	try {
 
-		const projectId: number = parseInt(req.params.projectId);
-		const userId: number = req.user.id;
-
 		if (!req.memberPermissions?.includes("leaveProject")) {
+
 			throw new AppError("As admin, you can't leave your own project", 403, true);
+
+		} else {
+
+			const projectId: number = parseInt(req.params.projectId);
+			const userId: number = req.user.id;
+	
+			await teamMemberService.leaveProject(projectId, userId);
+	
+			res.status(204).json({ message: "You have left the project successfully!" });
+
 		}
-
-		await teamMemberService.leaveProject(projectId, userId);
-
-		res.status(204).json({ message: "You have left the project successfully!" });
 
 	} catch (err) {
 
@@ -66,30 +70,33 @@ async function updateProject(
 
 	try {
 
-		const projectId: number = parseInt(req.params.projectId);
-		const updatedProjectProps = req.body.updatedProjectProps;
+		if (!req.memberPermissions?.includes('editProject')) {
 
-		const allowedStatuses = ['active', 'paused', 'completed'] as const;
-		type Status = typeof allowedStatuses[number];
-
-		const title = updatedProjectProps.title;
-		const status = updatedProjectProps.status;
-
-		const updatedFields: Partial<{ title: string; status: Status }> = { title, status };
-
-		if (Object.keys(updatedFields).length === 0) {
-			throw new AppError("Invalid fields have been provided for project update", 400, true);
-		}
-
-		if (req.memberPermissions?.includes('editProject')) {
-
-			const updatedProject = await projectService.updateProject(projectId, updatedFields);
-
-			res.status(200).json({ message: "Project has been updated successfully", updatedProject });
+			throw new AppError("You don't have enough permissions to edit the project", 403, true);
 
 		} else {
 
-			throw new AppError("You don't have enough permissions to edit the project", 403, true);
+			const projectId: number = parseInt(req.params.projectId);
+			const updatedProjectProps = req.body.updatedProjectProps;
+
+			const allowedStatuses = ['active', 'paused', 'completed'] as const;
+			type Status = typeof allowedStatuses[number];
+
+			const title = updatedProjectProps.title;
+			const status = updatedProjectProps.status;
+
+			const updatedFields: Partial<{ title: string; status: Status }> = { title, status };
+
+			if (Object.keys(updatedFields).length === 0) {
+				throw new AppError("Invalid fields have been provided for project update", 400, true);
+			}
+
+			const updatedProject = await projectService.updateProject(projectId, updatedFields);
+
+			res.status(200).json({ 
+				message: "Project has been updated successfully", 
+				updatedProject: updatedProject 
+			});
 
 		}
 
