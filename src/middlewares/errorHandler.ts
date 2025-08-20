@@ -19,7 +19,7 @@ const errorHandler: ErrorRequestHandler = (
 	if (err instanceof AppError && err.isOperational) {
 		res.status(err.statusCode).json({ message: err.message });
 	} else {
-		res.status(500).json({ message: "Internal Server Error" });
+		res.status(500).json({ message: "Unexpected internal server error occured" });
 	}
 
 }
