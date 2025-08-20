@@ -52,7 +52,10 @@ async function createProject(
 		const userId: number = req.user.id;
 		const project = await projectService.createProject(userId, title, userPosition);
 
-		res.status(201).json({ message: "New project has been created successfully!", project: project });
+		res.status(201).json({ 
+			message: "New project has been created successfully!", 
+			project: project 
+		});
 
 	} catch (err) {
 
