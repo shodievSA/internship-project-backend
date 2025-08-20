@@ -32,44 +32,31 @@ class TaskService {
 		try {
 
 			const [affectedRows] = await models.Task.update(
-
 				{ status: updatedTaskStatus },
-
 				{
 					where: { id: taskId },
                     individualHooks: true, 
                     context: { comment },  
 					transaction,
-
 				} as UpdateOptions 
-
 			);
 
-			if (affectedRows === 0) {
-
-				throw new AppError("Task not found");
-				
-			}
+			if (affectedRows === 0) throw new AppError("Failed to find the task", 400, true);
 
 			const task = await models.Task.findOne({
-
 				where: { id: taskId },
-
-				include: [
-					
+				include: [			
 					{
 						model: models.Project,
 						as: 'project',
 						attributes: ['title']
 					},
-
 					{
 						model: models.ProjectMember,
 						as: 'assignedByMember',
 						attributes: ['roleId', 'position', 'id'],
 						include: [{ model: models.User, as: 'user', attributes: ['id', 'fullName', 'avatarUrl', 'email'] }]
 					},
-
 					{
 						model: models.ProjectMember,
 						as: 'assignedToMember',
@@ -79,28 +66,18 @@ class TaskService {
 					{
 						model: models.TaskHistory,
 						as: 'history',
-						attributes: {
-
-							exclude: ['task_id']
-							
-						}
+						attributes: { exclude: ['task_id'] }
 					}
-
 				],
-
 				transaction
-
 			}) as Task & {
-
 				assignedByMember: ProjectMember & { user: User };
 				assignedToMember: ProjectMember & { user: User };
 				project: Project;
 				history: TaskHistory[];
-
 			};
 
 			const updatedTask = {
-
 				id: task.id,
 				title: task.title,
 				description: task.description,
@@ -124,7 +101,6 @@ class TaskService {
 				},
 				status: task.status,
 				history: task.history
-
 			};
 
 			let message, email, emailTitle, role, position, tasksType: string;
@@ -169,13 +145,14 @@ class TaskService {
 					throw new AppError(`Unhandled task status: ${_exhaustiveCheck}`);
 			}
 
-			await models.Notification.create({ 
-
-				title: emailTitle,
-				message: message,
-				userId: notificationReceiverId
-
-			}, { transaction });
+			await models.Notification.create(
+				{ 
+					title: emailTitle,
+					message: message,
+					userId: notificationReceiverId
+				}, 
+				{ transaction }
+			);
 
 			await transaction.commit();	
 
@@ -187,10 +164,10 @@ class TaskService {
 
 			return updatedTask;
 			
-		} catch (error) {
+		} catch (err) {
 
 			await transaction.rollback();
-			throw error;
+			throw err;
 
 		}
 
@@ -205,156 +182,154 @@ class TaskService {
 		files?: Express.Multer.File[]
 	): Promise<object> {
 
-		const deadline: Date = new Date(task.deadline);
-		const uploadedFiles: string[] = [];
-
-		const sprint = await models.Sprint.findOne({ where: { id: task.sprintId }});
-
-		if (deadline > sprint!.endDate) throw new AppError('Task deadline cannot exceed the sprint end date');
-		if (deadline < sprint!.startDate) throw new AppError('Task deadline cannot precede the sprint start date');
-
-		if (Number.isNaN(deadline.getTime())) {
-			throw new AppError('Invalid deadline format', 400);
-		}
-
-		if (deadline.getTime() < Date.now()) {
-			throw new AppError('Deadline cannot be in the past', 400);
-		}
-
-		let newTask: any;
-		let assignedBy: any;
-		let assignedTo: any;
-		let project: any;
-		let newTaskHistory: any;
-		let filesMetaData: any = [];
-
-		const transaction = await sequelize.transaction();
-
 		try {
 
-			assignedBy = await models.ProjectMember.findOne({
-				where: { userId: userId, projectId: projectId },
-				attributes: ['id', 'position'],
-				include: [{ model: models.User, as: 'user' }],
-				transaction
-			});
+			const deadline: Date = new Date(task.deadline);
+			const uploadedFiles: string[] = [];
 
-			assignedTo = await models.ProjectMember.findOne({
-				where: { id: task.assignedTo },
-				include: [{ model: models.User, as: 'user' }],
-				transaction
-			});
+			const sprint = await models.Sprint.findOne({ where: { id: task.sprintId }});
 
-			if (!assignedBy || !assignedTo) {
-				throw new AppError('No such users in project');
+			if (!sprint) throw new AppError(`Failed to find sprint with id ${task.sprintId}`, 404, true);
+			if (deadline > sprint.endDate) throw new AppError("Task deadline can't exceed the sprint end date", 400, true);
+			if (deadline < sprint.startDate) throw new AppError("Task deadline can't precede the sprint start date", 400, true);
+			if (Number.isNaN(deadline.getTime())) throw new AppError("Invalid deadline date", 400, true);
+			if (deadline.getTime() < Date.now()) throw new AppError("Deadline can't be in the past", 400, true);
+
+			let newTask: any;
+			let assignedBy: any;
+			let assignedTo: any;
+			let project: any;
+			let newTaskHistory: any;
+			let filesMetaData: any = [];
+
+			const transaction = await sequelize.transaction();
+
+			try {
+
+				assignedBy = await models.ProjectMember.findOne({
+					where: { userId: userId, projectId: projectId },
+					attributes: ['id', 'position'],
+					include: [{ model: models.User, as: 'user' }],
+					transaction
+				});
+	
+				assignedTo = await models.ProjectMember.findOne({
+					where: { id: task.assignedTo },
+					include: [{ model: models.User, as: 'user' }],
+					transaction
+				});
+	
+				if (!assignedBy || !assignedTo) {
+					throw new AppError("Failed to find either the assignee or assigner", 404, true);
+				}
+	
+				newTask = await models.Task.create(task, { transaction });
+				project = await models.Project.findByPk(projectId, { attributes: ['title'] });
+	
+				const history = await models.TaskHistory.create(
+					{
+						taskId: newTask.id,
+						status: newTask.status,
+					},
+					{ transaction }
+				);
+	
+				newTaskHistory = [history];
+	
+				if (files && files.length > 0) {
+	
+					if (files.length > 5) throw new AppError("Max 5 files are allowed per task", 400, true);
+	
+					const upload = files.map(file => {
+	
+						const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+						uploadedFiles.push(key);
+	
+						return sendFileToQueue({
+							key: key,
+							contentType: file.mimetype,
+							action: 'upload',
+							filePath: file.path
+						});
+	
+					});
+	
+					await Promise.all(upload);
+	
+					filesMetaData = await Promise.all(
+						uploadedFiles.map((key, i) =>
+							models.TaskFiles.create({ 
+								taskId: newTask.id, 
+								key: key, 
+								fileName: fileNames[i], 
+								size: sizes[i] 
+							}, 
+							{ transaction } 
+						))
+					);
+					
+				}
+	
+				await models.Notification.create(
+					{
+						userId: assignedTo.user.id,
+						title: "New Task",
+						message: "You've been assigned new task"
+					},
+					{ transaction }
+				);
+	
+				await transaction.commit();
+
+			} catch(err) {
+
+				await transaction.rollback();
+				throw err;
+
 			}
 
-			newTask = await models.Task.create(task,
-				{ transaction }
-			);
+			if (assignedTo.user.email !== assignedBy.user.email) {
 
-			project = await models.Project.findByPk(projectId, {
-				attributes: ['title']
-			});
-
-			const history = await models.TaskHistory.create(
-				{
-					taskId: newTask.id,
-					status: newTask.status,
-				},
-				{ transaction }
-			);
-
-			newTaskHistory = [history];
-
-			if (files && files.length > 0) {
-
-				if (files.length > 5) throw new AppError("Maximum 5 files are allowed per task", 400);
-
-				const upload = files.map(file => {
-
-					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
-					uploadedFiles.push(key);
-
-					return sendFileToQueue({
-						key: key,
-						contentType: file.mimetype,
-						action: 'upload',
-						filePath: file.path
-					});
-
+				await sendEmailToQueue({
+					type: GmailType.NEW_TASK,
+					receiverEmail: assignedTo.user.email,
+					params: [project!.title, newTask.title, projectId]
 				});
-
-				await Promise.all(upload);
-
-				filesMetaData = await Promise.all(
-					uploadedFiles.map((key, i) =>
-						models.TaskFiles.create({ 
-							taskId: newTask.id, 
-							key: key, 
-							fileName: fileNames[i], 
-							size: sizes[i] 
-						}, 
-						{ transaction } 
-					))
-				);
 				
 			}
 
-			await models.Notification.create(
-				{
-					userId: assignedTo.user.id,
-					title: "New Task",
-					message: "You've been assigned new task"
+			return {
+				deadline: newTask.deadline,
+				createdAt: newTask.createdAt,
+				updatedAt: newTask.updatedAt,
+				description: newTask.description,
+				id: newTask.id,
+				priority: newTask.priority,
+				status: newTask.status,
+				title: newTask.title,
+				assignedBy: {
+					id: assignedBy.id,
+					name: assignedBy.user.fullName,
+					avatarUrl: assignedBy.user.avatarUrl,
+					position: assignedBy.position,
+					email: assignedBy.user.email
 				},
-				{ transaction }
-			);
-
-			await transaction.commit();
+				assignedTo: {
+					id: assignedTo.id,
+					name: assignedTo.user.fullName,
+					avatarUrl: assignedTo.user.avatarUrl,
+					position: assignedTo.position,
+					email: assignedTo.user.email
+				},
+				history: newTaskHistory,
+				filesMetaData: filesMetaData
+			} as ProjectTask;
 
 		} catch (error) {
 
-			await transaction.rollback();
 			throw error;
 
 		}
-
-		if (assignedTo.user.email !== assignedBy.user.email) {
-
-			await sendEmailToQueue({
-				type: GmailType.NEW_TASK,
-				receiverEmail: assignedTo.user.email,
-				params: [project!.title, newTask.title, projectId]
-			});
-			
-		}
-
-		return {
-			deadline: newTask.deadline,
-			createdAt: newTask.createdAt,
-			updatedAt: newTask.updatedAt,
-			description: newTask.description,
-			id: newTask.id,
-			priority: newTask.priority,
-			status: newTask.status,
-			title: newTask.title,
-			assignedBy: {
-				id: assignedBy.id,
-				name: assignedBy.user.fullName,
-				avatarUrl: assignedBy.user.avatarUrl,
-				position: assignedBy.position,
-				email: assignedBy.user.email
-			},
-			assignedTo: {
-				id: assignedTo.id,
-				name: assignedTo.user.fullName,
-				avatarUrl: assignedTo.user.avatarUrl,
-				position: assignedTo.position,
-				email: assignedTo.user.email
-			},
-			history: newTaskHistory,
-			filesMetaData: filesMetaData
-		} as ProjectTask;
 
 	}
 
@@ -370,7 +345,7 @@ class TaskService {
 				transaction
 			});
 
-			if (!assignedBy) throw new Error("");
+			if (!assignedBy) throw new AppError("Failed to find the assigner", 404, true);
 
 			const files = await models.TaskFiles.findAll({
 				where: { taskId: taskId },
@@ -382,10 +357,7 @@ class TaskService {
 
 				for (const file of files) {
 
-					await sendFileToQueue({
-						key: file.key,
-						action: 'remove'
-					});
+					await sendFileToQueue({ key: file.key, action: 'remove' });
 					
 				}
 
@@ -401,16 +373,14 @@ class TaskService {
 				transaction
             });
     
-            if (!isDeleted) { 
-                throw new AppError('Failed to delete or no such task');
-            }
+            if (!isDeleted) throw new AppError("Failed to delete the task", 500, true);
 
 			await transaction.commit();
 
-        } catch(error) {
+        } catch(err) {
 			
 			await transaction.rollback();
-            throw error;
+            throw err;
 
         }
 
@@ -420,11 +390,19 @@ class TaskService {
 
         const transaction: Transaction = await sequelize.transaction();
         
-         try {
+        try {
 
-			const { projectId, taskId, filesToAdd, filesToDelete, sizes, fileNames, updatedTaskProps } = taskUpdatePayload;
+			const { 
+				projectId, 
+				taskId, 
+				filesToAdd, 
+				filesToDelete, 
+				sizes, 
+				fileNames, 
+				updatedTaskProps 
+			} = taskUpdatePayload;
 
-             const task = await models.Task.findOne({
+            const task = await models.Task.findOne({
                 where: { 
                     id: taskId, 
                     projectId: projectId,
@@ -467,14 +445,16 @@ class TaskService {
                     
             });
                     
-            if (!task) throw new AppError('Invalid task or project');
+            if (!task) throw new AppError(`Failed to find the task with id ${taskId}`, 404, true);
 
             if (updatedTaskProps.deadline) { 
                         
                 const newDeadline = new Date(updatedTaskProps.deadline);
                         
 				if (new Date(Date.now()) > newDeadline) {
-					throw new AppError('Cannot assign past date!');
+
+					throw new AppError("Deadline can't be in the past", 400, true);
+
 				}
 
 				task.deadline = newDeadline;
@@ -487,14 +467,12 @@ class TaskService {
 					{ where: { id: filesToDelete }, attributes: ['key'], transaction }
 				);
 
-				await Promise.all(
-					taskFiles.map(taskFile =>
-						sendFileToQueue({
-							key: taskFile.key,
-							action: 'remove',
-						})
-					)
-				);
+				await Promise.all(taskFiles.map(taskFile =>
+					sendFileToQueue({
+						key: taskFile.key,
+						action: 'remove',
+					})
+				));
 
 				await models.TaskFiles.destroy({
 					where: { id: filesToDelete },
@@ -513,10 +491,13 @@ class TaskService {
 				});
 
 				if ((existingFileCount + filesToAdd.length) > 5) {
-					throw new AppError("Maximum 5 files allowed per task", 400);
+
+					throw new AppError("Max 5 files is allowed per task", 400, true);
+
 				}
 
 				const edit = filesToAdd.map(file => {
+
 					const key = `tasks/${task.id}/${randomUUID()}-${file.filename}`;
 					editedFiles.push(key);
 
@@ -526,19 +507,18 @@ class TaskService {
 						action: 'edit',
 						filePath: file.path
 					});
+
 				});
 
-				const taskFiles = editedFiles.map((key, i) =>
-					models.TaskFiles.create(
-						{
-							taskId: task.id,
-							key: key,
-							fileName: fileNames[i],
-							size: sizes[i]
-						},
-						{ transaction }
-					)
-				);
+				const taskFiles = editedFiles.map((key, i) => models.TaskFiles.create(
+					{
+						taskId: task.id,
+						key: key,
+						fileName: fileNames[i],
+						size: sizes[i]
+					},
+					{ transaction }
+				));
 
 				await Promise.all([...edit, ...taskFiles]);
 				
@@ -549,7 +529,7 @@ class TaskService {
 				&& 
 				task.assignedBy !== updatedTaskProps.assignedBy
 			) { 
-                throw new AppError('Cannot change property assignedBy');
+                throw new AppError("Can't change the assigner", 400, true);
             }
 
             if (
@@ -559,7 +539,7 @@ class TaskService {
 				&& 
 				task.projectId !== updatedTaskProps.projectId
 			)  { 
-                throw new AppError('Cannot change status of task or projectId');
+                throw new AppError("Can't change task status and project id", 400, true);
             }
 
             let newAssignedUser: ProjectMember | null = null
@@ -584,18 +564,16 @@ class TaskService {
                     transaction
                 });
 
-                if (!newAssignedUser) { 
-                    throw new AppError ('No such user to assign task');
-                }
+                if (!newAssignedUser) throw new AppError("Failed to find the new assignee", 404, true);
 
-                await models.Notification.create({
-                    
-                    title: "Task reassigned",
-                    message: `Your task: ${task.title} was removed from your tasks by authority`,
-                    userId: task.assignedToMember.user.id,
-                    },
-                    {transaction}
-                )
+                await models.Notification.create(
+					{
+						title: "Task reassigned",
+						message: `Your task: ${task.title} was removed from your tasks by authority`,
+						userId: task.assignedToMember.user.id,
+                	},
+                    { transaction }
+                );
 
 				await sendEmailToQueue({
 					type: GmailType.REASSIGN_TASK,
@@ -603,18 +581,17 @@ class TaskService {
 					params: [task.project.title, task.title, projectId]
 				});
 
-                //change receiver
-                task.assignedToMember.user = newAssignedUser.user
+                task.assignedToMember.user = newAssignedUser.user;
 
-                await models.Notification.create({
-
-                    title: "New Task",
-                    userId: task.assignedToMember.user.id,
-                    message: `Project: ${task.project.title}.
-                    Assigned new task: "${task.title}"`,
+                await models.Notification.create(
+					{
+						title: "New Task",
+						userId: task.assignedToMember.user.id,
+						message: `Project: ${task.project.title}.
+						Assigned new task: "${task.title}"`,
                     },
-                    {transaction}
-                )
+                    { transaction }
+                );
 
 				await sendEmailToQueue({
 					type: GmailType.NEW_TASK,
@@ -624,14 +601,15 @@ class TaskService {
 
             } else { 
 
-                await models.Notification.create({ 
-                    title: "Task updated",
-                    userId: task.assignedToMember.user.id,
-                    message:`Project: ${task.project.title}.
-                    Your task: ${task.title} was updated by authority`
+                await models.Notification.create(
+					{ 
+						title: "Task updated",
+						userId: task.assignedToMember.user.id,
+						message:`Project: ${task.project.title}.
+						Your task: ${task.title} was updated by authority`
                     },
-                    {transaction}
-                )
+                    { transaction }
+                );
 
 				await sendEmailToQueue({
 					type: GmailType.UPDATED_TASK,
@@ -678,10 +656,10 @@ class TaskService {
 				updatedAt: task.updatedAt
             } as ProjectTask;
 
-        } catch(error) {
+        } catch(err) {
 
             await transaction.rollback();
-            throw error;
+            throw err;
 
         }      
         
@@ -696,13 +674,12 @@ class TaskService {
 				attributes: ['id', 'key', 'fileName', 'size']
 			});
 
-			const urls = await Promise.all(
-				taskFiles.map(file => fileHandler.retrieveFile(file.key))
-			);
+			const urls = await Promise.all(taskFiles.map(file => fileHandler.retrieveFile(file.key)));
 
 			const fileAttachments: object[] = [];
 
 			for (let i = 0; i < taskFiles.length; i++) {
+
 				const taskFile: object = {
 					fileName: taskFiles[i].fileName,
 					id: taskFiles[i].id,
@@ -711,12 +688,15 @@ class TaskService {
 				};
 
 				fileAttachments.push(taskFile);
+
 			}
 
 			return fileAttachments;
 			
-		} catch (error) {
-			throw error
+		} catch (err) {
+
+			throw err;
+
 		}
 		
 	}
