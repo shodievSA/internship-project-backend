@@ -16,32 +16,16 @@ async function leaveProject(
 		const userId: number = req.user.id;
 
 		if (!req.memberPermissions?.includes("leaveProject")) {
-
-			throw new AppError("As admin, you can't leave your own project", 403);
-
+			throw new AppError("As admin, you can't leave your own project", 403, true);
 		}
 
-		try {
+		await teamMemberService.leaveProject(projectId, userId);
 
-			await teamMemberService.leaveProject(projectId, userId);
+		res.status(204).json({ message: "You have left the project successfully!" });
 
-			res.sendStatus(204);
+	} catch (err) {
 
-		} catch (err) {
-
-			console.log(
-				"The following error occurred in leaveProject function: " + (err as Error).message
-			);
-
-			throw new AppError(
-				"Unexpected error occurred on our side while trying to make you leave the project. Please, try again later."
-			);
-
-		}
-
-	} catch (error) {
-
-		next(error);
+		next(err);
 
 	}
 
@@ -52,44 +36,27 @@ async function createProject(
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
-
-	const { title, userPosition } = req.body as {
-		title: string;
-		userPosition: string;
-	};
-
+	
 	try {
 
-		try {
-
-			const userId: number = req.user.id;
-			const project = await projectService.createProject(userId, title, userPosition);
-
-			res.status(201).json({ project });
-
-		} catch (err) {
-
-			console.error(
-				"Error occurred in createProject function: " + (err as AppError).message
-			);
-
-			throw new AppError(
-				`Unexpected error occurred ${err} . Please, try again later.`
-			);
-			
+		const { title, userPosition } = req.body as { title: string; userPosition: string; };
+	
+		if (!title || !userPosition) { 
+			throw new AppError("title and position can not be empty", 400, true);
 		}
 
-	} catch (error) {
+		const userId: number = req.user.id;
+		const project = await projectService.createProject(userId, title, userPosition);
 
-		next(error);
+		res.status(201).json({ message: "New project has been created successfully!", project: project });
+
+	} catch (err) {
+
+		next(err);
 
 	}
 
 }
-
-
-
-
 
 async function updateProject(
 	req: AuthenticatedRequest,
@@ -111,32 +78,28 @@ async function updateProject(
 		const updatedFields: Partial<{ title: string; status: Status }> = { title, status };
 
 		if (Object.keys(updatedFields).length === 0) {
-
-			res.status(400).json({ error: 'No valid fields provided for update' });
-			return;
-
+			throw new AppError("Invalid fields have been provided for project update", 400, true);
 		}
 
 		if (req.memberPermissions?.includes('editProject')) {
 
 			const updatedProject = await projectService.updateProject(projectId, updatedFields);
-			res.status(200).json({ message: 'Project updated successfully', updatedProject });
+
+			res.status(200).json({ message: "Project has been updated successfully", updatedProject });
 
 		} else {
 
-			res.sendStatus(403);
+			throw new AppError("You don't have enough permissions to edit the project", 403, true);
 
 		}
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
 }
-
-
 
 async function getProjects(
 	req: AuthenticatedRequest,
@@ -149,11 +112,11 @@ async function getProjects(
 		const userId: number = req.user.id;
 		const projects: FormattedProject[] = await projectService.getProjects(userId);
 
-		res.status(200).json({ projects: projects });
+		res.status(200).json({ projects });
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -168,18 +131,15 @@ async function getProjectDetails(
 	try {
 
 		const userId: any = req.user.id;
-		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
+		const projectId = parseInt(req.params.projectId);
 
-		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
-			userId,
-			projectId
-		);
+		const projectDetails: ProjectDetails = await projectService.getProjectDetails(userId, projectId);
 
 		res.status(200).json({ projectDetails: projectDetails });
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -190,25 +150,26 @@ async function deleteProject(
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
-
-	const projectId: number = parseInt(req.params.projectId);
-
+	
 	try {
 
-        if(req.memberPermissions?.includes('deleteProject')){
+		if (!req.memberPermissions?.includes('deleteProject')) {
+
+			throw new AppError("You don't have enough permissions to delete the project", 403, true);
+
+        } else { 
+            
+			const projectId: number = parseInt(req.params.projectId);
             
             await projectService.deleteProject(projectId);
     
-            res.sendStatus(204);
-            return
-        } else { 
-            
-            throw new AppError("No required permission");
+            res.status(204).json({ message: "The project has been deleted successfully"});
+
         }
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -220,118 +181,99 @@ async function sendProjectInvite(
 	next: NextFunction
 ): Promise<void> {
 
-	const { receiverEmail, positionOffered, roleOffered } = req.body as {
-		receiverEmail: string,
-		positionOffered: string,
-		roleOffered: 'manager' | 'member',
-	};
-
-	const projectId: number = parseInt(req.params.projectId);
-
 	try {
 
-		if (!receiverEmail || !positionOffered || !roleOffered) {
+		if (!req.memberPermissions?.includes('invitePeople')) {
+			
+			throw new AppError("You don't have enough permissions to send invites", 403, true);
 
-			res.status(400).json({
-				error: 'receiverEmail, positionOffered, and roleOffered are required',
-			});
+		} else {
 
-			return;
+			const { receiverEmail, positionOffered, roleOffered } = req.body as {
+				receiverEmail: string,
+				positionOffered: string,
+				roleOffered: 'manager' | 'member'
+			};
 
-		}
+			const projectId: number = parseInt(req.params.projectId);
 
-		if (!projectId) {
-			res.status(400).json({
-				error: 'projectId is missing',
-			});
+			if (!receiverEmail || !positionOffered || !roleOffered) {
+				throw new AppError("Receiver email, position and role are required for sending invite", 400, true);
+			}
 
-			return;
-		}
-
-		if (req.memberPermissions?.includes('invitePeople')) {
+			if (!projectId) throw new AppError("Project id is missing", 400, true);
 
 			const { invite } = await projectService.sendProjectInvite(
 				req.user.id, projectId, receiverEmail, positionOffered, roleOffered
 			);
 
-			res.status(201).json({
-				message: 'Project invitation sent successfully',
-				invite: invite,
-			});
-
-		} else {
-
-			res.sendStatus(403);
+			res.status(201).json({ message: "Project invite has been sent successfully", invite: invite });
 
 		}
 
+	} catch(err) {
 
-	} catch (error) {
-
-		next(error);
+		next(err);
 
 	}
 
 }
 
 async function getProjectInvites(
-    req : AuthenticatedRequest,
-    res : Response,
+    req: AuthenticatedRequest,
+    res: Response,
     next: NextFunction
 ) {
-    
-    const projectId = parseInt(req.params.projectId);
 
-    if (!projectId) throw new AppError('Empty input');
-    
-    try {
+	try {
 
-        if ( req.memberPermissions?.includes('getProjectInvites')) {
-    
-            const invites = await projectService.getProjectInvites(projectId);
-            return res.status(200).json({ projectInvites: invites });
+		if (!req.memberPermissions?.includes('getProjectInvites')) {
 
-        } else {
-            
-            throw new AppError('No permission to get project invites');
+			throw new AppError("You don't have enough permissions to view project invites", 403, true);
 
-        }
+		} else {
 
-    } catch(error) { 
+			const projectId = parseInt(req.params.projectId);
 
-    	next (error);
+    		if (!projectId) throw new AppError("Project id is missing", 400, true);
 
-    }
+			const invites = await projectService.getProjectInvites(projectId);
+
+			return res.status(200).json({ projectInvites: invites });
+
+		}
+
+	} catch(err) {
+
+		next(err);
+
+	}
 
 }
 
 async function getProjectTeam(
-    req : AuthenticatedRequest,
-    res : Response,
+    req: AuthenticatedRequest,
+    res: Response,
     next: NextFunction  
 ) {
-    
-    const projectId = parseInt(req.params.projectId);
-	const userId = req.user.id;
 
-    if (!projectId) throw new AppError('Empty input');
+	try {
 
-    try {
-        
-        const team = await projectService.getProjectTeam(projectId);
-        return res.status(200).json({ team: team });
+		const projectId = parseInt(req.params.projectId);
 
-    } catch(error) { 
-	
-		next(error);
+		if (!projectId) throw new AppError("Project id is missing", 400, true);
 
-    }
+		const team = await projectService.getProjectTeam(projectId);
+
+        return res.status(200).json({ team });
+
+	} catch(err) {
+
+		next(err);
+
+	}
 
 }
-
-
-
-
 
 const projectController = {
 	leaveProject,

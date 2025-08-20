@@ -18,8 +18,6 @@ import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { GmailType } from '../services/gmaiService';
 
-
-
 class ProjectService {
 
 	async leaveProject(projectId: number, userId: number): Promise<void> {
@@ -34,15 +32,17 @@ class ProjectService {
 				transaction,
 			});
 
-			if (!projectMember) throw new AppError('Project member not found');
+			if (!projectMember) throw new AppError(
+				`Failed to find project member with project id ${projectId} and user id ${userId}`, 404, true
+			);
 
 			const [user, project] = await Promise.all([
 				models.User.findOne({ where: { id: userId }, attributes: ['fullName'], transaction }),
 				models.Project.findOne({ where: { id: projectId }, attributes: ['title'], transaction })
 			]);
 
-			if (!user) throw new AppError(`No such user with id ${userId}`);
-			if (!project) throw new AppError(`No such project with id ${projectId}`);
+			if (!user) throw new AppError(`Failed to find user with id ${userId}`, 404, true);
+			if (!project) throw new AppError(`Failed to find project with id ${projectId}`, 404, true);
 
 			const admin = await models.ProjectMember.findOne({
 				where: {
@@ -54,7 +54,7 @@ class ProjectService {
 				transaction,
 			});
 
-			if (!admin) throw new AppError(`No other admin to notify`);
+			if (!admin) throw new AppError("No other admin to notify", 404, true);
 
 			const userRole: string = projectMember.roleId === 2 ? 'manager' : 'member';
 			const position: string = projectMember.position;
@@ -84,12 +84,7 @@ class ProjectService {
 
 	}
 
-	async createProject(userId: number, title: string, position: string): Promise<object> {
-            
-        if ( !title || !position ) { 
-            
-            throw new AppError("Title and Position fields can not be empty")
-        }
+	async createProject(userId: number, title: string, userPosition: string): Promise<object> {
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -97,15 +92,13 @@ class ProjectService {
 
 			const project = await models.Project.create({ title }, { transaction });
 
-            if (!project) { 
-                throw new AppError('Failed creating project')
-            }
+            if (!project) throw new AppError('Failed to create new project', 500, true);
 		
 			await models.ProjectMember.create(
 				{
 					userId: userId,
 					projectId: project.id,
-					position: position,
+					position: userPosition,
 					roleId: 1,
 				},
 				{ transaction }
@@ -133,90 +126,95 @@ class ProjectService {
 
 	}
 
-
-
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
-		const user = await models.User.findByPk(userId, {
-			include: [{ 
-				model: models.Project,
-				as: 'projects',
-			}],
-			order: [[{ model: models.Project, as: 'projects' }, 'createdAt', 'DESC']]
-		});
+		try {
 
-		if (!user) {
-			throw new AppError(`User not found.`);
-		}
-
-		const projects = user.projects as Project[];
-
-		if (projects.length === 0) {
-
-			return [];
-
-		} else {
-
-			const projectsWithStats = await Promise.all(
-				projects.map(async (project: Project) => {
-
-					const projectId = project.id;
-		
-					const [members, sprints, completedSprints, isAdmin] = await Promise.all([
-						models.ProjectMember.count({ where: { projectId } }),
-						models.Sprint.count({ where: { projectId } }),
-						models.Sprint.count({ where: { projectId, status: 'completed' } }),
-						models.ProjectMember.findOne({
-							where: {
-								projectId,
-								userId,
-								roleId: await models.Role.findOne({
-									where: { name: 'admin' },
-									attributes: ['id'],
-								}).then((role) => role?.id),
-							},
-							raw: true,
-						}).then((member) => !!member),
-					]);
-	
-					return {
-						id: project.id,
-						title: project.title,
-						status: project.status,
-						createdAt: project.createdAt,
-						members: members,
-						totalSprints: sprints,
-						totalSprintsCompleted: completedSprints,
-						isAdmin: isAdmin
-					} as FormattedProject;
-
-				})
+			const user = await models.User.findByPk(userId, 
+				{
+					include: [{ 
+						model: models.Project,
+						as: 'projects',
+					}],
+					order: [[{ model: models.Project, as: 'projects' }, 'createdAt', 'DESC']]
+				}
 			);
+	
+			if (!user) throw new AppError(`Failed to find user with id ${userId}`, 500, true);
+	
+			const projects = user.projects as Project[];
+	
+			if (projects.length === 0) {
+	
+				return [];
+	
+			} else {
+	
+				const projectsWithStats = await Promise.all(
+					projects.map(async (project: Project) => {
+	
+						const projectId = project.id;
+			
+						const [members, sprints, completedSprints, isAdmin] = await Promise.all([
+							models.ProjectMember.count({ where: { projectId } }),
+							models.Sprint.count({ where: { projectId } }),
+							models.Sprint.count({ where: { projectId, status: 'completed' } }),
+							models.ProjectMember.findOne({
+								where: {
+									projectId,
+									userId,
+									roleId: await models.Role.findOne({
+										where: { name: 'admin' },
+										attributes: ['id'],
+									}).then((role) => role?.id),
+								},
+								raw: true,
+							}).then((member) => !!member),
+						]);
+		
+						return {
+							id: project.id,
+							title: project.title,
+							status: project.status,
+							createdAt: project.createdAt,
+							members: members,
+							totalSprints: sprints,
+							totalSprintsCompleted: completedSprints,
+							isAdmin: isAdmin
+						} as FormattedProject;
+	
+					})
+				);
+	
+				return projectsWithStats;
+	
+			}
 
-			return projectsWithStats;
+		} catch(err) {
+
+			throw err;
 
 		}
 
 	}
 
-	async updateProject(projectId: number, updatedFields: Partial<{
-		title: string;
-		status: 'active' | 'paused' | 'completed';
-	}>): Promise<object> {
+	async updateProject(
+		projectId: number, 
+		updatedFields: Partial<{
+			title: string;
+			status: 'active' | 'paused' | 'completed';
+		}>
+	): Promise<object> {
 
 		try {
 		
 			const [count, affectedRows] = await models.Project.update(updatedFields, {
-
 				where: { id: projectId },
-				returning: true,
-
+				returning: true
 			});
 		
 			if (count === 0 || affectedRows.length === 0) {
-
-				throw new AppError('Project not found');
-				
+				throw new AppError("Failed to update the project", 500, true);
 			}
 		
 			return affectedRows[0].toJSON();
@@ -237,7 +235,7 @@ class ProjectService {
 
 			const project = await models.Project.findByPk(projectId, { attributes: ['id'], transaction });
 
-			if (!project) throw new AppError('Project not found');
+			if (!project) throw new AppError(`Failed to find project with id ${projectId}`, 404, true);
 
 			const tasks = await project.getTasks({
 				attributes: ['id'],
@@ -251,14 +249,12 @@ class ProjectService {
 					transaction
 				});
 
-				await Promise.all(
-					files.map(file => {
-						sendFileToQueue({
-							key: file.key,
-							action: 'remove'
-						});
-					})
-				)
+				await Promise.all(files.map(file => {
+					sendFileToQueue({
+						key: file.key,
+						action: 'remove'
+					});
+				}));
 				
 			}
 
@@ -267,9 +263,7 @@ class ProjectService {
 				transaction
 			});
 		
-			if (deletedProjectCount === 0) {
-				throw new AppError('Project not found');
-			}
+			if (deletedProjectCount === 0) throw new AppError(`Failed to delete project with id ${projectId}`, 500, true);
 
 			await transaction.commit();
 
@@ -333,8 +327,12 @@ class ProjectService {
 				}
 			});
             
-			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
-			if (!currentMember) throw new AppError("Couldn't find current project member");
+			if (!project) throw new AppError(
+				`Failed to find project with id ${projectId}`, 404, true
+			);
+			if (!currentMember) throw new AppError(
+				`Failed to find project member with user id ${userId} and project id ${projectId}`, 404, true
+			);
             
             const projectMetaData: ProjectMetaData = {
 				id: project.id,
@@ -458,7 +456,7 @@ class ProjectService {
 
             const team = await this.getProjectTeam(projectId);
 
-            if (!team) throw new AppError("Faced error while getting team");
+            if (!team) throw new AppError("Failed to fetch project team", 404, true);
 
 			return {
 				metaData: projectMetaData,
@@ -632,38 +630,43 @@ class ProjectService {
 
         }
 
-        return invites
+        return invites;
+
     }
 
     async getProjectTeam(projectId: number): Promise<TeamMember[]> {
 
-        const project = await models.Project.findByPk(projectId, {
-            include: [{
-                model: models.User,
-                as: 'users',
-                attributes: ['fullName', 'email', 'avatarUrl'],
-                through: {
-                    as: 'projectMember',
-                    attributes: ['id', 'userId', 'position', 'roleId'],
-                },
-            }]
-        });
+        const project = await models.Project.findByPk(projectId, 
+			{
+				include: [{
+					model: models.User,
+					as: 'users',
+					attributes: ['fullName', 'email', 'avatarUrl'],
+					through: {
+						as: 'projectMember',
+						attributes: ['id', 'userId', 'position', 'roleId'],
+					},
+				}]
+        	}
+		);
 
-        if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
+        if (!project) throw new AppError(`Failed to find project with id ${projectId}`, 404, true);
 
-            const team = project.users.map((projectN: User) => {
+		const team = project.users.map((projectN: User) => {
 
-                return {
-                    id: projectN.projectMember.id as number,
-                    name: projectN.fullName,
-                    email: projectN.email,
-                    avatarUrl: projectN.avatarUrl,
-                    position: projectN.projectMember.position,
-                    role: projectN.projectMember.role as string
-		}
-            });
+			return {
+				id: projectN.projectMember.id as number,
+				name: projectN.fullName,
+				email: projectN.email,
+				avatarUrl: projectN.avatarUrl,
+				position: projectN.projectMember.position,
+				role: projectN.projectMember.role as string
+			}
 
-        return team
+		});
+
+        return team;
+
     }
 
 }

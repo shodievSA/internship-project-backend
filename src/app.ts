@@ -6,8 +6,21 @@ import cors from 'cors';
 import session from './config/session';
 import v1Router from './routes/api/v1/index';
 import errorHandler from './middlewares/errorHandler';
+import winston from "winston";
 
 const app = express();
+
+export const logger = winston.createLogger({
+	level: "info",
+	format: winston.format.combine(
+		winston.format.timestamp(),
+		winston.format.json()
+	),
+	transports: [
+		new winston.transports.Console(),
+		new winston.transports.File({ filename: "errors.log", level: "error" })
+	]
+});
 
 app.use(express.json());
 app.enable('trust proxy');
