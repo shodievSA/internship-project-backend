@@ -6,35 +6,38 @@ import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
 
 async function createSprint(
-    req : AuthenticatedRequest,
-    res : Response,
+    req: AuthenticatedRequest,
+    res: Response,
     next: NextFunction  
 ) {
-    const projectId = parseInt(req.params.projectId);
-    const sprintInfo = req.body.sprint;
 
-    if (!projectId) throw new AppError('Empty input');
-    
-    if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)) { 
-        throw new AppError('Invalid fields in request body');
-    }
+	try {
 
-    try {
+		if (!req.memberPermissions?.includes('assignTasks')) {
 
-        if (req.memberPermissions?.includes('assignTasks')) {
+			throw new AppError("You don't have enough permissions to create sprints", 403, true);
 
-            const sprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
-            return res.status(200).json({ newSprint: sprint });
+		} else {
+			
+			const projectId = parseInt(req.params.projectId);
+			const sprintInfo = req.body.sprint;
+	
+			if (!projectId) throw new AppError("Project id is missing", 400, true);
+			if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)) { 
+				throw new AppError("Invalid fields in request body", 400, true);
+			}
 
-        }
+			const sprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
 
-    	throw new AppError('No permission');
+			return res.status(200).json({ newSprint: sprint });
 
-    } catch(error) { 
+		}
 
-    	next (error);
+	} catch (err) {
 
-    }
+		next(err);
+
+	}
 
 }
 
@@ -44,20 +47,27 @@ async function getSprintsTasks(
 	next: NextFunction
 ): Promise<void> {
 
+	const projectId = parseInt(req.params.projectId);
+    const sprintId = parseInt(req.params.sprintId);
+
 	try {
 
-		const projectId = parseInt(req.params.projectId);
-        const sprintId = parseInt(req.params.sprintId);
+        if (!projectId || !sprintId) {
 
-        if (!projectId || !sprintId) throw new AppError('Empty input');
+			throw new AppError("Project id or sprint id is missing", 400, true);
+
+		}
 		
 		const sprintDetails = await sprintService.getSprintDetails(projectId, sprintId);
 
-		res.status(200).json({ tasks: sprintDetails.tasks, metaData: sprintDetails.metaData });
+		res.status(200).json({ 
+			tasks: sprintDetails.tasks, 
+			metaData: sprintDetails.metaData 
+		});
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -71,56 +81,60 @@ async function updateSprint(
 
 	try {
 
-		const projectId: number = parseInt(req.params.projectId);
-        const sprintId: number = parseInt(req.params.sprintId);
-		const updatedSprintProps = req.body.updatedSprintProps;
+		if (!req.memberPermissions?.includes('editProject')) {
 
-		const allowedStatuses = ['planned', 'active', 'completed', 'overdue'] as const;
-		type Status = typeof allowedStatuses[number];
-
-		const title = updatedSprintProps.title;
-        const description = updatedSprintProps.description
-		const status = updatedSprintProps.status;
-        let startDate: Date | undefined= undefined;
-        let endDate: Date | undefined = undefined;
-
-        if (updatedSprintProps.startDate ) { 
-            startDate = new Date(updatedSprintProps?.startDate);
-        }
-        
-        if (updatedSprintProps.endDate ) { 
-            endDate = new Date(updatedSprintProps?.endDate);
-        }
-
-		const updatedFields: Partial<{ 
-            title: string;
-            description:string;
-            status: Status;
-            startDate: Date | undefined;
-            endDate: Date | undefined;
-		}> = { title, description, status, startDate, endDate };
-
-		if (Object.keys(updatedFields).length === 0) {
-
-			res.status(400).json({ error: 'No valid fields provided for update' });
-			return;
-
-		}
-
-		if (req.memberPermissions?.includes('editProject')) {
-
-			const updatedSprint = await sprintService.updateSprint(projectId, sprintId, updatedFields);
-			res.status(200).json({ message: 'Project updated successfully', updatedSprint });
+			throw new AppError("You don't have enough permissions to edit the sprint", 403, true);
 
 		} else {
 
-			res.sendStatus(403);
+			const projectId: number = parseInt(req.params.projectId);
+			const sprintId: number = parseInt(req.params.sprintId);
+			const updatedSprintProps = req.body.updatedSprintProps;
+
+			const allowedStatuses = ['planned', 'active', 'completed', 'overdue'] as const;
+			type Status = typeof allowedStatuses[number];
+
+			const title = updatedSprintProps.title;
+			const description = updatedSprintProps.description
+			const status = updatedSprintProps.status;
+
+			let startDate: Date | undefined = undefined;
+			let endDate: Date | undefined = undefined;
+
+			if (updatedSprintProps.startDate) { 
+			    startDate = new Date(updatedSprintProps?.startDate);
+			}
+			
+			if (updatedSprintProps.endDate) { 
+			    endDate = new Date(updatedSprintProps?.endDate);
+			}
+
+			const updatedFields: Partial<{ 
+			    title: string;
+			    description:string;
+			    status: Status;
+			    startDate: Date | undefined;
+			    endDate: Date | undefined;
+			}> = { title, description, status, startDate, endDate };
+
+			if (Object.keys(updatedFields).length === 0) {
+
+				throw new AppError("Invalid fields have been provided for sprint update", 400, true);
+
+			}
+
+			const updatedSprint = await sprintService.updateSprint(projectId, sprintId, updatedFields);
+
+			res.status(200).json({ 
+				message: "Sprint has been updated successfully", 
+				updatedSprint: updatedSprint 
+			});
 
 		}
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -137,21 +151,21 @@ async function deleteSprint(
 
 	try {
 
-        if (req.memberPermissions?.includes('deleteProject')) {
-            
-            await sprintService.deleteSprint(projectId, sprintId);
-    
-            res.sendStatus(204);
+        if (!req.memberPermissions?.includes('deleteProject')) {
+
+			throw new AppError("You don't have enough permissions to delete this sprint", 403, true);
             
         } else { 
 
-            throw new AppError("No required permission");
+            await sprintService.deleteSprint(projectId, sprintId);
+    
+            res.status(200).json({ message: "Sprint has been deleted successfully!" });
 
         }
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -167,17 +181,15 @@ async function getAllSprints(
 
 	try {
 
-		if (!projectId || isNaN(projectId)) {
-			res.status(400).json({ error: 'Invalid project ID' });
-			return;
-		}
+		if (!projectId) throw new AppError("Invalid project id", 400, true);
 
 		const sprints = await sprintService.getAllSprints(projectId);
+
 		res.status(200).json({ sprints });
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -188,18 +200,23 @@ async function getDefaultSprint(
 	res: Response,
 	next: NextFunction
 ): Promise<void> {
+
 	const projectId: number = parseInt(req.params.projectId);
+
 	try {
-		if (!projectId || isNaN(projectId)) {
-			res.status(400).json({ error: 'Invalid project ID' });
-			return;
-		}
+
+		if (!projectId) throw new AppError("Project id is missing", 400, true);
 		
 		const defaultSprint = await sprintService.getDefaultSprint(projectId);
+
 		res.status(200).json({ defaultSprint });
-	} catch (error) {
-		next(error);
+
+	} catch (err) {
+
+		next(err);
+
 	}
+
 }
 
 const sprintController = {

@@ -11,55 +11,63 @@ import { sendFileToQueue } from '@/queues';
 
 class SprintService {
 
-    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ) {
+    async createSprint(projectId: number, sprintInfo: FrontSprintAttributes) {
         
         const project = await models.Project.findByPk(projectId);
         const startDate = new Date(sprintInfo.startDate);
         const endDate = new Date(sprintInfo.endDate);
 
-        if (!project) throw new AppError('No such project');
+		try {
 
-        if (
-			startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
-			|| 
-			endDate.getTime() < startDate.getTime()
-		) {
-            throw new AppError('Incorrect time intervals');
-        }
+			if (!project) throw new AppError(`Failed to find project with id ${projectId}`, 400, true);
+	
+			if (
+				startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
+				|| 
+				endDate.getTime() < startDate.getTime()
+			) {
+				throw new AppError("Invalid time intervals", 400, true);
+			}
+	
+			const sprint = await models.Sprint.create({
+				...sprintInfo,
+				projectId: projectId
+			});
+	
+			if (!sprint) throw new AppError("Failed to create sprint", 400, true);
+	
+			const createdBy = await models.ProjectMember.findOne({
+				where: { id: sprint.createdBy },
+				include: [{
+					model: models.User,
+					as: "user",
+					attributes: ["email", "fullName", "avatarUrl"]
+				}]
+			});
+	
+			if (!createdBy) throw new AppError("Failed to find sprint creator", 404, true);
+	
+			return {
+				id: sprint.id,
+				title: sprint.title,
+				description: sprint.description,
+				status: sprint.status,
+				projectId: sprint.projectId,
+				createdBy: {
+					fullName: createdBy.user.fullName,
+					avatarUrl: createdBy.user.avatarUrl,
+					email: createdBy.user.email
+				},
+				totalTasksCompleted: 0,
+				totalTasks: 0,
+				startDate: sprint.startDate,
+				endDate: sprint.endDate,
+			}
+			
+		} catch (err) {
 
-        const sprint = await models.Sprint.create({
-			...sprintInfo,
-			projectId: projectId
-		});
+			throw err;
 
-        if (!sprint) throw new AppError('Problem faced while saving sprint');
-
-		const createdBy = await models.ProjectMember.findOne({
-			where: { id: sprint.createdBy },
-			include: [{
-				model: models.User,
-				as: "user",
-				attributes: ["email", "fullName", "avatarUrl"]
-			}]
-		});
-
-		if (!createdBy) throw new AppError('Problem faced while finding sprint creator');
-
-        return {
-			id: sprint.id,
-			title: sprint.title,
-			description: sprint.description,
-			status: sprint.status,
-			projectId: sprint.projectId,
-			createdBy: {
-				fullName: createdBy.user.fullName,
-				avatarUrl: createdBy.user.avatarUrl,
-				email: createdBy.user.email
-			},
-			totalTasksCompleted: 0,
-			totalTasks: 0,
-			startDate: sprint.startDate,
-			endDate: sprint.endDate,
 		}
 
     }
@@ -102,7 +110,7 @@ class SprintService {
 				]
 			});
 
-			if (!sprint) throw new AppError(`Can't find sprint with id - ${sprintId}`);
+			if (!sprint) throw new AppError(`Failed to find sprint with id ${sprintId}`, 404, true);
 
 			const sprintMetaData: SprintMetaData = {
 				id: sprint.id,
@@ -161,8 +169,6 @@ class SprintService {
 				order: [['created_at', 'DESC']]
 			});
 
-			if (!sprintsTasks) throw new AppError('Cannot find tasks');
-
 			const tasks: any[] = [];
 
 			for (const task of sprintsTasks) {
@@ -210,10 +216,10 @@ class SprintService {
 
     async updateSprint(
 		projectId: number, 
-		sprintId:number, 
+		sprintId: number, 
 		updatedFields: Partial<{ 
 			title: string;
-			description:string;
+			description: string;
 			status: 'planned' | 'active' | 'completed' | 'overdue';
 			startDate: Date;
 			endDate: Date; 
@@ -221,10 +227,9 @@ class SprintService {
 	): Promise<object> {
 
 		try {
-            if (
-                updatedFields.status &&
-                updatedFields.status === 'active' 
-            ) { 
+
+            if (updatedFields.status && updatedFields.status === 'active') { 
+
                 const activeSprint = await models.Sprint.findOne({
                     where:{ 
                         projectId: projectId, 
@@ -233,10 +238,14 @@ class SprintService {
                     attributes: ["id"]
                 });
 
-                if ( activeSprint && activeSprint.id != sprintId) { 
-                    throw new AppError("Looks like you have another active sprint")
+                if (activeSprint && activeSprint.id != sprintId) {
+
+                    throw new AppError("You can't have two active sprints at the same time", 400, true);
+
                 }
+
             }
+
 			const sprint = await models.Sprint.findOne({
 				where: { 
 					id: sprintId,
@@ -275,7 +284,7 @@ class SprintService {
 				]
 			});
 
-			if (!sprint) throw new AppError("Sprint not found");
+			if (!sprint) throw new AppError(`Failed to find sprint with id ${sprintId}`, 404, true);
 
 			if (
 				updatedFields.startDate &&
@@ -285,7 +294,7 @@ class SprintService {
 					updatedFields.startDate.getTime() > sprint.endDate.getTime()
 				)
 			) {
-				throw new AppError('Incorrect time intervals');
+				throw new AppError("Invalid time intervals", 400, true);
 			}
 
 			if (
@@ -296,7 +305,7 @@ class SprintService {
 					updatedFields.endDate.getTime() < sprint.startDate.getTime()
 				)
 			) {
-				throw new AppError('Incorrect time intervals');
+				throw new AppError("Invalid time intervals", 400, true);
 			}
 
 			if (
@@ -305,7 +314,7 @@ class SprintService {
 				(updatedFields.startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000)) &&
 				updatedFields.endDate < updatedFields.startDate
 			) { 
-				throw new AppError("Incorrect time intervals");
+				throw new AppError("Invalid time intervals", 400, true);
 			}
 
 			const updatedSprint = await sprint.update(updatedFields);
@@ -327,9 +336,9 @@ class SprintService {
 				endDate: updatedSprint.endDate,
 			};
 
-		} catch (error) {
+		} catch (err) {
 
-            throw error;
+            throw err;
 
 		}
 
@@ -341,15 +350,20 @@ class SprintService {
 
 		try {
 
-			const project = await models.Project.findByPk(projectId, { attributes: ['id'], transaction });
-			if (!project) throw new AppError('Project not found');
+			const project = await models.Project.findByPk(projectId, { 
+				attributes: ['id'], 
+				transaction 
+			});
+
+			if (!project) throw new AppError(`Failed to find project with id ${projectId}`, 404, true);
 
 			const sprint = await models.Sprint.findOne({
 				where: { id: sprintId, projectId: projectId },
 				attributes: ['id'],
 				transaction
 			});
-			if (!sprint) throw new AppError('Sprint not found');
+
+			if (!sprint) throw new AppError(`Failed to find sprint with id ${sprintId}`, 404, true);
 
 			const tasks = await sprint.getTasks({ attributes: ['id'], transaction });
 
@@ -357,14 +371,12 @@ class SprintService {
 
 				const files = await task.getTaskFiles({ attributes: ['key'], transaction });
 
-				await Promise.all(
-					files.map(file => {
-						sendFileToQueue({
-							key: file.key,
-							action: 'remove'
-						})
+				await Promise.all(files.map(file => {
+					sendFileToQueue({
+						key: file.key,
+						action: 'remove'
 					})
-				);
+				}));
 				
 			}
 
@@ -376,16 +388,14 @@ class SprintService {
 				transaction
 			});
 		
-			if (deletedSprint === 0) {
-				throw new AppError('Project not found');
-			}
+			if (deletedSprint === 0) throw new AppError("Failed to delete sprint", 400, true);
 
 			await transaction.commit();
 
-		} catch (error) {
+		} catch (err) {
 
 			await transaction.rollback();
-			throw error;
+			throw err;
 
 		}
 
@@ -399,7 +409,9 @@ class SprintService {
         startDate: Date;
         endDate: Date;
     }>> {
+
         try {
+
             const sprints = await models.Sprint.findAll({
                 where: { 
                     projectId: projectId
@@ -417,9 +429,12 @@ class SprintService {
                 endDate: sprint.endDate
             }));
 
-        } catch (error) {
-            throw error;
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
     async getDefaultSprint(projectId: number): Promise<{
@@ -430,18 +445,20 @@ class SprintService {
         startDate: Date;
         endDate: Date;
     } | null> {
+
         try {
-            // First, try to find an active sprint
+            
             const activeSprint = await models.Sprint.findOne({
                 where: { 
                     projectId: projectId,
                     status: 'active'
                 },
                 attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
-                order: [['created_at', 'DESC']] // If multiple active sprints, get the most recently created one
+                order: [['created_at', 'DESC']] 
             });
 
             if (activeSprint) {
+
                 return {
                     id: activeSprint.id,
                     title: activeSprint.title,
@@ -450,9 +467,9 @@ class SprintService {
                     startDate: activeSprint.startDate,
                     endDate: activeSprint.endDate
                 };
+
             }
 
-            // If no active sprint, get the sprint with the latest end date
             const latestSprint = await models.Sprint.findOne({
                 where: { 
                     projectId: projectId
@@ -462,6 +479,7 @@ class SprintService {
             });
 
             if (latestSprint) {
+
                 return {
                     id: latestSprint.id,
                     title: latestSprint.title,
@@ -470,12 +488,17 @@ class SprintService {
                     startDate: latestSprint.startDate,
                     endDate: latestSprint.endDate
                 };
+
             }
 
-            return null; // No sprints found
-        } catch (error) {
-            throw error;
+            return null;
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
 }
