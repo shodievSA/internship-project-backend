@@ -1,5 +1,5 @@
 import { AppError } from "@/types";
-import { transporter } from "@/config/email";
+import { transporter } from "@/config/gmail";
 
 export enum GmailType {
     PROJECT_INVITE = 'PROJECT_INVITE',
