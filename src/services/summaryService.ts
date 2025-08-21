@@ -1,6 +1,10 @@
 import { models } from '../models';
 import { AppError } from '../types/customError';
-import { SprintProgressResponse, PriorityBreakdownResponse, RecentActivityResponse } from '../types/summary';
+import { 
+	SprintProgressResponse, 
+	PriorityBreakdownResponse, 
+	RecentActivityResponse 
+} from '../types/summary';
 
 export interface StatusOverviewResponse {
     totalWorkItems: number;
@@ -28,15 +32,25 @@ export interface TeamWorkloadResponse {
 }
 
 class SummaryService {
-    async getStatusOverview(projectId: number, sprintId?: number): Promise<StatusOverviewResponse> {
+
+    async getStatusOverview(
+		projectId: number, 
+		sprintId?: number
+	): Promise<StatusOverviewResponse> {
+
         try {
             // Build where clause for sprints
             const sprintWhereClause: any = { projectId };
+
             if (sprintId) {
+
                 sprintWhereClause.id = sprintId;
+
             } else {
+
                 // If no sprintId provided, get all sprints regardless of status
                 sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+
             }
 
             // Get sprints based on filter
@@ -64,20 +78,34 @@ class SummaryService {
                 totalWorkItems: allTasks.length,
                 statusDistribution: statusCounts
             };
-        } catch (error) {
-            throw new AppError('Failed to get status overview');
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
-    async getTeamWorkload(projectId: number, sprintId?: number): Promise<TeamWorkloadResponse> {
+    async getTeamWorkload(
+		projectId: number, 
+		sprintId?: number
+	): Promise<TeamWorkloadResponse> {
+
         try {
+
             // Build where clause for sprints
             const sprintWhereClause: any = { projectId };
+
             if (sprintId) {
+
                 sprintWhereClause.id = sprintId;
+
             } else {
+
                 // If no sprintId provided, get all sprints regardless of status
                 sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+
             }
 
             // Get sprints based on filter
@@ -103,6 +131,7 @@ class SummaryService {
             const totalTasks = allTasks.length;
 
             if (totalTasks === 0) {
+
                 return {
                     assignees: [],
                     unassigned: {
@@ -110,6 +139,7 @@ class SummaryService {
                         taskCount: 0
                     }
                 };
+
             }
 
             // Group tasks by assignee
@@ -117,23 +147,32 @@ class SummaryService {
             let unassignedCount = 0;
 
             allTasks.forEach((task) => {
+
                 if (task && task.assignedToMember) {
+
                     const assigneeId = task.assignedToMember.id;
                     const assigneeName = task.assignedToMember.user.fullName;
                     const avatarUrl = task.assignedToMember.user.avatarUrl;
 
                     if (!assigneeMap.has(assigneeId)) {
+						
                         assigneeMap.set(assigneeId, {
                             id: assigneeId,
                             name: assigneeName,
                             avatarUrl,
                             taskCount: 0
                         });
+
                     }
+
                     assigneeMap.get(assigneeId).taskCount++;
+
                 } else {
+
                     unassignedCount++;
+
                 }
+
             });
 
             // Calculate work distribution percentages
@@ -151,20 +190,34 @@ class SummaryService {
             };
 
             return result;
-        } catch (error) {
-            throw new AppError('Failed to get team workload');
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
-    async getSprintProgress(projectId: number, sprintId?: number): Promise<SprintProgressResponse> {
+    async getSprintProgress(
+		projectId: number, 
+		sprintId?: number
+	): Promise<SprintProgressResponse> {
+
         try {
+
             // Build where clause for sprints
             const sprintWhereClause: any = { projectId };
+
             if (sprintId) {
+
                 sprintWhereClause.id = sprintId;
+
             } else {
+
                 // If no sprintId provided, get all sprints regardless of status
                 sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+
             }
 
             // Get sprints based on filter
@@ -179,6 +232,7 @@ class SummaryService {
             });
 
             const sprintProgress = sprints.map(sprint => {
+
                 const tasks = sprint.tasks || [];
                 const totalTasks = tasks.length;
 
@@ -217,23 +271,38 @@ class SummaryService {
                         blocked: blockedTasks
                     }
                 };
+
             });
 
             return { sprints: sprintProgress };
-        } catch (error) {
-            throw new AppError('Failed to get sprint progress');
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
-    async getPriorityBreakdown(projectId: number, sprintId?: number): Promise<PriorityBreakdownResponse> {
+    async getPriorityBreakdown(
+		projectId: number, 
+		sprintId?: number
+	): Promise<PriorityBreakdownResponse> {
+
         try {
+
             // Build where clause for sprints
             const sprintWhereClause: any = { projectId };
+
             if (sprintId) {
+
                 sprintWhereClause.id = sprintId;
+
             } else {
+
                 // If no sprintId provided, get all sprints regardless of status
                 sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+
             }
 
             // Get sprints based on filter
@@ -279,28 +348,39 @@ class SummaryService {
                 }
             ];
 
-            return {
-                priorities,
-                totalTasks
-            };
-        } catch (error) {
-            throw new AppError('Failed to get priority breakdown');
+            return { priorities, totalTasks };
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
 
-    async getRecentActivity(projectId: number, sprintId?: number): Promise<RecentActivityResponse> {
+    async getRecentActivity(
+		projectId: number, 
+		sprintId?: number
+	): Promise<RecentActivityResponse> {
+
         try {
+
             const now = new Date();
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
             // Build where clause for sprints
             const sprintWhereClause: any = { projectId };
+
             if (sprintId) {
+
                 sprintWhereClause.id = sprintId;
+
             } else {
+
                 // If no sprintId provided, get all sprints regardless of status
                 sprintWhereClause.status = ['planned', 'active', 'completed', 'overdue'];
+
             }
 
             // Get sprints based on filter
@@ -360,10 +440,15 @@ class SummaryService {
                     }
                 }
             };
-        } catch (error) {
-            throw new AppError('Failed to get recent activity');
+
+        } catch (err) {
+
+            throw err;
+
         }
+
     }
+
 }
 
 export default new SummaryService();

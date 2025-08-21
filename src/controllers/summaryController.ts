@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import AuthenticatedRequest from '../types/authenticatedRequest';
 import summaryService from '../services/summaryService';
+import { AppError } from '@/types';
 
 /**
  * Summary Controller
@@ -36,28 +36,30 @@ class SummaryController {
      * 
      * Used for: Status Overview donut chart in dashboard
      */
-    async getStatusOverview(req: Request, res: Response, next: NextFunction) {
+    async getStatusOverview(
+		req: Request, 
+		res: Response, 
+		next: NextFunction
+	) {
+
         try {
+
             const projectId = parseInt(req.params.projectId);
             const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
             
-            if (!projectId || isNaN(projectId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid project ID' 
-                });
-            }
-
-            if (sprintId && isNaN(sprintId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid sprint ID' 
-                });
-            }
+            if (!projectId || isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+            if (sprintId && isNaN(sprintId)) throw new AppError("Invalid sprint id", 400, true);
 
             const statusOverview = await summaryService.getStatusOverview(projectId, sprintId);
+
             res.status(200).json(statusOverview);
-        } catch (error) {
-            next(error);
+
+        } catch (err) {
+
+            next(err);
+
         }
+
     }
 
     /**
@@ -80,28 +82,30 @@ class SummaryController {
      * 
      * Used for: Team Workload bar chart in dashboard
      */
-    async getTeamWorkload(req: Request, res: Response, next: NextFunction) {
+    async getTeamWorkload(
+		req: Request, 
+		res: Response, 
+		next: NextFunction
+	) {
+
         try {
+
             const projectId = parseInt(req.params.projectId);
             const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
             
-            if (!projectId || isNaN(projectId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid project ID' 
-                });
-            }
-
-            if (sprintId && isNaN(sprintId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid sprint ID' 
-                });
-            }
+            if (!projectId || isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+            if (sprintId && isNaN(sprintId)) throw new AppError("Invalid sprint id", 400, true);
 
             const teamWorkload = await summaryService.getTeamWorkload(projectId, sprintId);
+
             res.status(200).json(teamWorkload);
-        } catch (error) {
-            next(error);
+
+        } catch (err) {
+
+            next(err);
+
         }
+
     }
 
     /**
@@ -126,28 +130,30 @@ class SummaryController {
      * 
      * Used for: Sprint Progress component in dashboard
      */
-    async getSprintProgress(req: Request, res: Response, next: NextFunction) {
+    async getSprintProgress(
+		req: Request, 
+		res: Response, 
+		next: NextFunction
+	) {
+
         try {
+
             const projectId = parseInt(req.params.projectId);
             const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
             
-            if (!projectId || isNaN(projectId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid project ID' 
-                });
-            }
-
-            if (sprintId && isNaN(sprintId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid sprint ID' 
-                });
-            }
+            if (!projectId || isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+            if (sprintId && isNaN(sprintId)) throw new AppError("Invalid sprint id", 400, true);
 
             const sprintProgress = await summaryService.getSprintProgress(projectId, sprintId);
+
             res.status(200).json(sprintProgress);
-        } catch (error) {
-            next(error);
+
+        } catch (err) {
+
+            next(err);
+
         }
+
     }
 
     /**
@@ -170,28 +176,30 @@ class SummaryController {
      * 
      * Used for: Priority Breakdown bar chart in dashboard
      */
-    async getPriorityBreakdown(req: Request, res: Response, next: NextFunction) {
+    async getPriorityBreakdown(
+		req: Request, 
+		res: Response, 
+		next: NextFunction
+	) {
+
         try {
+
             const projectId = parseInt(req.params.projectId);
             const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
             
-            if (!projectId || isNaN(projectId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid project ID' 
-                });
-            }
-
-            if (sprintId && isNaN(sprintId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid sprint ID' 
-                });
-            }
+            if (!projectId || isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+            if (sprintId && isNaN(sprintId)) throw new AppError("Invalid sprint id", 400, true);
 
             const priorityBreakdown = await summaryService.getPriorityBreakdown(projectId, sprintId);
+
             res.status(200).json(priorityBreakdown);
-        } catch (error) {
-            next(error);
+
+        } catch (err) {
+
+            next(err);
+
         }
+
     }
 
     /**
@@ -217,29 +225,32 @@ class SummaryController {
      * 
      * Used for: Recent Activity summary cards in dashboard
      */
-    async getRecentActivity(req: Request, res: Response, next: NextFunction) {
+    async getRecentActivity(
+		req: Request, 
+		res: Response, 
+		next: NextFunction
+	) {
+
         try {
+
             const projectId = parseInt(req.params.projectId);
             const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
             
-            if (!projectId || isNaN(projectId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid project ID' 
-                });
-            }
-
-            if (sprintId && isNaN(sprintId)) {
-                return res.status(400).json({ 
-                    error: 'Invalid sprint ID' 
-                });
-            }
+            if (!projectId || isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+            if (sprintId && isNaN(sprintId)) throw new AppError("Invalid sprint id", 400, true);
 
             const recentActivity = await summaryService.getRecentActivity(projectId, sprintId);
+
             res.status(200).json(recentActivity);
-        } catch (error) {
-            next(error);
+
+        } catch (err) {
+
+            next(err);
+
         }
+
     }
+
 }
 
 export default new SummaryController(); 
