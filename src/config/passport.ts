@@ -55,8 +55,8 @@ passport.use(new GoogleStrategy({
 }, async (
 	req: Request, 
 	accessToken: string, 
-	refreshToken: string, 
-	params: any, 
+	refreshToken: string,
+	_params: any, 
 	profile: Profile, 
 	done: any
 ) => {
