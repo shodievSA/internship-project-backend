@@ -9,44 +9,52 @@ async function enhanceText(
 	next: NextFunction
 ) {
 
-	return aiService
-		.Enhance(req.body.text)
-		.then((result: string | undefined) => {
-		return res.status(200).json({ enhancedVersion: result });
-		})
-		.catch((err) => {
+	try {
+
+		const { text } = req.body;
+
+		if (text.trim().length < 100) throw new AppError("The text is too small", 400, true);
+
+		const enhancedText = await aiService.enhanceText(text);
+		
+		return res.status(200).json({ enhancedVersion: enhancedText });
+
+	} catch (err) {
+
 		return next(err);
-		});
+
+	}
 
 }
 
-async function createTitle(
+async function generateTaskTitle(
 	req: AuthenticatedRequest, 
 	res: Response, 
 	next: NextFunction
 ) {
-    if (!req.body.taskDescription){
-        throw new AppError("Empty fields",429)
-    }
-    return aiService
-    .CreateTitle(req.body.taskDescription)
-    .then((result: string | undefined)=> { 
-        if (result === undefined) { 
-            console.log(result)
-            throw new AppError("Something went wrong")
-        }
 
-        return res.status(200).json({ generatedTaskTitle: result })
-    })
-    .catch((err) => {
+	try {
+
+		const { taskDescription } = req.body;
+
+		if (!taskDescription) throw new AppError("Task description is missing", 400, true);
+		if (taskDescription.trim().length < 20) throw new AppError("Task description is too small", 400, true);
+
+		const taskTitle = await aiService.generateTaskTitle(taskDescription);
+
+		return res.status(200).json({ generatedTaskTitle: taskTitle });
+
+	} catch (err) {
+
 		return next(err);
-    });
+
+	}
     
 }
 
 const aiController = {
 	enhanceText,
-    createTitle,
+    generateTaskTitle,
 };
 
 export default aiController;

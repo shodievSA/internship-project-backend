@@ -3,12 +3,12 @@ import aiController from '../../../controllers/aiController';
 
 const {
 	enhanceText,
-    createTitle
+    generateTaskTitle
 } = aiController;
 
 const router = Router();
 
 router.post('/enhance', enhanceText as RequestHandler);
-router.post('/generate-task-title', createTitle as RequestHandler)
+router.post('/generate-task-title', generateTaskTitle as RequestHandler);
 
 export default router;

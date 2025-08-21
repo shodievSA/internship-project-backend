@@ -217,7 +217,7 @@ async function generateReport() {
                 
 				}
            
-            const summary = await aiService.CreateSummary(report)
+            const summary = await aiService.generateWorkPlanSummary(report);
 
 			await DailyAiReport.create({
 				userId: user.id,
