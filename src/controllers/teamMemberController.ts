@@ -3,10 +3,6 @@ import teamMemberService from '../services/teamMemberService';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
-
-
-
-
 async function changeTeamMemberRole(
 	req: AuthenticatedRequest,
 	res: Response,
@@ -15,33 +11,37 @@ async function changeTeamMemberRole(
 
 	try {
 
-		const projectId: number = parseInt(req.params.projectId);
-		const memberId: number = parseInt(req.params.memberId);
-		const newRole = req.body.newRole;
-        
-        if (!req.memberPermissions?.includes('promoteMembers') || !req.memberPermissions?.includes("demoteMembers")) {
+        if (
+			!req.memberPermissions?.includes('promoteMembers') 
+			|| 
+			!req.memberPermissions?.includes("demoteMembers")
+		) {
 
-            throw new AppError(`No permission to assign member <${newRole}> role`);
-        }
+            throw new AppError("You don't have enough permissions to change team members' roles", 403, true);
 
-        if (!projectId || !memberId) {
-            res.status(400).json({ error: 'Project ID and Member ID are required' });
-            return;
-        }
+        } else {
 
-		if (!newRole) {
-			res.status(400).json({ error: 'New role does not exist' });
-			return;
+			const projectId: number = parseInt(req.params.projectId);
+			const memberId: number = parseInt(req.params.memberId);
+			const newRole = req.body.newRole;
+			
+			if (!projectId || !memberId) {
+
+				throw new AppError("Project id and member id are required", 400, true);
+
+			}
+	
+			if (!newRole) throw new AppError("Updated member role is missing", 400, true);
+	
+			const updatedTeamMember = await teamMemberService.updateTeamMemberRole(projectId, memberId, newRole);
+	
+			res.status(200).json({ updatedTeamMember });
+
 		}
 
-		const updatedTeamMember = await teamMemberService.updateTeamMemberRole(projectId, memberId, newRole);
+	} catch (err) {
 
-		res.status(200).json({ updatedTeamMember });
-
-
-	} catch (error) {
-
-		next(error);
+		next(err);
 
 	}
 
@@ -53,27 +53,28 @@ async function removeTeamMember(
 	next: NextFunction
 ): Promise<void> {
 
-	const projectId: number = parseInt(req.params.projectId);
-	const memberId: number = parseInt(req.params.memberId);
-	const userId: number = req.user.id;
+	try {
 
-	if (!req.memberPermissions?.includes('kickOutTeamMembers')) { // issue
+		if (!req.memberPermissions?.includes('kickOutTeamMembers')) { // issue
+	
+			throw new AppError("You don't have enough permissions to remove team members", 403, true);
+	
+		} else {
 
-		throw new AppError("You do not have rights to remove team member")
+			const projectId: number = parseInt(req.params.projectId);
+			const memberId: number = parseInt(req.params.memberId);
+	
+			if (!projectId || !memberId) throw new AppError("Project id and member id are required", 400, true);
 
-	} else {
+			await teamMemberService.removeTeamMember(projectId, memberId);
 
-		try {
-
-			await teamMemberService.removeTeamMember(projectId, memberId, userId);
-
-			res.sendStatus(204);
-
-		} catch (error) {
-
-			next(error);
-
+			res.status(200).json({ message: "The team member has been successfully removed from the project!" });
+	
 		}
+
+	} catch (err) {
+	
+		next(err);
 
 	}
 
@@ -85,32 +86,34 @@ async function getMemberProductivity(
     next: NextFunction
 ) {
 
-    const projectId = parseInt(req.params.projectId)
-    const memberId = parseInt(req.params.memberId)
+	try {
 
-    if (!projectId || !memberId) { 
-        throw new AppError('Empty input')
-    }
+		if (!req.memberPermissions?.includes('viewMemberProductivity')) {
 
-    try {
+			throw new AppError(
+				"You don't have enough permissions to view team members' productivity information", 403, true
+			);
 
-        if ( req.memberPermissions?.includes('viewMemberProductivity')){
-    
-            const result = await teamMemberService.getMemberProductivity(projectId, memberId);
-            return res.status(200).json({productivityData: result})
-        }
-        else{
-            throw new AppError('No permission to edit task')
-        }
+		} else {
 
-	} catch(error) { 
-    	next (error);
+			const projectId = parseInt(req.params.projectId);
+			const memberId = parseInt(req.params.memberId);
+		
+			if (!projectId || !memberId) throw new AppError("Project id and member id are required", 400, true);
+		
+			const result = await teamMemberService.getMemberProductivity(projectId, memberId);
+
+			return res.status(200).json({ productivityData: result });
+
+		}
+
+	} catch (err) { 
+	
+		next(err);
+	
 	}
+
 }
-
-
-
-
 
 const teamMemberController = {
 	changeTeamMemberRole,

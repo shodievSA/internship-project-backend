@@ -1,5 +1,4 @@
 import { Router, RequestHandler } from "express";
-import { getMemberPermissions } from "@/middlewares/getMemberPermissions";
 import teamMemberController from "../../../../controllers/teamMemberController";
 import projectController from "../../../../controllers/projectController";
 
@@ -9,10 +8,7 @@ const {
     getMemberProductivity,
 } = teamMemberController;
 
-const { 
-    leaveProject,
-    getProjectTeam 
-} = projectController;
+const { leaveProject, getProjectTeam } = projectController;
 
 const router = Router({ mergeParams: true });
 

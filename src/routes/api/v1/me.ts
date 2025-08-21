@@ -19,7 +19,6 @@ router.get('/daily-report', getDailyReport as RequestHandler);
 router.get('/notifications', fetchUserNotifications as RequestHandler);
 router.patch('/notifications', updateNotifications as RequestHandler);
 router.delete('/notifications', deleteNotifications as RequestHandler);
-
 router.get('/invites', getInvitations as RequestHandler);
 
 export default router;

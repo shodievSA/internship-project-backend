@@ -18,9 +18,7 @@ const {
 	deleteProject
 } = projectController;
 
-const {
-	getMyProductivityData,
-} = memberProductivityController;
+const { getMyProductivityData } = memberProductivityController;
 
 const router = Router();
 
@@ -34,10 +32,7 @@ router.use('/:projectId/sprints', getMemberPermissions, sprintRouter);
 router.use('/:projectId/timer', timerRouter);
 router.use('/:projectId/summary', getMemberPermissions, summaryRouter);
 
-// Member productivity routes
 router.get('/:projectId/my-productivity', getMemberPermissions, getMyProductivityData as RequestHandler);
-
-
 
 router.get('/:projectId', getProjectDetails as RequestHandler);
 router.patch('/:projectId', getMemberPermissions, isProjectUpdateValid, updateProject as RequestHandler);

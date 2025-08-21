@@ -1,6 +1,5 @@
 import { Response, NextFunction } from 'express';
 import projectService from '../services/projectService';
-import teamMemberService from '../services/teamMemberService';
 import { AppError, FormattedProject, ProjectDetails } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
@@ -21,7 +20,7 @@ async function leaveProject(
 			const projectId: number = parseInt(req.params.projectId);
 			const userId: number = req.user.id;
 	
-			await teamMemberService.leaveProject(projectId, userId);
+			await projectService.leaveProject(projectId, userId);
 	
 			res.status(200).json({ message: "You have left the project successfully!" });
 
