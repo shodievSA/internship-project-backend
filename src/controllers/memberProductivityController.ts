@@ -1,70 +1,46 @@
-import { Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
+import AuthenticatedRequest from '@/types/authenticatedRequest';
 import memberProductivityService from '../services/memberProductivityService';
 import { AppError } from '@/types';
 
-const getMyProductivityData = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Parse and validate projectId
-    const projectId = parseInt(req.params.projectId);
+async function getMyProductivityData(
+	req: AuthenticatedRequest, 
+	res: Response,
+	next: NextFunction
+): Promise<void> {
 
-    if (isNaN(projectId)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid project ID'
-      });
-      return;
-    }
+	try {
+		
+		const projectId = parseInt(req.params.projectId);
+		const userId = req.user.id;
 
-    // Get user ID from authenticated request
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-      return;
-    }
+		if (isNaN(projectId)) throw new AppError("Invalid project id", 400, true);
+		if (!userId) throw new AppError("User not authenticated", 401, true);
 
-    // Prepare filters - only sprint filtering
-    const filters: any = {};
-    
-    // Add sprint filtering if provided
-    if (req.query.sprintId) {
-      const sprintId = parseInt(req.query.sprintId as string);
-      if (!isNaN(sprintId)) {
-        filters.sprintId = sprintId;
-      }
-    }
-    // If no sprintId provided, it means "all sprints" (sprintId will be undefined)
+		const filters: any = {};
+		
+		if (req.query.sprintId) {
 
-    // Get productivity data
-    const productivityData = await memberProductivityService.getMemberProductivity(
-      userId,
-      projectId,
-      filters
-    );
+			const sprintId = parseInt(req.query.sprintId as string);
 
-    res.status(200).json({
-      success: true,
-      data: productivityData
-    });
+			if (!isNaN(sprintId)) {
 
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Something went wrong'
-      });
-    }
-  }
+				filters.sprintId = sprintId;
+
+			}
+
+		}
+
+		const productivityData = await memberProductivityService.getMemberProductivity(userId, projectId, filters);
+
+		res.status(200).json({ data: productivityData });
+
+	} catch (err) {
+
+		next(err);
+
+	}
+
 };
 
-
-export default {
-  getMyProductivityData,
-}; 
+export default { getMyProductivityData }; 
