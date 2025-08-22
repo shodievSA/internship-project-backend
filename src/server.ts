@@ -1,5 +1,6 @@
 import { createServer } from 'http';
 import app from './app';
+import { logger } from './app';
 import initDB from './models';
 import { initConsumers } from './queues/initConsumers';
 import { startCronJobs } from './services/cronService';
@@ -18,11 +19,15 @@ async function main() {
 		await startCronJobs();
 		await initConsumers();
 
-		server.listen(PORT, () => console.log(`Server is running at http://localhost:${PORT}`));
+		server.listen(PORT, () => {
 
-	} catch (error) {
+			logger.log("info", `Server is running at http://localhost:${PORT}`);
 
-		console.error('Failed to start server:', error);
+		});
+
+	} catch (err) {
+
+		logger.error("Failed to start the server: ", err);
 
 	}
 
