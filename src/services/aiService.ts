@@ -5,6 +5,7 @@ import { FunctionDefinition } from 'openai/resources';
 import type { ChatCompletion } from 'openai/resources/chat/completions';
 
 const enhanceTextFunction: FunctionDefinition = {
+
 	name: 'enhanceText',
 	description: 'Improve clarity, readability, and structure of a piece of text while retaining its intent.',
 	parameters: {
@@ -17,9 +18,11 @@ const enhanceTextFunction: FunctionDefinition = {
 		},
 		required: ['enhancedText'],
 	},
+
 };
 
 const generateTaskTitleFunction: FunctionDefinition = {
+
 	name: 'generateTaskTitle',
 	description: 'Generates a concise and meaningful title based on the provided task description.',
 	parameters: {
@@ -32,9 +35,11 @@ const generateTaskTitleFunction: FunctionDefinition = {
 		},
 		required: ['title'],
 	},
+
 };
 
 const generateWorkPlanSummaryFunction: FunctionDefinition = {
+
 	name: 'generateWorkPlanSummary',
 	description: 'Generates a concise and meaningful summary based on the provided task description.',
 	parameters: {
@@ -47,6 +52,7 @@ const generateWorkPlanSummaryFunction: FunctionDefinition = {
 		},
 		required: ['summary'],
 	},
+	
 };
 
 const sysPromptForTextEnhacement: string = `
@@ -94,7 +100,7 @@ const sysPromptForWorkPlanSummaryGeneration: string = `
 
 class AiService {
 
-	async enhanceText(text: string): Promise<string> {
+	public async enhanceText(text: string): Promise<string> {
 
 		try {
 
@@ -119,7 +125,7 @@ class AiService {
 	
 			return parsed.enhancedText;
 
-		} catch (err) {
+		} catch (err: unknown) {
 
 			throw err;
 
@@ -127,7 +133,7 @@ class AiService {
 
 	}
 
-	async generateTaskTitle(taskDescription: string): Promise<string> {
+	public async generateTaskTitle(taskDescription: string): Promise<string> {
 
 		try {
 
@@ -152,7 +158,7 @@ class AiService {
 
 			return parsed.title;
 
-		} catch (err) {
+		} catch (err: unknown) {
 
 			throw err;
 
@@ -160,7 +166,7 @@ class AiService {
 
 	}
 
-	async generateWorkPlanSummary(report: DailyReport): Promise<string> {
+	public async generateWorkPlanSummary(report: DailyReport): Promise<string> {
 
 		try {
 
@@ -185,7 +191,7 @@ class AiService {
 
 			return parsed.summary;
 
-		} catch (err) {
+		} catch (err: unknown) {
 
 			throw err;
 
