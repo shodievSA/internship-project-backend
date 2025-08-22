@@ -106,14 +106,12 @@ class AiService {
 
 			type EnhancedTextArgs = { enhancedText: string };
 
-			const toolChoiceFunc: string = 'enhanceText';
-
 			const result: ChatCompletion = await this.helper(
 
 				sysPromptForTextEnhacement,
 				text,
 				enhanceTextFunction,
-				toolChoiceFunc,
+				enhanceTextFunction.name,
 
 			);
 	
@@ -139,14 +137,12 @@ class AiService {
 
 			type GenerateTaskTitleArgs = { title: string };
 
-			const toolChoiceFunc: string = 'generateTaskTitle';
-
 			const result: ChatCompletion = await this.helper(
 
 				sysPromptForTaskTitleGeneration,
 				taskDescription,
 				generateTaskTitleFunction,
-				toolChoiceFunc,
+				generateTaskTitleFunction.name,
 
 			);
 
@@ -172,14 +168,12 @@ class AiService {
 
 			type GenerateWorkPlanSummaryArgs = { summary: string };
 
-			const toolChoiceFunc: string = 'generateWorkPlanSummary';
-
 			const result: ChatCompletion = await this.helper(
 
 				sysPromptForWorkPlanSummaryGeneration,
 				report,
 				generateWorkPlanSummaryFunction,
-				toolChoiceFunc,
+				generateWorkPlanSummaryFunction.name,
 
 			);
 
