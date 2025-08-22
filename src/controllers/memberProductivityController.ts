@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import AuthenticatedRequest from '@/types/authenticatedRequest';
 import memberProductivityService from '../services/memberProductivityService';
 import { AppError } from '@/types';
 
-const getMyProductivityData = async (req: Request, res: Response): Promise<void> => {
+const getMyProductivityData = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // Parse and validate projectId
     const projectId = parseInt(req.params.projectId);
