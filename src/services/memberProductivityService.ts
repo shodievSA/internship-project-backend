@@ -371,4 +371,4 @@ class MemberProductivityService {
   }
 }
 
-export default new MemberProductivityService(); 
+export default new MemberProductivityService();

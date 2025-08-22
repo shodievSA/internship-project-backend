@@ -220,4 +220,4 @@ class TimeTrackingService {
     }
 }
 
-export default new TimeTrackingService(); 
+export default new TimeTrackingService();

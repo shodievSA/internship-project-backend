@@ -274,7 +274,7 @@ class TaskService {
 					{
 						userId: assignedTo.user.id,
 						title: "New Task",
-						message: "You've been assigned new task"
+						message: "You have been assigned a new task"
 					},
 					{ transaction }
 				);
@@ -586,7 +586,7 @@ class TaskService {
 						title: "New Task",
 						userId: task.assignedToMember.user.id,
 						message: `Project: ${task.project.title}.
-						Assigned new task: "${task.title}"`,
+						Assigned a new task: "${task.title}"`,
                     },
                     { transaction }
                 );
