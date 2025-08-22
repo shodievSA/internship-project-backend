@@ -29,15 +29,15 @@ async function getUserData(userId: number): Promise<UserData | null> {
 
 		return user ? (user.toJSON() as UserData) : null;
 
-	} catch (error) {
+	} catch (err) {
 
-		throw new AppError(`${error}`,500);
+		throw err;
 		
 	}
 
 }
 
-async function getContacts(userId : number ): Promise<Contact[]> {
+async function getContacts(userId: number): Promise<Contact[]> {
 	
 	try {
 
@@ -46,7 +46,9 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 			attributes : ['refreshToken']
 		});
 
-		const refreshToken = await runCryptoWorker('decrypt', user?.refreshToken!, process.env.ENCRYPTION_KEY!);
+		const refreshToken = await runCryptoWorker(
+			'decrypt', user?.refreshToken!, process.env.ENCRYPTION_KEY!
+		);
 
 		const oauth2Client = new auth.OAuth2(
 			process.env.GOOGLE_CLIENT_ID!,
@@ -69,9 +71,9 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 				personFields: 'names,emailAddresses,photos',
 				pageToken : nextPageToken,
 			});
-            if ( !response) { 
-                throw new AppError('Could not get list of connections', 502);
-            }
+
+            if (!response) throw new AppError("Failed to get user's connections", 502, true);
+
 			const connections: GooglePerson[] = response.data.connections || []
 			const connectionsWithEmail = connections.filter((connection) => {
 				return connection.emailAddresses
@@ -95,8 +97,10 @@ async function getContacts(userId : number ): Promise<Contact[]> {
 
 		return allConnections;
 
-	} catch(error) { 
-        throw error
+	} catch (err) { 
+
+        throw err
+
 	}
 
 }
@@ -106,29 +110,24 @@ async function getUserNotifications(userId: number): Promise<object> {
 	try {
 
 		const notifications = await models.Notification.findAll({
-
 			where: {
-
 				userId: userId
-
 			},
-
 			attributes: { exclude: ['user_id'] },
 			order: [["createdAt", "DESC"]]
-
 		});
 
 		return notifications;
 		
-	} catch (error) {
+	} catch (err) {
 		
-		throw new AppError(`${error}`);
+		throw err;
 
 	}
 
 }
 
-async function getInvites( userId: number ): Promise<FrontInvite[]> {
+async function getInvites(userId: number): Promise<FrontInvite[]> {
     
     try { 
 
@@ -149,10 +148,6 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
             ],
 			order: [[ 'createdAt', 'DESC' ]]
         });
-
-        if (!rawInvites) {
-            throw new AppError('No Invites found')
-        }
 
         const invites: FrontInvite[] = [];
 		
@@ -180,9 +175,9 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
 
         return invites;
 
-    } catch(error) { 
+    } catch(err) { 
 
-        throw error
+        throw err;
 
     }
 
@@ -191,11 +186,9 @@ async function getInvites( userId: number ): Promise<FrontInvite[]> {
 async function deleteNotification( 
 	userId: number, 
 	notificationIds: number[]
-): Promise<string>{ 
+): Promise<void> { 
     
     const transaction: Transaction = await sequelize.transaction();
-
-    let message = 'Successfully deleted'
 
     try {
         
@@ -206,19 +199,20 @@ async function deleteNotification(
             },
             attributes: ['id'],
             transaction
-        })
+        });
 
         if (usersNotifications.length === 0 ) { 
 
-            throw new AppError('Empty or incorrect notification Ids');
+            throw new AppError("Failed to find notifications to delete", 404, true);
 
         }
 
-        const notificationsToDelete: number[] = []
+        const notificationsToDelete: number[] = [];
 
         for (const notification of usersNotifications) { 
 
-            notificationsToDelete.push(notification.id)
+            notificationsToDelete.push(notification.id);
+
         }
         
         await models.Notification.destroy({
@@ -226,17 +220,17 @@ async function deleteNotification(
                 id: notificationsToDelete
             },
             transaction
-        })
+        });
 
-        transaction.commit()
-        return message
-    }
-    catch (error) { 
+        transaction.commit();
 
-        transaction.rollback()
-        
-        throw error
+    } catch (err) { 
+
+        transaction.rollback();
+        throw err;
+
     }
+
 }
 
 async function updateNotification( 
@@ -251,32 +245,32 @@ async function updateNotification(
 
     try {
 
-        await models.Notification.update({
-            isViewed:notificationViewUpdates.isViewed,
-        },
-        {
-            where: { 
+        await models.Notification.update(
+			{
+            	isViewed: notificationViewUpdates.isViewed,
+        	},
+			{
+				where: { 
+					id: notificationViewUpdates.notificationIds,
+					userId: userId,
+				},
+				returning: true,
+				transaction,
+			}
+		);
 
-                id: notificationViewUpdates.notificationIds,
-                userId: userId,
-            },
-            returning: true,
-            transaction,
-        })
-
-        transaction.commit()
+        transaction.commit();
 
         return { 
             notificationIds: notificationViewUpdates.notificationIds,
             updatedViewStatus: notificationViewUpdates.isViewed
-        }
-    }
-    
-    catch(error){ 
+        };
 
-        transaction.rollback()
+    } catch (err) { 
 
-        throw error
+        transaction.rollback();
+        throw err;
+
     }
     
 }
@@ -320,7 +314,7 @@ async function updateUserInviteStatus(
 			transaction
 		});
 
-		if (count === 0) throw new AppError('Project invitation not found');
+		if (count === 0) throw new AppError("Failed to update user invite status", 404, true);
 
 		const invite = await models.Invite.findByPk(inviteId, { 
 			include: { 
@@ -331,7 +325,7 @@ async function updateUserInviteStatus(
 			transaction 
 		});
 
-		if (!invite) throw new AppError('Project invitation not found after update');			
+		if (!invite) throw new AppError("Failed to find project invite after update", 404, true);			
 
 		const { 
 			projectId, 
@@ -345,8 +339,8 @@ async function updateUserInviteStatus(
 			models.Project.findByPk(projectId, { transaction })
 		]);
 
-		if (!user) throw new AppError(`Couldn't find user with id ${invitedUserId}`);
-		if (!project) throw new AppError(`Couldn't find project with id ${projectId}`);
+		if (!user) throw new AppError(`Couldn't find user with id ${invitedUserId}`, 404, true);
+		if (!project) throw new AppError(`Couldn't find project with id ${projectId}`, 404, true);
 
 		const roleId = (roleOffered === 'manager') ? 2 : 3;
 
@@ -434,12 +428,12 @@ async function updateUserInviteStatus(
 
 		}
 
-		throw new AppError('Invalid status');
+		throw new AppError("Invalid invite status", 400, true);
 
-	} catch (error) {
+	} catch (err) {
 
 		if (!(transaction as any).finished) await transaction.rollback();
-		throw error;
+		throw err;
 
 	}
 

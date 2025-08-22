@@ -1,17 +1,7 @@
 import { Response, NextFunction } from 'express';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import userService from '../services/userService';
-import teamMemberService from '../services/teamMemberService';
-import { UserData } from '@/types';
-
-const {
-    getUserData,
-    getContacts,
-    getUserNotifications,
-    getInvites,
-    deleteNotification,
-    updateNotification    
-} = userService;
+import { AppError, UserData } from '@/types';
 
 async function getMe(
 	req: AuthenticatedRequest, 
@@ -21,14 +11,13 @@ async function getMe(
 
 	try {    
 
-		const userData: UserData | null = await getUserData(req.user.id);
+		const userData: UserData | null = await userService.getUserData(req.user.id);
 
 		res.status(200).json({ user: userData });
-    return;
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -42,13 +31,13 @@ async function getMailContacts(
 
 	try {
 
-		const connections = await getContacts(req.user.id);
+		const connections = await userService.getContacts(req.user.id);
+
 		res.status(200).json({ contacts: connections });
-		return;
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -64,14 +53,16 @@ async function fetchUserNotifications(
 
 	try {
 
-		const notifications = await getUserNotifications(userId);
-		res.status(200).json({ message: 'Notifications fetched successfully', notifications });
+		const notifications = await userService.getUserNotifications(userId);
 
-		return;
+		res.status(200).json({ 
+			message: "Notifications fetched successfully", 
+			notifications: notifications 
+		});
 
-	} catch (error) {
+	} catch (err) {
 
-		next(error);
+		next(err);
 
 	}
 
@@ -81,16 +72,17 @@ async function getInvitations(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-) {  
+): Promise<void> {  
 
     try {
 
-        const invites = await getInvites(req.user.id);
-        res.status(200).json({ invites: invites });
+        const invites = await userService.getInvites(req.user.id);
 
-  	} catch (error) {
+        res.status(200).json({ invites });
 
-    	next(error);
+  	} catch (err) {
+
+    	next(err);
 
   	}
 
@@ -104,15 +96,15 @@ async function deleteNotifications(
 
     try {
 
-        const notificationsToDelete = req.body.notificationsToDelete as { notificationIds: number[]}
+        const notificationsToDelete = req.body.notificationsToDelete as { notificationIds: number[] };
 
-        const message = await deleteNotification(req.user.id, notificationsToDelete.notificationIds)
+        await userService.deleteNotification(req.user.id, notificationsToDelete.notificationIds);
 
-        res.status(200).json({ message: message });
+        res.status(200).json({ message: "Notifications have been deleted successfully!" });
 
-  	} catch (error) {
+  	} catch (err) {
 
-    	next(error);
+    	next(err);
 
   	}
 
@@ -126,14 +118,15 @@ async function updateNotifications(
 
 	try {
 
-        const notificationViewUpdates = req.body.notificationViewUpdates as { notificationIds: number[], isViewed:boolean}
-        const newRecords = await updateNotification(req.user.id, notificationViewUpdates)
+        const notificationViewUpdates = req.body.notificationViewUpdates as { notificationIds: number[], isViewed: boolean };
+
+        const newRecords = await userService.updateNotification(req.user.id, notificationViewUpdates);
 
         res.status(200).json({ updatedNotifications: newRecords });
 
-  	} catch (error) {
+  	} catch (err) {
 
-    	next(error);
+    	next(err);
 
   	}
 
@@ -150,9 +143,9 @@ async function getDailyReport(
 		const userId = req.user.id;
 		const report = await userService.getDailyReport(userId);
 
-		res.status(200).json({ report: report });
+		res.status(200).json({ report });
 
-	} catch(err) {
+	} catch (err) {
 
 		next(err);
 
@@ -166,41 +159,24 @@ async function updateUserInviteStatus(
 	next: NextFunction
 ): Promise<void> {
 
-	const inviteStatus: 'accepted' | 'rejected' = req.body.status;
-	const inviteId: number = parseInt(req.params.inviteId);
-
 	try {
+		
+		const inviteStatus: 'accepted' | 'rejected' = req.body.status;
+		const inviteId: number = parseInt(req.params.inviteId);
 
-		if (!inviteStatus) {
+		if (!inviteStatus) throw new AppError("Updated invite status is missing", 400, true);
+		if (!inviteId) throw new AppError("Invite id is missing", 400, true);
+		
+		const inviteInfo = await userService.updateUserInviteStatus(inviteStatus, inviteId);
 
-			res.status(400).json({
-				error: 'inviteStatus is missing'
-			});
+		res.status(200).json({ 
+			message: "Project invitation status changed successfully", 
+			inviteInfo: inviteInfo 
+		});
 
-			return;
+	} catch (err) {
 
-		} else if (!inviteId) {
-
-			res.status(400).json({
-				error: 'inviteId is missing'
-			});
-
-			return;
-
-		} else {
-
-			const inviteInfo = await userService.updateUserInviteStatus(inviteStatus, inviteId);
-
-			res.status(200).json({ 
-				message: 'Project invitation status changed successfully', 
-				inviteInfo: inviteInfo 
-			});
-
-		}
-
-	} catch (error) {
-
-		next(error);
+		next(err);
 
 	}
 
