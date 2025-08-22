@@ -1,14 +1,11 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
-import { 
-	InviteType, 
-	ProjectInvite, 
+import {
 	AppError, 
 	TeamMember,
 	MemberProductivity
 } from '@/types';
-import User from '@/models/user';
 import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue } from '@/queues';
 
@@ -75,10 +72,6 @@ class TeamMemberService {
 		}
 
 	}
-
-
-
-
 
 	async updateTeamMemberRole(
 		projectId: number, 
@@ -168,10 +161,6 @@ class TeamMemberService {
 		memberId: number, 
 		userId: number
 	): Promise<void> {
-
-		if (!projectId) throw new AppError("Project ID is required");
-		if (!memberId) throw new AppError("Member ID is required");
-		if (!userId) throw new AppError("User id ID is required");
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -342,10 +331,6 @@ class TeamMemberService {
         }
     
     }
-
-
-
-    
 
 }
 

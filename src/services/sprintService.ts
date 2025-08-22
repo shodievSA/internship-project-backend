@@ -5,7 +5,8 @@ import {
 	AppError, 
 	FrontSprintAttributes,
     SprintMetaData,
-	SprintDetails
+	SprintDetails,
+    ProjectTask
 } from '@/types';
 import { sendFileToQueue } from '@/queues';
 
@@ -14,18 +15,8 @@ class SprintService {
     async createSprint(projectId: number, sprintInfo: FrontSprintAttributes ) {
         
         const project = await models.Project.findByPk(projectId);
-        const startDate = new Date(sprintInfo.startDate);
-        const endDate = new Date(sprintInfo.endDate);
 
         if (!project) throw new AppError('No such project');
-
-        if (
-			startDate.getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
-			|| 
-			endDate.getTime() < startDate.getTime()
-		) {
-            throw new AppError('Incorrect time intervals');
-        }
 
         const sprint = await models.Sprint.create({
 			...sprintInfo,
@@ -163,7 +154,7 @@ class SprintService {
 
 			if (!sprintsTasks) throw new AppError('Cannot find tasks');
 
-			const tasks: any[] = [];
+			const tasks: ProjectTask[] = [];
 
 			for (const task of sprintsTasks) {
 

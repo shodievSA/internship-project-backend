@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import taskService from '../services/taskService';
-import { AppError } from '@/types';
+import { AppError, TaskInfoFromUser } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
@@ -54,31 +54,29 @@ async function createTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-): Promise<any> {
+): Promise<void> {
 
-	const task: {
-
-		title: string;
-		description: string;
-		priority: string;
-		deadline: string;
-		assignedTo: number;
-		assignedBy: number;
-		projectId: number;
-		sprintId: number;
-
-	} = {
-
+	const task: TaskInfoFromUser = {
+        
 		title: req.body.title,
 		description: req.body.description,
 		priority: req.body.priority,
-		deadline: req.body.deadline,
+		deadline: new Date(req.body.deadline),
 		assignedTo: Number(req.body.assignedTo),
 		assignedBy: Number(req.body.assignedBy),
 		projectId: Number(req.body.projectId),
 		sprintId: Number(req.body.sprintId)
 
 	};
+
+    
+    if (Number.isNaN(task.deadline.getTime())) {
+        throw new AppError('Invalid deadline format', 400);
+    }
+
+    if (task.deadline.getTime() < Date.now()) {
+        throw new AppError('Deadline cannot be in the past', 400);
+    }
 
 	const projectId: number = parseInt(req.params.projectId);
 	const userId = req.user.id;
@@ -98,11 +96,13 @@ async function createTask(
 			const newTask = await taskService.createTask(
 				task, userId, projectId, fileNames, sizes, files
 			);
-			return res.status(201).json({ newTask });
+			res.status(201).json({ newTask });
+            return;
 
 		}
 
-		return res.status(403).json({ message: 'Permission required' });
+		res.status(403).json({ message: 'Permission required' });
+        return;
 
 	} catch (error) {
 
@@ -115,16 +115,16 @@ async function deleteTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
+): Promise<void> {
 	try {
 		const projectId = parseInt(req.params.projectId)
 		const taskId = parseInt(req.params.taskId)
 
 		if (req.memberPermissions?.includes('deleteTasks')) {
 
-			await taskService.deleteTask(req.user.id, projectId, taskId)
-			res.sendStatus(204)
-			return
+			await taskService.deleteTask(req.user.id, projectId, taskId);
+			res.sendStatus(204);
+			return;
 		}
 		throw new AppError('No permission', 403)
 	}
@@ -138,7 +138,7 @@ async function updateTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
+): Promise<void> {
 
 	const projectId = parseInt(req.params.projectId);
 	const taskId = parseInt(req.params.taskId);
@@ -166,7 +166,8 @@ async function updateTask(
 		if (req.memberPermissions?.includes('editTasks')) {
 
 			const result = await taskService.updateTask(taskUpdatePayload);
-			return res.status(200).json({ updatedTask: result });
+			res.status(200).json({ updatedTask: result });
+            return;
 
 		} else {
 
@@ -186,7 +187,7 @@ async function getTaskFiles(
 	req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -196,7 +197,9 @@ async function getTaskFiles(
 
 		const fileAttachments = await taskService.getTaskFiles(taskId);
 
-		return res.status(200).json({ fileUrls: fileAttachments });
+		res.status(200).json({ fileUrls: fileAttachments });
+        
+        return;
 	
 	} catch (error) {
 		next (error);

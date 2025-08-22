@@ -3,10 +3,6 @@ import teamMemberService from '../services/teamMemberService';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
-
-
-
-
 async function changeTeamMemberRole(
 	req: AuthenticatedRequest,
 	res: Response,
@@ -57,6 +53,10 @@ async function removeTeamMember(
 	const memberId: number = parseInt(req.params.memberId);
 	const userId: number = req.user.id;
 
+    if (!projectId) throw new AppError("Project ID is required");
+    if (!memberId) throw new AppError("Member ID is required");
+    if (!userId) throw new AppError("User id ID is required");
+
 	if (!req.memberPermissions?.includes('kickOutTeamMembers')) { // issue
 
 		throw new AppError("You do not have rights to remove team member")
@@ -83,7 +83,7 @@ async function getMemberProductivity(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
-) {
+): Promise<void> {
 
     const projectId = parseInt(req.params.projectId)
     const memberId = parseInt(req.params.memberId)
@@ -97,7 +97,8 @@ async function getMemberProductivity(
         if ( req.memberPermissions?.includes('viewMemberProductivity')){
     
             const result = await teamMemberService.getMemberProductivity(projectId, memberId);
-            return res.status(200).json({productivityData: result})
+            res.status(200).json({productivityData: result})
+            return ;
         }
         else{
             throw new AppError('No permission to edit task')
@@ -107,10 +108,6 @@ async function getMemberProductivity(
     	next (error);
 	}
 }
-
-
-
-
 
 const teamMemberController = {
 	changeTeamMemberRole,

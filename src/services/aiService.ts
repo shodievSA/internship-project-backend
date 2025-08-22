@@ -93,9 +93,7 @@ immediately focus on the user's work plan. Finally, keep your tone friendly and 
 
 class aiService {
   public async Enhance(text: string) {
-    if (text.length < 100) {
-      throw new Error('Not enough content provided');
-    }
+
     const result = await openai.chat.completions.create({
       model: 'anthropic/claude-sonnet-4',
       messages: [
@@ -115,8 +113,8 @@ class aiService {
       },
     });
     const args = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    
     if (!args) {
-
         throw new AppError('AI tool did not return expected result');
     }
 
@@ -126,12 +124,6 @@ class aiService {
   }
 
   public async CreateTitle (description: string) {
-
-    if (description.length < 20) {
-
-      throw new Error('Not enough content provided');
-
-    }
 
     const result = await openai.chat.completions.create({
       model: 'anthropic/claude-sonnet-4',

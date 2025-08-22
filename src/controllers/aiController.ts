@@ -7,43 +7,57 @@ async function enhanceText(
 	req: AuthenticatedRequest, 
 	res: Response, 
 	next: NextFunction
-) {
+): Promise<void> {
 
-	return aiService
-		.Enhance(req.body.text)
-		.then((result: string | undefined) => {
-		return res.status(200).json({ enhancedVersion: result });
-		})
-		.catch((err) => {
+    try { 
+        const text: string = req.body.text; 
+
+        if (text.length < 100) {
+            throw new Error('Not enough content provided');
+        }
+
+        const result: string | undefined = await aiService.Enhance(text);
+        if (result === undefined ) { 
+            throw new AppError("Error in enhancing");
+        }
+        res.status(200).json({ enhancedVersion: result })
+
+    }
+    catch (err) {
+
 		return next(err);
-		});
+        
+	}
 
 }
 
 async function createTitle(
-	req: AuthenticatedRequest, 
-	res: Response, 
-	next: NextFunction
-) {
-    if (!req.body.taskDescription){
-        throw new AppError("Empty fields",429)
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+
+    if (!req.body.taskDescription) {
+      throw new AppError("Empty fields", 429);
     }
-    return aiService
-    .CreateTitle(req.body.taskDescription)
-    .then((result: string | undefined)=> { 
-        if (result === undefined) { 
-            console.log(result)
-            throw new AppError("Something went wrong")
-        }
 
-        return res.status(200).json({ generatedTaskTitle: result })
-    })
-    .catch((err) => {
-		return next(err);
-    });
+    const description = req.body.taskDescription
     
-}
+    if (description.length < 20) {
+      throw new Error('Not enough content provided');
+    }
+    
+    const result = await aiService.CreateTitle(description);
+    if (!result) {
+      throw new AppError("Something went wrong");
+    }
 
+    res.status(200).json({ generatedTaskTitle: result });
+  } catch (err) {
+    next(err);
+  }
+}
 const aiController = {
 	enhanceText,
     createTitle,

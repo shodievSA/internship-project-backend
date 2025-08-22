@@ -85,11 +85,6 @@ class ProjectService {
 	}
 
 	async createProject(userId: number, title: string, position: string): Promise<object> {
-            
-        if ( !title || !position ) { 
-            
-            throw new AppError("Title and Position fields can not be empty")
-        }
 
 		const transaction: Transaction = await sequelize.transaction();
 
@@ -132,8 +127,6 @@ class ProjectService {
 		}
 
 	}
-
-
 
 	async getProjects(userId: number): Promise<FormattedProject[]> {
 
@@ -325,6 +318,8 @@ class ProjectService {
 					}, 
                 ]
 			});
+            
+            if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 
 			const currentMember = await models.ProjectMember.findOne({
 				where: {
@@ -333,7 +328,6 @@ class ProjectService {
 				}
 			});
             
-			if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 			if (!currentMember) throw new AppError("Couldn't find current project member");
             
             const projectMetaData: ProjectMetaData = {

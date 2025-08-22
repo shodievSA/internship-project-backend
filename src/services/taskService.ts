@@ -5,7 +5,8 @@ import {
 	ProjectTask, 
 	AppError, 
 	TaskUpdatePayload,
-	FilesMetaData
+	FilesMetaData,
+    TaskInfoFromUser,
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
@@ -16,6 +17,7 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
+import TaskFiles from '@/models/taskFiles';
 
 class TaskService {
 
@@ -197,36 +199,28 @@ class TaskService {
 	}
 
 	async createTask(
-		task: any, 
+		task: TaskInfoFromUser, 
 		userId: number, 
 		projectId: number, 
 		fileNames: string[], 
 		sizes: number[], 
 		files?: Express.Multer.File[]
-	): Promise<object> {
+	): Promise<ProjectTask> {
 
-		const deadline: Date = new Date(task.deadline);
 		const uploadedFiles: string[] = [];
 
 		const sprint = await models.Sprint.findOne({ where: { id: task.sprintId }});
+        if (!sprint) throw new AppError("Sprint not found", 404);
 
-		if (deadline > sprint!.endDate) throw new AppError('Task deadline cannot exceed the sprint end date');
-		if (deadline < sprint!.startDate) throw new AppError('Task deadline cannot precede the sprint start date');
+		if (task.deadline > sprint.endDate) throw new AppError('Task deadline cannot exceed the sprint end date');
+		if (task.deadline < sprint.startDate) throw new AppError('Task deadline cannot precede the sprint start date');
 
-		if (Number.isNaN(deadline.getTime())) {
-			throw new AppError('Invalid deadline format', 400);
-		}
-
-		if (deadline.getTime() < Date.now()) {
-			throw new AppError('Deadline cannot be in the past', 400);
-		}
-
-		let newTask: any;
-		let assignedBy: any;
-		let assignedTo: any;
-		let project: any;
-		let newTaskHistory: any;
-		let filesMetaData: any = [];
+        let newTask: Task | null = null;
+        let assignedBy: ProjectMember | null = null;
+        let assignedTo: ProjectMember | null = null;
+        let project: Project | null = null;
+        let newTaskHistory: TaskHistory[] = [];
+        let filesMetaData: TaskFiles[] = [];
 
 		const transaction = await sequelize.transaction();
 
@@ -249,7 +243,17 @@ class TaskService {
 				throw new AppError('No such users in project');
 			}
 
-			newTask = await models.Task.create(task,
+			newTask = await models.Task.create({
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                deadline: task.deadline,
+                assignedTo: task.assignedTo,
+                assignedBy: task.assignedBy,
+                fileAttachments: [],
+                projectId: task.projectId,
+                sprintId: task.sprintId
+            },
 				{ transaction }
 			);
 
@@ -273,7 +277,7 @@ class TaskService {
 
 				const upload = files.map(file => {
 
-					const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+					const key = `tasks/${newTask!.id}/${randomUUID()}-${file.filename}`;
 					uploadedFiles.push(key);
 
 					return sendFileToQueue({
@@ -290,7 +294,7 @@ class TaskService {
 				filesMetaData = await Promise.all(
 					uploadedFiles.map((key, i) =>
 						models.TaskFiles.create({ 
-							taskId: newTask.id, 
+							taskId: newTask!.id, 
 							key: key, 
 							fileName: fileNames[i], 
 							size: sizes[i] 
@@ -335,6 +339,7 @@ class TaskService {
 			updatedAt: newTask.updatedAt,
 			description: newTask.description,
 			id: newTask.id,
+            sprintId: task.sprintId,
 			priority: newTask.priority,
 			status: newTask.status,
 			title: newTask.title,
@@ -657,6 +662,7 @@ class TaskService {
                 description: task.description,
                 priority: task.priority,
                 deadline: task.deadline,
+                sprintId:task.sprintId,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,

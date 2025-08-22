@@ -8,7 +8,7 @@ async function leaveProject(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -58,6 +58,10 @@ async function createProject(
 		userPosition: string;
 	};
 
+    if ( !title || !userPosition ) { 
+        throw new AppError("Title and Position fields can not be empty")
+    }
+
 	try {
 
 		try {
@@ -86,10 +90,6 @@ async function createProject(
 	}
 
 }
-
-
-
-
 
 async function updateProject(
 	req: AuthenticatedRequest,
@@ -136,8 +136,6 @@ async function updateProject(
 
 }
 
-
-
 async function getProjects(
 	req: AuthenticatedRequest,
 	res: Response,
@@ -167,8 +165,8 @@ async function getProjectDetails(
 
 	try {
 
-		const userId: any = req.user.id;
-		const projectId = parseInt(req.params.projectId, 10) || req.body.projectId;
+		const userId: number = req.user.id;
+		const projectId = parseInt(req.params.projectId);
 
 		const projectDetails: ProjectDetails = await projectService.getProjectDetails(
 			userId,
@@ -278,7 +276,7 @@ async function getProjectInvites(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
-) {
+): Promise<void> {
     
     const projectId = parseInt(req.params.projectId);
 
@@ -289,7 +287,8 @@ async function getProjectInvites(
         if ( req.memberPermissions?.includes('getProjectInvites')) {
     
             const invites = await projectService.getProjectInvites(projectId);
-            return res.status(200).json({ projectInvites: invites });
+            res.status(200).json({ projectInvites: invites });
+            return;
 
         } else {
             
@@ -309,7 +308,7 @@ async function getProjectTeam(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction  
-) {
+):Promise<void> {
     
     const projectId = parseInt(req.params.projectId);
 	const userId = req.user.id;
@@ -319,7 +318,8 @@ async function getProjectTeam(
     try {
         
         const team = await projectService.getProjectTeam(projectId);
-        return res.status(200).json({ team: team });
+        res.status(200).json({ team: team });
+        return;
 
     } catch(error) { 
 	
@@ -328,10 +328,6 @@ async function getProjectTeam(
     }
 
 }
-
-
-
-
 
 const projectController = {
 	leaveProject,

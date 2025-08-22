@@ -33,7 +33,7 @@ export interface FilesMetaData {
 
 export interface ProjectTask { 
     id: number;
-    title: string | null;
+    title: string;
     description: string;
     priority: 'low' | 'high' | 'middle';
     deadline: Date;

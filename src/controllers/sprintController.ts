@@ -9,11 +9,20 @@ async function createSprint(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction  
-) {
+): Promise<void> {
     const projectId = parseInt(req.params.projectId);
-    const sprintInfo = req.body.sprint;
-
     if (!projectId) throw new AppError('Empty input');
+
+    const sprintInfo = req.body.sprint;
+    
+        if (
+			new Date(sprintInfo.startDate).getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
+			|| 
+			new Date(sprintInfo.endDate).getTime() < new Date(sprintInfo.startDate).getTime()
+		) {
+            throw new AppError('Incorrect time intervals');
+        }
+
     
     if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)) { 
         throw new AppError('Invalid fields in request body');
@@ -24,7 +33,8 @@ async function createSprint(
         if (req.memberPermissions?.includes('assignTasks')) {
 
             const sprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
-            return res.status(200).json({ newSprint: sprint });
+            res.status(200).json({ newSprint: sprint });
+            return;
 
         }
 
