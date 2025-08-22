@@ -215,7 +215,7 @@ class AiService {
 
 		const result = await openai.chat.completions.create({
 
-			model: 'anthropic/claude-sonnet-4',
+			model: 'qwen/qwen3-coder:free',
 
 			messages: [
 
