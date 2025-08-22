@@ -5,7 +5,8 @@ import {
 	ProjectTask, 
 	AppError, 
 	TaskUpdatePayload,
-	FilesMetaData
+	FilesMetaData,
+    TaskInfoFromUser,
 } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Task from '@/models/task';
@@ -16,6 +17,7 @@ import { GmailType } from '../services/gmaiService';
 import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
+import TaskFiles from '@/models/taskFiles';
 
 class TaskService {
 
@@ -174,33 +176,30 @@ class TaskService {
 	}
 
 	async createTask(
-		task: any, 
+		task: TaskInfoFromUser, 
 		userId: number, 
 		projectId: number, 
 		fileNames: string[], 
 		sizes: number[], 
 		files?: Express.Multer.File[]
-	): Promise<object> {
+	): Promise<ProjectTask> {
 
 		try {
 
-			const deadline: Date = new Date(task.deadline);
 			const uploadedFiles: string[] = [];
 
 			const sprint = await models.Sprint.findOne({ where: { id: task.sprintId }});
 
 			if (!sprint) throw new AppError(`Failed to find sprint with id ${task.sprintId}`, 404, true);
-			if (deadline > sprint.endDate) throw new AppError("Task deadline can't exceed the sprint end date", 400, true);
-			if (deadline < sprint.startDate) throw new AppError("Task deadline can't precede the sprint start date", 400, true);
-			if (Number.isNaN(deadline.getTime())) throw new AppError("Invalid deadline date", 400, true);
-			if (deadline.getTime() < Date.now()) throw new AppError("Deadline can't be in the past", 400, true);
+			if (task.deadline > sprint.endDate) throw new AppError("Task deadline can't exceed the sprint end date", 400, true);
+			if (task.deadline < sprint.startDate) throw new AppError("Task deadline can't precede the sprint start date", 400, true);
 
-			let newTask: any;
-			let assignedBy: any;
-			let assignedTo: any;
-			let project: any;
-			let newTaskHistory: any;
-			let filesMetaData: any = [];
+			let newTask: Task | null = null;
+			let assignedBy: ProjectMember | null = null;
+			let assignedTo: ProjectMember | null = null;
+			let project: Project | null = null;
+			let newTaskHistory: TaskHistory[] = [];
+			let filesMetaData: TaskFiles[] = [];
 
 			const transaction = await sequelize.transaction();
 
@@ -223,7 +222,21 @@ class TaskService {
 					throw new AppError("Failed to find either the assignee or assigner", 404, true);
 				}
 	
-				newTask = await models.Task.create(task, { transaction });
+				newTask = await models.Task.create(
+					{
+						title: task.title,
+						description: task.description,
+						priority: task.priority,
+						deadline: task.deadline,
+						assignedTo: task.assignedTo,
+						assignedBy: task.assignedBy,
+						fileAttachments: [],
+						projectId: task.projectId,
+						sprintId: task.sprintId
+					}, 
+					{ transaction }
+				);
+
 				project = await models.Project.findByPk(projectId, { attributes: ['title'] });
 	
 				const history = await models.TaskHistory.create(
@@ -242,7 +255,7 @@ class TaskService {
 	
 					const upload = files.map(file => {
 	
-						const key = `tasks/${newTask.id}/${randomUUID()}-${file.filename}`;
+						const key = `tasks/${newTask!.id}/${randomUUID()}-${file.filename}`;
 						uploadedFiles.push(key);
 	
 						return sendFileToQueue({
@@ -259,7 +272,7 @@ class TaskService {
 					filesMetaData = await Promise.all(
 						uploadedFiles.map((key, i) =>
 							models.TaskFiles.create({ 
-								taskId: newTask.id, 
+								taskId: newTask!.id, 
 								key: key, 
 								fileName: fileNames[i], 
 								size: sizes[i] 
@@ -304,6 +317,7 @@ class TaskService {
 				updatedAt: newTask.updatedAt,
 				description: newTask.description,
 				id: newTask.id,
+				sprintId: task.sprintId,
 				priority: newTask.priority,
 				status: newTask.status,
 				title: newTask.title,
@@ -633,6 +647,7 @@ class TaskService {
                 description: task.description,
                 priority: task.priority,
                 deadline: task.deadline,
+                sprintId:task.sprintId,
                 assignedBy: {
                     id: task.assignedByMember.id,
                     name: task.assignedByMember.user.fullName,

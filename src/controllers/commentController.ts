@@ -31,7 +31,7 @@ interface DeleteCommentMsg {
 
 type IncomingMsg = JoinCommentSectionMsg | NewCommentMsg | UpdateCommentMsg | DeleteCommentMsg;
 
-export function handleCommentWSConnection(ws: WSWebSocket) {
+export function handleCommentWSConnection(ws: WSWebSocket): void {
 
 	let joinedTaskId: number | null = null;
 
@@ -116,7 +116,7 @@ export function handleCommentWSConnection(ws: WSWebSocket) {
 
 export const commentController = {
 
-	async getAll(req: Request, res: Response, next: NextFunction) {
+	async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
 
 		try {
 
@@ -133,7 +133,7 @@ export const commentController = {
 
 	},
 
-	async create(req: Request, res: Response, next: NextFunction) {
+	async create(req: Request, res: Response, next: NextFunction): Promise<void> {
 
 		try {
 
@@ -156,7 +156,7 @@ export const commentController = {
 
 	},
 
-	async update(req: Request, res: Response, next: NextFunction) {
+	async update(req: Request, res: Response, next: NextFunction): Promise<void> {
 
 		try {
 
@@ -168,7 +168,10 @@ export const commentController = {
 				message
 			);
 
-			if (!comment) return res.status(404).json({ message: "Comment not found" });
+			if (!comment) {
+                res.status(404).json({ message: "Comment not found" })
+                return
+            }
 
 			res.json(comment);
 
@@ -180,7 +183,7 @@ export const commentController = {
 
 	},
 
-	async remove(req: Request, res: Response, next: NextFunction) {
+	async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
 
 		try {
 
@@ -190,7 +193,10 @@ export const commentController = {
 				Number(commentId)
 			);
 
-			if (!deleted) return res.status(404).json({ message: "Comment not found" });
+			if (!deleted) {
+                res.status(404).json({ message: "Comment not found" })
+                return
+            }
 
 			res.status(204).send();
 

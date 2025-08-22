@@ -7,21 +7,21 @@ async function enhanceText(
 	req: AuthenticatedRequest, 
 	res: Response, 
 	next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
-		const { text } = req.body;
+		const text: string = req.body.text;
 
 		if (text.trim().length < 100) throw new AppError("The text is too small", 400, true);
 
-		const enhancedText = await aiService.enhanceText(text);
+		const enhancedVersion = await aiService.enhanceText(text);
 		
-		return res.status(200).json({ enhancedVersion: enhancedText });
+		res.status(200).json({ enhancedVersion });
 
 	} catch (err) {
 
-		return next(err);
+		next(err);
 
 	}
 
@@ -31,25 +31,25 @@ async function generateTaskTitle(
 	req: AuthenticatedRequest, 
 	res: Response, 
 	next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
-		const { taskDescription } = req.body;
+		const taskDescription: string = req.body.taskDescription;
 
 		if (!taskDescription) throw new AppError("Task description is missing", 400, true);
 		if (taskDescription.trim().length < 20) throw new AppError("Task description is too small", 400, true);
 
-		const taskTitle = await aiService.generateTaskTitle(taskDescription);
+		const generatedTaskTitle = await aiService.generateTaskTitle(taskDescription);
 
-		return res.status(200).json({ generatedTaskTitle: taskTitle });
+		res.status(200).json({ generatedTaskTitle });
 
 	} catch (err) {
 
-		return next(err);
+		next(err);
 
 	}
-    
+
 }
 
 const aiController = {

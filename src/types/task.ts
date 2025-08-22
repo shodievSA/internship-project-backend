@@ -23,3 +23,15 @@ export type TaskUpdatePayload = {
 	fileNames: string[],
 	updatedTaskProps: Partial<TaskAttributes>,
 }
+
+export interface TaskInfoFromUser {
+    title: string;
+    description: string;
+    priority: 'low' | 'high' | 'middle';
+    deadline: Date;
+    assignedTo: number;
+    assignedBy: number;
+    projectId: number;
+    sprintId: number;
+
+}

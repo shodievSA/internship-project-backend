@@ -84,7 +84,7 @@ async function getMemberProductivity(
     req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -103,7 +103,7 @@ async function getMemberProductivity(
 		
 			const result = await teamMemberService.getMemberProductivity(projectId, memberId);
 
-			return res.status(200).json({ productivityData: result });
+			res.status(200).json({ productivityData: result });
 
 		}
 

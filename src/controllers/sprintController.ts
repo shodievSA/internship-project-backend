@@ -9,7 +9,7 @@ async function createSprint(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction  
-) {
+): Promise<void> {
 
 	try {
 
@@ -23,13 +23,22 @@ async function createSprint(
 			const sprintInfo = req.body.sprint;
 	
 			if (!projectId) throw new AppError("Project id is missing", 400, true);
+
 			if (!hasOnlyKeysOfB(sprintInfo, models.Sprint)) { 
 				throw new AppError("Invalid fields in request body", 400, true);
 			}
 
-			const sprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
+			if (
+				new Date(sprintInfo.startDate).getTime() < (Date.now() - 24 * 60 * 60 * 1000) 
+				|| 
+				new Date(sprintInfo.endDate).getTime() < new Date(sprintInfo.startDate).getTime()
+			) {
+				throw new AppError("Invalid time intervals", 400, true);
+			}
 
-			return res.status(200).json({ newSprint: sprint });
+			const newSprint = await sprintService.createSprint(projectId, sprintInfo as FrontSprintAttributes);
+
+			res.status(200).json({ newSprint });
 
 		}
 

@@ -7,7 +7,7 @@ async function leaveProject(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -139,7 +139,7 @@ async function getProjectDetails(
 
 	try {
 
-		const userId: any = req.user.id;
+		const userId: number = req.user.id;
 		const projectId = parseInt(req.params.projectId);
 
 		const projectDetails: ProjectDetails = await projectService.getProjectDetails(userId, projectId);
@@ -232,7 +232,7 @@ async function getProjectInvites(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -248,7 +248,7 @@ async function getProjectInvites(
 
 			const invites = await projectService.getProjectInvites(projectId);
 
-			return res.status(200).json({ projectInvites: invites });
+			res.status(200).json({ projectInvites: invites });
 
 		}
 
@@ -264,7 +264,7 @@ async function getProjectTeam(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction  
-) {
+): Promise<void> {
 
 	try {
 
@@ -274,7 +274,7 @@ async function getProjectTeam(
 
 		const team = await projectService.getProjectTeam(projectId);
 
-        return res.status(200).json({ team });
+        res.status(200).json({ team });
 
 	} catch (err) {
 

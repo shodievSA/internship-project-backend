@@ -41,6 +41,6 @@ async function getMyProductivityData(
 
 	}
 
-};
+}
 
 export default { getMyProductivityData }; 

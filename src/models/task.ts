@@ -37,12 +37,12 @@ export interface TaskAttributes {
 	deadline: Date | string;
 	assignedBy: number;
 	assignedTo: number;
-	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
 	projectId: number;
-	fileAttachments: FileAttachments;
-	createdAt: Date | string;
     sprintId: number;
-    updatedAt: Date | string;
+	fileAttachments?: FileAttachments;
+	createdAt?: Date | string;
+    updatedAt?: Date | string;
 }
 
 class Task extends Model<

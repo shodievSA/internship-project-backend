@@ -1,9 +1,9 @@
-import amqp, { type Channel } from 'amqplib';
+import amqp, { type Channel, type ChannelModel } from 'amqplib';
 import { AppError } from '@/types';
 
 const rabbitmqUrl = process.env.RABBITMQ_URL!;
 
-let connection: any = null;
+let connection: ChannelModel | null = null;
 const queueChannels = new Map<string, Channel>();
 
 export async function getQueueChannel(queueName: string): Promise<Channel> {
