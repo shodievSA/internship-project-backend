@@ -1,5 +1,6 @@
 import type { Channel, ConsumeMessage } from 'amqplib';
 import { GmailSenderFactory, GmailType } from '@/services/gmaiService';
+import { logger } from '@/config/logger';
 
 export function consumeEmailQueue(channel: Channel): void {
 
@@ -10,26 +11,25 @@ export function consumeEmailQueue(channel: Channel): void {
         try {
 
             const {
-
                 type,
                 receiverEmail,
                 params
-
             }: {
-
                 type: GmailType;
                 receiverEmail: string;
                 params: any;
-
             } = JSON.parse(msg.content.toString());
 
             await GmailSenderFactory.sendGmail(type).sendGmail(receiverEmail, params);
 
             channel.ack(msg);       
             
-        } catch (error) {
+        } catch (err) {
 
-            console.error('Error processing email message:', error);
+			logger.error({
+				message: "error occured while processing email queue",
+				error: err
+			});
             channel.nack(msg, false, false); 
             
         }

@@ -258,9 +258,8 @@ export async function startCronJobs() {
 			timezone: "Asia/Tashkent"
 		}
 	); 
-
-	// Temporarily disabled to prevent OpenAI API errors during startup
-	// await generateReport();
+	
+	await generateReport();
 
 }
 

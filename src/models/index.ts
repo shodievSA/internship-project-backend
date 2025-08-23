@@ -293,12 +293,14 @@ export default async function initDB() {
 
 		await sequelize.authenticate();
 		await sequelize.sync({ force: false });
+
 		initAssociations();
+		
 		await seedRoles();
 		await seedPermissions();
 		await seedRolePermissions();
 
-		logger.log("info", "Database synchronized successfully");
+		logger.info("Database synchronized successfully");
 
 	} catch (err) {
 

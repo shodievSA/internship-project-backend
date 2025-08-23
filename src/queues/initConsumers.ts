@@ -11,10 +11,9 @@ export async function initConsumers() {
 		const fileChannel = await getQueueChannel('file_uploader');
 		consumeFileQueue(fileChannel);
 
-	} catch (error) {
+	} catch (err) {
 
-		console.error('Failed to initialize consumers:', error);
-		process.exit(1);
+		throw err;
 
 	}
     

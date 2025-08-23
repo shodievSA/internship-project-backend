@@ -3,8 +3,8 @@ import ProjectMember from '../models/projectMember';
 import Role from '../models/role';
 import Permission from '../models/permission';
 import { Model } from 'sequelize';
+import { AppError } from '@/types';
 
-// Extend Express Request type to include memberPermissions
 declare global {
     namespace Express {
         interface Request {
@@ -26,24 +26,25 @@ export const getMemberPermissions = async (
     res: Response,
     next: NextFunction
 ): Promise<void> => {
+
     try {
-        // Get project ID from request params or body
+        
         const projectId = req.params.projectId || req.body.projectId;
 
         if (!projectId) {
-            res.status(400).json({ message: 'Project ID is required' });
-            return;
+
+			throw new AppError("Project id is missing", 400, true);
+
         }
 
-        // Get the authenticated user's ID
         const userId = (req.user as any)?.id;
 
         if (!userId) {
-            res.status(401).json({ message: 'User not authenticated' });
-            return;
+
+            throw new AppError("You aren't authenticated. Try to relogin.", 403, true);
+
         }
 
-        // Find the project member record
         const projectMember = await ProjectMember.findOne({
             where: {
                 projectId: projectId,
@@ -55,7 +56,7 @@ export const getMemberPermissions = async (
                     include: [
                         {
                             model: Permission,
-                            through: { attributes: [] }, // Exclude junction table attributes
+                            through: { attributes: [] },
                         },
                     ],
                 },
@@ -63,24 +64,23 @@ export const getMemberPermissions = async (
         }) as ProjectMemberModel | null;
 
         if (!projectMember) {
-            res.status(404).json({ message: 'Project member not found' });
-            return;
+
+            throw new AppError("Project member not found", 404, true);
+
         }
 
-        // Extract permissions from the role
         const permissions = projectMember.Role?.Permissions?.map(
             (permission) => permission.name
         ) || [];
 
-        console.log('User Permissions:', permissions); // Log 4: Check final permissions
-
-
-        // Attach permissions to request object
         req.memberPermissions = permissions;
 
         next();
-    } catch (error) {
-        console.error('Error in getMemberPermissions middleware:', error);
-        res.status(500).json({ message: 'Internal server error' });
+
+    } catch (err) {
+
+        next(err);
+
     }
+
 }; 

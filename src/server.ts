@@ -21,13 +21,16 @@ async function main() {
 
 		server.listen(PORT, () => {
 
-			logger.log("info", `Server is running at http://localhost:${PORT}`);
+			logger.info(`server is running at http://localhost:${PORT}`);
 
 		});
 
 	} catch (err) {
 
-		logger.error("Failed to start the server: ", err);
+		logger.error({
+			message: "failed to start the server",
+			error: err
+		});
 
 	}
 

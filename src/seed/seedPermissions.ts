@@ -1,3 +1,4 @@
+import { logger } from '@/config/logger';
 import Permission from '../models/permission';
 
 const permissionEnum = [
@@ -19,7 +20,21 @@ const permissionEnum = [
 ];
 
 export default async function seedPermissions() {
-  for (const permission of permissionEnum) {
-    await Permission.findOrCreate({ where: { name: permission } });
-  }
+
+	try {
+
+		for (const permission of permissionEnum) {
+	
+			await Permission.findOrCreate({ where: { name: permission } });
+	
+		}
+
+		logger.info("permissions seeded successfully")
+
+	} catch (err) {
+
+		throw err;
+
+	}
+
 };
