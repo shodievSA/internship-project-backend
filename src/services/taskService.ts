@@ -230,7 +230,6 @@ class TaskService {
 						deadline: task.deadline,
 						assignedTo: task.assignedTo,
 						assignedBy: task.assignedBy,
-						fileAttachments: [],
 						projectId: task.projectId,
 						sprintId: task.sprintId
 					}, 
