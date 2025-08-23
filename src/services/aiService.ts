@@ -87,7 +87,7 @@ class AiService {
 		try {
 	
 			const result = await openai.chat.completions.create({
-				model: 'anthropic/claude-sonnet-4',
+				model: 'qwen/qwen3-coder:free',
 				messages: [
 					{ role: 'system', content: sysPromptForTextEnhacement },
 					{ role: 'user', content: text },
@@ -126,7 +126,7 @@ class AiService {
 		try {
 
 			const result = await openai.chat.completions.create({
-				model: 'anthropic/claude-sonnet-4',
+				model: 'qwen/qwen3-coder:free',
 				messages: [
 					{ role: 'system', content: sysPromptForTaskTitleGeneration },
 					{ role: 'user', content: taskDescription },
@@ -165,7 +165,7 @@ class AiService {
 		try {
 
 			const result = await openai.chat.completions.create({
-				model: 'anthropic/claude-sonnet-4',
+				model: 'qwen/qwen3-coder:free',
 				messages: [
 					{ role: 'system', content: sysPromptForWorkPlanSummaryGeneration },
 					{ role: 'user', content: 'Generate a summary report based on the following data:' + '\n\n```json\n' + JSON.stringify(report, null, 2) + '\n```' }
