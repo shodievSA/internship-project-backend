@@ -17,7 +17,7 @@ import Invite from './invites';
 import TaskFiles from './taskFiles';
 import Sprint from './sprint';
 import TimeEntry from './timeEntry';
-import { logger } from '@/app';
+import { logger } from '@/config/logger';
 
 interface Models {
 	User: typeof User;

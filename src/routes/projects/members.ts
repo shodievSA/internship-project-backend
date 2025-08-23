@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from "express";
-import teamMemberController from "../../../../controllers/teamMemberController";
-import projectController from "../../../../controllers/projectController";
+import teamMemberController from "../../controllers/teamMemberController";
+import projectController from "../../controllers/projectController";
 
 const {
 	changeTeamMemberRole,

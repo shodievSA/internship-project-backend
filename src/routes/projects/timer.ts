@@ -1,6 +1,6 @@
 import { RequestHandler, Router } from 'express';
-import timeTrackingController from '../../../../controllers/timeTrackingController';
-import isAuthenticated from '../../../../middlewares/isAuthenticated';
+import timeTrackingController from '../../controllers/timeTrackingController';
+import isAuthenticated from '../../middlewares/isAuthenticated';
 
 const router = Router();
 

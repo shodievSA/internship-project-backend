@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import app from './app';
-import { logger } from './app';
+import { logger } from './config/logger';
 import initDB from './models';
 import { initConsumers } from './queues/initConsumers';
 import { startCronJobs } from './services/cronService';
