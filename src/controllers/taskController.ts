@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import taskService from '../services/taskService';
-import { AppError } from '@/types';
+import { AppError, TaskInfoFromUser } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 import { hasOnlyKeysOfB } from '@/middlewares/isCorrectKeys';
 import { models } from '@/models';
@@ -47,7 +47,7 @@ async function createTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-): Promise<any> {
+): Promise<void> {
 
 	try {
 
@@ -57,20 +57,11 @@ async function createTask(
 
 		} else {
 
-			const task: {
-				title: string;
-				description: string;
-				priority: string;
-				deadline: string;
-				assignedTo: number;
-				assignedBy: number;
-				projectId: number;
-				sprintId: number;
-			} = {
+			const task: TaskInfoFromUser = {
 				title: req.body.title,
 				description: req.body.description,
 				priority: req.body.priority,
-				deadline: req.body.deadline,
+				deadline: new Date(req.body.deadline),
 				assignedTo: Number(req.body.assignedTo),
 				assignedBy: Number(req.body.assignedBy),
 				projectId: Number(req.body.projectId),
@@ -78,9 +69,15 @@ async function createTask(
 			};
 
 			if (!hasOnlyKeysOfB(task, models.Task)) {
+				throw new AppError("Invalid fields have been provided in the request body", 400, true);
+			}
 
-				throw new AppError('Invalid fields have been provided in the request body', 400, true);
+			if (Number.isNaN(task.deadline.getTime())) {
+				throw new AppError("Invalid deadline format", 400);
+			}
 
+			if (task.deadline.getTime() < Date.now()) {
+				throw new AppError("Deadline cannot be in the past", 400);
 			}
 
 			const projectId: number = parseInt(req.params.projectId);
@@ -92,7 +89,7 @@ async function createTask(
 
 			const newTask = await taskService.createTask(task, userId, projectId, fileNames, sizes, files);
 
-			return res.status(201).json({ newTask });
+			res.status(201).json({ newTask });
 
 		}
 
@@ -108,8 +105,8 @@ async function deleteTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
-
+): Promise<void> {
+	
 	try {
 
 		if (!req.memberPermissions?.includes('deleteTasks')) {
@@ -139,7 +136,7 @@ async function updateTask(
 	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -177,7 +174,7 @@ async function updateTask(
 
 			const updatedTask = await taskService.updateTask(taskUpdatePayload);
 
-			return res.status(200).json({ updatedTask });
+			res.status(200).json({ updatedTask });
 
 		}
 
@@ -193,7 +190,7 @@ async function getTaskFiles(
 	req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
-) {
+): Promise<void> {
 
 	try {
 
@@ -203,7 +200,9 @@ async function getTaskFiles(
 
 		const fileAttachments = await taskService.getTaskFiles(taskId);
 
-		return res.status(200).json({ fileUrls: fileAttachments });
+		res.status(200).json({ fileUrls: fileAttachments });
+        
+        return;
 	
 	} catch (err) {
 

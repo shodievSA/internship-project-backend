@@ -258,7 +258,7 @@ export async function startCronJobs() {
 			timezone: "Asia/Tashkent"
 		}
 	); 
-
+	
 	await generateReport();
 
 }

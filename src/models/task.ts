@@ -12,7 +12,6 @@ import ProjectMember from './projectMember';
 import Comment from './comment';
 import TaskHistory from './taskHistory';
 import TaskFiles from './taskFiles';
-import { FileObject } from 'openai/resources';
 import { models } from '.';
 import { HasManyGetAssociationsMixin } from 'sequelize';
 
@@ -25,11 +24,6 @@ export interface TaskAssociations {
 	taskFiles: TaskFiles[];
 }
 
-export interface FileAttachments {
-	deleted: number[];
-	new: FileObject[];
-}
-
 export interface TaskAttributes { 
 	title: string;
 	description: string;
@@ -37,12 +31,11 @@ export interface TaskAttributes {
 	deadline: Date | string;
 	assignedBy: number;
 	assignedTo: number;
-	status: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
+	status?: 'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue';
 	projectId: number;
-	fileAttachments: FileAttachments;
-	createdAt: Date | string;
     sprintId: number;
-    updatedAt: Date | string;
+	createdAt?: Date | string;
+    updatedAt?: Date | string;
 }
 
 class Task extends Model<
@@ -58,7 +51,6 @@ class Task extends Model<
 	declare assignedTo: number;
 	declare status: CreationOptional<'ongoing' | 'closed' | 'rejected' | 'under review' | 'overdue'>;
 	declare projectId: number;
-	declare fileAttachments: string[];
     declare sprintId: number;
 	declare createdAt: CreationOptional<Date>;
 	declare updatedAt: CreationOptional<Date>;
@@ -133,10 +125,6 @@ Task.init(
 				key: 'id'
 			},
 			onDelete: "CASCADE"
-		},
-		fileAttachments: {
-			type: DataTypes.JSONB,
-			allowNull: true,
 		},
         sprintId:{
             type: DataTypes.INTEGER,

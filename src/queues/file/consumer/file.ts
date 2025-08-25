@@ -1,16 +1,14 @@
 import type { Channel, ConsumeMessage } from 'amqplib';
 import fileHandler from '@/services/fileService';
-import { AppError } from '@/types';
 import fs from 'fs';
 import { rmTaskFileUploads } from '@/utils/rmTaskFileUploads';
+import { logger } from '@/config/logger';
 
 type FileUploadPayload = {
-
     key: string | string[];
     contentType?: string | string[];
     action: 'upload' | 'edit' | 'remove';
     filePath?: string | string[];
-
 };
 
 export function consumeFileQueue(channel: Channel): void {
@@ -22,12 +20,10 @@ export function consumeFileQueue(channel: Channel): void {
         try {
 
             const {
-
                 key,
                 contentType,
                 action,
                 filePath
-
             }: FileUploadPayload = JSON.parse(msg.content.toString());
 
             if (action === 'upload') {
@@ -37,11 +33,9 @@ export function consumeFileQueue(channel: Channel): void {
                 const contentTypes = Array.isArray(contentType) ? contentType : [contentType];
 
                 const files = keys.map((k, i) => ({
-
                     key: k,
                     stream: fs.createReadStream(paths[i]!),
                     contentType: contentTypes[i]!,
-
                 }));
 
                 await fileHandler.uploadfile(files);
@@ -84,9 +78,12 @@ export function consumeFileQueue(channel: Channel): void {
 
             }
             
-        } catch (error) {
+        } catch (err) {
 
-            console.error('Error processing file upload:', error);
+            logger.error({
+				message: "error occured while processing file queue", 
+				error: err
+			});
             channel.nack(msg, false, false); 
             
         }

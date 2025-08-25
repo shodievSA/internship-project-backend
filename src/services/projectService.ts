@@ -319,6 +319,8 @@ class ProjectService {
 					}, 
                 ]
 			});
+            
+            if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
 
 			const currentMember = await models.ProjectMember.findOne({
 				where: {

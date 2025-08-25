@@ -1,9 +1,9 @@
 import { Router, RequestHandler } from 'express';
 import { isProjectUpdateValid } from '@/middlewares/areUpdatedPropsValid';
 import memberRouter from './members';
-import projectController from '../../../../controllers/projectController';
-import memberProductivityController from '../../../../controllers/memberProductivityController';
-import { getMemberPermissions } from "../../../../middlewares/getMemberPermissions";
+import projectController from '../../controllers/projectController';
+import memberProductivityController from '../../controllers/memberProductivityController';
+import { getMemberPermissions } from "../../middlewares/getMemberPermissions";
 import taskRouter from './tasks'
 import inviteRouter from './invites';
 import sprintRouter from './sprints'

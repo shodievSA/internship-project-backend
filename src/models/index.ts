@@ -17,6 +17,7 @@ import Invite from './invites';
 import TaskFiles from './taskFiles';
 import Sprint from './sprint';
 import TimeEntry from './timeEntry';
+import { logger } from '@/config/logger';
 
 interface Models {
 	User: typeof User;
@@ -289,17 +290,22 @@ export function initAssociations() {
 export default async function initDB() {
 
 	try {
+
 		await sequelize.authenticate();
 		await sequelize.sync({ force: false });
+
 		initAssociations();
+		
 		await seedRoles();
 		await seedPermissions();
 		await seedRolePermissions();
 
-		console.log('Database synchronized successfully.');
+		logger.info("Database synchronized successfully");
 
-	} catch (error) {
-		console.error('Failed to initialize DB:', error);
+	} catch (err) {
+
+		throw err;
+
 	}
 
 }

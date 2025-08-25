@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RequestHandler } from 'express';
-import summaryController from '../../../../controllers/summaryController';
-import isAuthenticated from '../../../../middlewares/isAuthenticated';
+import summaryController from '../../controllers/summaryController';
+import isAuthenticated from '../../middlewares/isAuthenticated';
 
 const router = Router({ mergeParams: true });
 

@@ -1,9 +1,9 @@
-import amqp, { type Channel } from 'amqplib';
-import { AppError } from '@/types';
+import amqp, { type Channel, type ChannelModel } from 'amqplib';
+import { logger } from './logger';
 
 const rabbitmqUrl = process.env.RABBITMQ_URL!;
 
-let connection: any = null;
+let connection: ChannelModel | null = null;
 const queueChannels = new Map<string, Channel>();
 
 export async function getQueueChannel(queueName: string): Promise<Channel> {
@@ -28,14 +28,16 @@ export async function getQueueChannel(queueName: string): Promise<Channel> {
 
         queueChannels.set(queueName, channel);
 
-        console.log(`Connected to RabbitMQ and asserted queue: "${queueName}"`);
+        logger.info(`connected successfully to rabbitmq and asserted queue: "${queueName}"`);
+
         return channel;
 
-    } catch (error) {
+    } catch (err) {
 
-        throw new AppError(`Failed to connect to RabbitMQ or assert queue "${queueName}"`);
+        throw err;
 
     }
+
 }
 
 function initGracefulShutdown(): void {
@@ -58,11 +60,11 @@ function initGracefulShutdown(): void {
 
             }
 
-            console.log('RabbitMQ connection and channels closed successfully.');
+            logger.info("rabbitmq connection and channels closed successfully");
 
-        } catch (error) {
+        } catch (err) {
 
-            throw new AppError('Failed to shutdown RabbitMQ connection and channels', 500);
+            throw err;
 
         } finally {
 

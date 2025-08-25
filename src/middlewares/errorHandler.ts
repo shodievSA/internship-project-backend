@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { AppError } from '@/types/customError';
-import { logger } from '@/app';
+import { logger } from '@/config/logger';
 
 const errorHandler: ErrorRequestHandler = (
 	err: Error,
@@ -17,9 +17,13 @@ const errorHandler: ErrorRequestHandler = (
 	});
 
 	if (err instanceof AppError && err.isOperational) {
-		res.status(err.statusCode).json({ message: err.message });
+
+		res.status(err.statusCode).json({ error: err.message });
+
 	} else {
-		res.status(500).json({ message: "Unexpected internal server error occured" });
+
+		res.status(500).json({ error: "Unexpected internal server error occured while processing your request!" });
+		
 	}
 
 }

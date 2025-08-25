@@ -1,6 +1,6 @@
-import taskController from "../../../../controllers/taskController";
+import taskController from "../../controllers/taskController";
 import { RequestHandler, Router } from "express";
-import { commentController } from '../../../../controllers/commentController';
+import { commentController } from '../../controllers/commentController';
 import { upload } from '@/middlewares/fileUploads';
 
 const router = Router({ mergeParams: true });

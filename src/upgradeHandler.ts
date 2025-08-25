@@ -6,10 +6,26 @@ import { handleCommentWSConnection } from './controllers/commentController';
 import { handleNotificationWSConnection } from './services/notificationWSService';
 
 const wss = new WebSocketServer({ noServer: true });
-const notificationWSS = new WebSocketServer({ noServer: true });
 
-wss.on('connection', handleCommentWSConnection);
-notificationWSS.on('connection', handleNotificationWSConnection);
+wss.on('connection', (ws: WSWebSocket, request: IncomingMessage) => {
+
+	const url = request.url;
+	
+	if (url?.startsWith('/comments')) {
+
+		handleCommentWSConnection(ws);
+
+	} else if (url?.startsWith('/notifications')) {
+
+		handleNotificationWSConnection(ws);
+
+	} else {
+
+		ws.close(1008, 'Invalid endpoint');
+
+	}
+
+});
 
 export const taskConnectionsMap: Map<number, Set<WSWebSocket>> = new Map();
 export const notificationConnectionsMap: Map<number, WSWebSocket> = new Map();
@@ -19,26 +35,23 @@ export function handleUpgrade(
 	socket: Duplex, 
 	head: Buffer
 ) {
-
-	if (request.url && request.url.startsWith('/comments')) {
 	
+	if (
+		request.url && (request.url.startsWith('/comments') 
+		|| 
+		request.url.startsWith('/notifications')
+	)) {
+
 		wss.handleUpgrade(request, socket, head, (ws) => {
 			wss.emit('connection', ws, request);
-		});
-
-	} else if (request.url && request.url.startsWith('/notifications')) {
-
-		notificationWSS.handleUpgrade(request, socket, head, (ws) => { 
-			notificationWSS.emit('connection', ws, request)
 		});
 
 	} else {
 
 		socket.destroy();
-
+		
 	}
 
-};
+}
 
 export { wss };
-export { notificationWSS };
