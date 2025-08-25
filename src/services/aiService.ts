@@ -5,7 +5,6 @@ import { FunctionDefinition } from 'openai/resources';
 import type { ChatCompletion } from 'openai/resources/chat/completions';
 
 const enhanceTextFunction: FunctionDefinition = {
-
 	name: 'enhanceText',
 	description: 'Improve clarity, readability, and structure of a piece of text while retaining its intent.',
 	parameters: {
@@ -18,11 +17,9 @@ const enhanceTextFunction: FunctionDefinition = {
 		},
 		required: ['enhancedText'],
 	},
-
 };
 
 const generateTaskTitleFunction: FunctionDefinition = {
-
 	name: 'generateTaskTitle',
 	description: 'Generates a concise and meaningful title based on the provided task description.',
 	parameters: {
@@ -35,11 +32,9 @@ const generateTaskTitleFunction: FunctionDefinition = {
 		},
 		required: ['title'],
 	},
-
 };
 
 const generateWorkPlanSummaryFunction: FunctionDefinition = {
-
 	name: 'generateWorkPlanSummary',
 	description: 'Generates a concise and meaningful summary based on the provided task description.',
 	parameters: {
@@ -52,11 +47,9 @@ const generateWorkPlanSummaryFunction: FunctionDefinition = {
 		},
 		required: ['summary'],
 	},
-	
 };
 
 const sysPromptForTextEnhacement: string = `
-
 	You are a professional technical writer and task clarity expert.
 	Your job is to rewrite the following text to make it:
 	-Easy to understand for anyone, even WITHOUT a technical background
@@ -67,11 +60,9 @@ const sysPromptForTextEnhacement: string = `
 	Preserve all original intent and instructions, but express them in a more accessible and polished way.
 	Return only the improved version. Do not include explanations.
 	**Do not add any markdown into your response such as asterisk!. Return plain text only!**
-
 `;
 
 const sysPromptForTaskTitleGeneration: string = `
-
 	You are a professional technical writer and task clarity expert.
 	Your job is to read a task description and generate a short, clear, and specific title for it.
 	The title should accurately reflect the main goal or action of the task, using simple and professional language.
@@ -84,18 +75,15 @@ const sysPromptForTaskTitleGeneration: string = `
 	-Ensure the title stands alone without needing extra explanation
 	Return only the title. Do not include explanations.
 	**Do not add any markdown into your response such as asterisk!. Return plain text only!**
-
 `;
 
 const sysPromptForWorkPlanSummaryGeneration: string = `
-
 	You are a smart assistant that helps users of a project management system by giving them a general
 	overview of what they need to work on. Your job is to generate a brief report highlighting the user's 
 	upcoming tasks and recent notifications which they might have missed. The data, represented as JSON, will 
 	include the following: tasks due today, tasks due tomorrow, tasks due later this week and recent notifications.
 	Keep in mind that your report shouldn't contain any markdown, headings, titles or subtitles and should
 	immediately focus on the user's work plan. Finally, keep your tone friendly and informal.
-
 `;
 
 type EnhancedTextArgs = { enhancedText: string };
@@ -111,12 +99,10 @@ class AiService {
 		try {
 
 			const parsedResult = await this.helper(
-
 				sysPromptForTextEnhacement,
 				text,
 				enhanceTextFunction,
 				enhanceTextFunction.name,
-
 			);
 	
 			return parsedResult.enhancedText;
@@ -134,12 +120,10 @@ class AiService {
 		try {
 
 			const parsedResult: Args = await this.helper(
-
 				sysPromptForTaskTitleGeneration,
 				taskDescription,
 				generateTaskTitleFunction,
 				generateTaskTitleFunction.name,
-
 			);
 
 			return parsedResult.title;
@@ -157,12 +141,10 @@ class AiService {
 		try {
 
 			const parsedResult: Args  = await this.helper(
-
 				sysPromptForWorkPlanSummaryGeneration,
 				report,
 				generateWorkPlanSummaryFunction,
 				generateWorkPlanSummaryFunction.name,
-
 			);
 
 			return parsedResult.summary;
@@ -176,12 +158,10 @@ class AiService {
 	}
 
 	async helper(
-
 		sysContent: string,
 		userContent: string | DailyReport,
 		toolsFunc: FunctionDefinition,
 		toolChoiceFunc: string,
-
 	): Promise<Args> {
 
 		const userContentType: string =
@@ -190,36 +170,24 @@ class AiService {
 				: JSON.stringify(userContent, null, 2);
 
 		const result: ChatCompletion = await openai.chat.completions.create({
-
-			model: 'anthropic/claude-sonnet-4',
-
+			model: 'qwen/qwen3-coder:free',
 			messages: [
 
 				{ role: 'system', content: sysContent },
 				{ role: 'user', content: userContentType },
 
 			],
-
 			temperature: 0.7,
-
 			tools: [
-
 				{
-
 					type: 'function',
 					function: toolsFunc,
-
 				},
-
 			],
-
 			tool_choice: {
-
 				type: 'function',
 				function: { name: toolChoiceFunc },
-
 			},
-
 		});
 
 		const args: string | undefined = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
