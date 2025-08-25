@@ -3,7 +3,7 @@ import { logger } from './logger';
 
 const rabbitmqUrl = process.env.RABBITMQ_URL!;
 
-let connection: ChannelModel | null = null;
+let connection: any = null;
 const queueChannels = new Map<string, Channel>();
 
 export async function getQueueChannel(queueName: string): Promise<Channel> {
@@ -18,7 +18,7 @@ export async function getQueueChannel(queueName: string): Promise<Channel> {
 
         if (!connection) {
 
-            connection = await amqp.connect(rabbitmqUrl);
+            connection = await connectWithRetry(rabbitmqUrl);
             initGracefulShutdown();
 
         }
@@ -76,5 +76,37 @@ function initGracefulShutdown(): void {
 
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
+
+}
+
+async function connectWithRetry(
+    url: string,
+    maxRetries = 5,
+    delayMs = 3000
+): Promise<amqp.Connection> {
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+
+        try {
+
+            const conn: any = await amqp.connect(url);
+            
+            return conn;
+            
+        } catch (err) {
+
+            if (attempt === maxRetries) {
+
+                throw err;
+
+            }
+
+            await new Promise(res => setTimeout(res, delayMs));
+
+        }
+
+    }
+
+	throw new Error("Unexpected failure while connecting to RabbitMQ");
 
 }
