@@ -6,7 +6,6 @@ const { method, token, key } = workerData;
 const ENCRYPTION_KEY = crypto.createHash('sha256').update(key).digest();
 
 if (method === 'encrypt') {
-
 	const iv = crypto.randomBytes(16);
 	const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
 
@@ -14,9 +13,7 @@ if (method === 'encrypt') {
 	encrypted += cipher.final('hex');
 
 	parentPort?.postMessage(iv.toString('hex') + encrypted);
-
 } else {
-
 	const iv = Buffer.from(token.slice(0, 32), 'hex');
 	const encrypted = token.slice(32);
 
@@ -25,5 +22,4 @@ if (method === 'encrypt') {
 	decrypted += decipher.final('utf8');
 
 	parentPort?.postMessage(decrypted);
-	
 }
