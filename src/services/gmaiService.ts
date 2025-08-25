@@ -1,5 +1,5 @@
 import { AppError } from "@/types";
-import { transporter } from "@/config/email";
+import { transporter } from "@/config/gmail";
 
 export enum GmailType {
     PROJECT_INVITE = 'PROJECT_INVITE',
@@ -265,13 +265,13 @@ class LeaveProject extends Gmail<LeaveGmailParam> {
 			from: process.env.EMAIL,
 			subject: '📬 Leave Project',
 			html: buildEmailHTML({
-				headerColor: 'rgb(255, 0, 0)',
+				headerColor: 'rgb(242, 0, 255)',
 				title: 'User has left the project!',
 				projectTitle,
 				role: userRole,
 				position: userPosition,
 				buttonText: 'View notification in the app',
-				buttonColor: 'rgb(255, 0, 0)',
+				buttonColor: 'rgb(242, 0, 255)',
 				buttonLink: `${process.env.FRONTEND_URL}/notifications`
 			})	
 		});
@@ -290,7 +290,7 @@ class ChangeTaskStatus extends Gmail<ChangeTaskStatusGmailParam> {
 		} else if (emailTitle.includes('rejected')) {
 			emailColor = 'rgb(255, 0, 0)'
 		} else {
-			emailColor = 'rgb(11, 177, 11)';
+			emailColor = 'rgba(4, 98, 4, 1)';
 		}
 
         await transporter.sendMail({
@@ -346,12 +346,12 @@ class NewTask extends Gmail<NewTaskGmailParam> {
 			from: process.env.EMAIL,
 			subject: '📬 New Task',
 			html: buildEmailHTML({
-				headerColor: 'rgb(21, 211, 21)',
-				title: 'You have been assigned a new task',
+				headerColor: 'rgb(153, 0, 255)',
+				title: 'You have been assigned a new task!',
 				projectTitle,
 				taskTitle,
 				buttonText: 'View notification in the app',
-				buttonColor: 'rgb(21, 211, 21)',
+				buttonColor: 'rgb(153, 0, 255)',
 				buttonLink: `${process.env.FRONTEND_URL}/projects/${projectId}/my-tasks`
 			})
 		});
@@ -393,7 +393,7 @@ class UpdatedTask extends Gmail<UpdatedTaskGmailParam> {
 			subject: '📬 Task Update',
 			html: buildEmailHTML({
 				headerColor: 'rgb(87, 103, 192)',
-				title: 'Your task has been updated',
+				title: 'Your task has been updated!',
 				projectTitle,
 				taskTitle,
 				buttonText: 'View notification in the app',

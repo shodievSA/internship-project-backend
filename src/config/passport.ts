@@ -53,11 +53,11 @@ passport.use(new GoogleStrategy({
     callbackURL: `${process.env.BASE_URL}/api/v1/auth/google/callback`,
     passReqToCallback: true,
 }, async (
-	req: Request, 
-	accessToken: string, 
-	refreshToken: string, 
-	params: any, 
-	profile: Profile, 
+	_req: Request,
+	accessToken: string,
+	refreshToken: string,
+	_params: any,
+	profile: Profile,
 	done: any
 ) => {
 

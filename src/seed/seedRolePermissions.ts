@@ -4,40 +4,45 @@ import PermissionModel from '../models/permission';
 import { logger } from '@/config/logger';
 
 const rolePermissionPairs = [
-	{
-		roleName: 'admin',
-		permissionName: [
-			'kickOutTeamMembers',
-			'invitePeople',
-			'deleteProject',
-			'assignTasks',
-			'editTasks',
-			'deleteTasks',
-			'viewMemberProductivity',
-			'editProject',
-			'promoteMembers',
-			'demoteMembers',
-			'editAnotherTasks',
-			'deleteAnotherTasks',
-			'makeComments',
-			'getProjectInvites'
-		],
-	},
-	{
-		roleName: 'manager',
-		permissionName: [
-			'assignTasks',
-			'editTasks',
-			'deleteTasks',
-			'makeComments',
-			'leaveProject',
-		],
-	},
-	{ 
-		roleName: 'member', 
-		permissionName: ['makeComments', 'leaveProject'] 
-	}
-];
+  {
+    roleName: 'admin',
+    permissionName: [
+      'kickOutTeamMembers',
+      'invitePeople',
+      'deleteProject',
+      'assignTasks',
+      'editTasks',
+      'deleteTasks',
+      'viewMemberProductivity',
+      'editProject',
+      'promoteMembers',
+      'demoteMembers',
+      'editAnotherTasks',
+      'deleteAnotherTasks',
+      'makeComments',
+      'getProjectInvites',
+      'createSprints',
+      'editSprints',
+      'deleteSprints',
+    ],
+  },
+
+  {
+    roleName: 'manager',
+    permissionName: [
+      'assignTasks',
+      'editTasks',
+      'deleteTasks',
+      'makeComments',
+      'leaveProject',
+      'createSprints',
+      'editSprints',
+      'deleteSprints',
+    ],
+  },
+
+  { roleName: 'member', permissionName: ['makeComments', 'leaveProject'] },
+] as const satisfies object[];
 
 export default async function seedRolePermissions() {
 
