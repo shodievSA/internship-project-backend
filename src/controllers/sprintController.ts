@@ -13,7 +13,7 @@ async function createSprint(
 
 	try {
 
-		if (!req.memberPermissions?.includes('assignTasks')) {
+		if (!req.memberPermissions?.includes('createSprints')) {
 
 			throw new AppError("You don't have enough permissions to create sprints", 403, true);
 
@@ -81,7 +81,7 @@ async function updateSprint(
 
 	try {
 
-		if (!req.memberPermissions?.includes('editProject')) {
+		if (!req.memberPermissions?.includes('editSprints')) {
 
 			throw new AppError("You don't have enough permissions to edit the sprint", 403, true);
 
@@ -151,7 +151,7 @@ async function deleteSprint(
 
 	try {
 
-        if (!req.memberPermissions?.includes('deleteProject')) {
+        if (!req.memberPermissions?.includes('deleteSprints')) {
 
 			throw new AppError("You don't have enough permissions to delete this sprint", 403, true);
             

@@ -347,7 +347,7 @@ class NewTask extends Gmail<NewTaskGmailParam> {
 			subject: '📬 New Task',
 			html: buildEmailHTML({
 				headerColor: 'rgb(153, 0, 255)',
-				title: 'You have been assigned a new task',
+				title: 'You have been assigned a new task!',
 				projectTitle,
 				taskTitle,
 				buttonText: 'View notification in the app',
@@ -393,7 +393,7 @@ class UpdatedTask extends Gmail<UpdatedTaskGmailParam> {
 			subject: '📬 Task Update',
 			html: buildEmailHTML({
 				headerColor: 'rgb(87, 103, 192)',
-				title: 'Your task has been updated',
+				title: 'Your task has been updated!',
 				projectTitle,
 				taskTitle,
 				buttonText: 'View notification in the app',

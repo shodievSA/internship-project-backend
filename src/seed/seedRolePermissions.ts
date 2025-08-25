@@ -19,7 +19,10 @@ const rolePermissionPairs = [
       'editAnotherTasks',
       'deleteAnotherTasks',
       'makeComments',
-      'getProjectInvites'
+      'getProjectInvites',
+      'createSprints',
+      'editSprints',
+      'deleteSprints',
     ],
   },
 
@@ -31,11 +34,14 @@ const rolePermissionPairs = [
       'deleteTasks',
       'makeComments',
       'leaveProject',
+      'createSprints',
+      'editSprints',
+      'deleteSprints',
     ],
   },
 
   { roleName: 'member', permissionName: ['makeComments', 'leaveProject'] },
-];
+] as const satisfies object[];
 
 export default async function seedRolePermissions() {
   try {

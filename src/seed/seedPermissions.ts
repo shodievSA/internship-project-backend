@@ -15,8 +15,11 @@ const permissionEnum = [
   'deleteAnotherTasks',
   'makeComments',
   'leaveProject',
-  'getProjectInvites'
-];
+  'getProjectInvites',
+  'createSprints',
+  'editSprints',
+  'deleteSprints',
+] as const satisfies string[];
 
 export default async function seedPermissions() {
   for (const permission of permissionEnum) {

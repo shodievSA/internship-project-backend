@@ -24,7 +24,10 @@ const permissionEnum = [
 	'makeComments',
 	'leaveProject',
     'getProjectInvites',
-];
+	'createSprints',
+	'editSprints',
+	'deleteSprints',
+] as const satisfies string[];
 
 export interface PermissionAssociations {
   	Roles?: Role[];
