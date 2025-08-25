@@ -21,7 +21,8 @@ async function markOverdueTasks() {
 
     try {
 
-        const now = new Date();
+        const now = DateTime.now().setZone("Asia/Tashkent").toJSDate();
+
         const [updatedCount] = await Task.update(
             { status: 'overdue' },
             {
