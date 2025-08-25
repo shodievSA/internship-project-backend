@@ -259,8 +259,7 @@ export async function startCronJobs() {
 		}
 	); 
 
-	// Temporarily disabled to prevent OpenAI API errors during startup
-	// await generateReport();
+	await generateReport();
 
 }
 
