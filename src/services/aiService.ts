@@ -98,15 +98,19 @@ const sysPromptForWorkPlanSummaryGeneration: string = `
 
 `;
 
+type EnhancedTextArgs = { enhancedText: string };
+type GenerateTaskTitleArgs = { title: string };
+type GenerateWorkPlanSummaryArgs = { summary: string };
+
+type Args = EnhancedTextArgs & GenerateTaskTitleArgs & GenerateWorkPlanSummaryArgs;
+
 class AiService {
 
 	public async enhanceText(text: string): Promise<string> {
 
 		try {
 
-			type EnhancedTextArgs = { enhancedText: string };
-
-			const result: ChatCompletion = await this.helper(
+			const parsedResult = await this.helper(
 
 				sysPromptForTextEnhacement,
 				text,
@@ -115,13 +119,7 @@ class AiService {
 
 			);
 	
-			const args: string | undefined = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
-	
-			if (!args) throw new AppError("AI service did not return expected result", 502, true);
-	
-			const parsed: EnhancedTextArgs = JSON.parse(args);
-	
-			return parsed.enhancedText;
+			return parsedResult.enhancedText;
 
 		} catch (err: unknown) {
 
@@ -135,9 +133,7 @@ class AiService {
 
 		try {
 
-			type GenerateTaskTitleArgs = { title: string };
-
-			const result: ChatCompletion = await this.helper(
+			const parsedResult: Args = await this.helper(
 
 				sysPromptForTaskTitleGeneration,
 				taskDescription,
@@ -146,13 +142,7 @@ class AiService {
 
 			);
 
-			const args: string | undefined = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
-
-			if (!args) throw new AppError("AI service did not return expected result", 502, true);
-
-			const parsed: GenerateTaskTitleArgs = JSON.parse(args);
-
-			return parsed.title;
+			return parsedResult.title;
 
 		} catch (err: unknown) {
 
@@ -166,9 +156,7 @@ class AiService {
 
 		try {
 
-			type GenerateWorkPlanSummaryArgs = { summary: string };
-
-			const result: ChatCompletion = await this.helper(
+			const parsedResult: Args  = await this.helper(
 
 				sysPromptForWorkPlanSummaryGeneration,
 				report,
@@ -177,13 +165,7 @@ class AiService {
 
 			);
 
-			const args: string | undefined = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
-
-			if (!args) throw new AppError("AI service did not return expected result", 502, true);
-
-			const parsed: GenerateWorkPlanSummaryArgs = JSON.parse(args);
-
-			return parsed.summary;
+			return parsedResult.summary;
 
 		} catch (err: unknown) {
 
@@ -200,14 +182,14 @@ class AiService {
 		toolsFunc: FunctionDefinition,
 		toolChoiceFunc: string,
 
-	): Promise<ChatCompletion> {
+	): Promise<Args> {
 
 		const userContentType: string =
 			typeof userContent === 'string'
 				? userContent
 				: JSON.stringify(userContent, null, 2);
 
-		const result = await openai.chat.completions.create({
+		const result: ChatCompletion = await openai.chat.completions.create({
 
 			model: 'anthropic/claude-sonnet-4',
 
@@ -240,7 +222,25 @@ class AiService {
 
 		});
 
-		return result;
+		const args: string | undefined = result.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+
+		if (!args) throw new AppError("AI service did not return expected result", 502, true);
+
+		let parsed: Args;
+
+		if (toolChoiceFunc === 'enhanceText') {
+
+			return parsed = JSON.parse(args);
+
+		} else if (toolChoiceFunc === 'generateTaskTitle') {
+
+			return parsed = JSON.parse(args);
+
+		} else {
+
+			return parsed = JSON.parse(args);
+
+		}
 		
 	};
 
