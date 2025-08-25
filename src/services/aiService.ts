@@ -226,22 +226,10 @@ class AiService {
 
 		if (!args) throw new AppError("AI service did not return expected result", 502, true);
 
-		let parsed: Args;
-
-		if (toolChoiceFunc === 'enhanceText') {
-
-			return parsed = JSON.parse(args);
-
-		} else if (toolChoiceFunc === 'generateTaskTitle') {
-
-			return parsed = JSON.parse(args);
-
-		} else {
-
-			return parsed = JSON.parse(args);
-
-		}
+		const parsed: Args = JSON.parse(args);
 		
+		return parsed;
+
 	};
 
 }
