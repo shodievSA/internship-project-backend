@@ -105,49 +105,49 @@ class TaskService {
 				history: task.history
 			};
 
-			let message, email, emailTitle, role, position, tasksType: string;
-			let notificationReceiverId: number;
+			if (task.assignedByMember.id !== task.assignedToMember.id) {
 
-			switch (updatedTaskStatus) {
-				case 'under review': 
-					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
-					email = task.assignedByMember.user.email;
-					emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
-					notificationReceiverId = task.assignedByMember.user.id;
-					role =
-						task.assignedToMember.roleId === 2 ? 'manager' :
-						task.assignedToMember.roleId === 3 ? 'member' :
-						'admin';
-					position = task.assignedToMember.position;
-					tasksType = 'review-tasks';
-					break;
+				let message, email, emailTitle, role, position, tasksType: string;
+				let notificationReceiverId: number;
+
+				switch (updatedTaskStatus) {
+					case 'under review': 
+						message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
+						email = task.assignedByMember.user.email;
+						emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
+						notificationReceiverId = task.assignedByMember.user.id;
+						role =
+							task.assignedToMember.roleId === 2 ? 'manager' :
+							task.assignedToMember.roleId === 3 ? 'member' :
+							'admin';
+						position = task.assignedToMember.position;
+						tasksType = 'review-tasks';
+						break;
+					
+					case 'rejected':
+						message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+						email = task.assignedToMember.user.email;
+						emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
+						notificationReceiverId = task.assignedToMember.user.id;
+						role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+						position = task.assignedByMember.position;
+						tasksType = 'my-tasks';
+						break;
+
+					case 'closed':
+						message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+						email = task.assignedToMember.user.email;
+						emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
+						notificationReceiverId = task.assignedToMember.user.id;
+						role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+						position = task.assignedByMember.position;
+						tasksType = 'my-tasks';
+						break;
 				
-				case 'rejected':
-					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
-					email = task.assignedToMember.user.email;
-					emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
-					notificationReceiverId = task.assignedToMember.user.id;
-					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
-					position = task.assignedByMember.position;
-					tasksType = 'my-tasks';
-					break;
-
-				case 'closed':
-					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
-					email = task.assignedToMember.user.email;
-					emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
-					notificationReceiverId = task.assignedToMember.user.id;
-					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
-					position = task.assignedByMember.position;
-					tasksType = 'my-tasks';
-					break;
-			
-				default:
-					const _exhaustiveCheck: never = updatedTaskStatus;
-					throw new AppError(`Unsupported task status: ${_exhaustiveCheck}`, 400, true);
-			}
-
-			if (task.assignedByMember.user.id !== task.assignedToMember.user.id) {
+					default:
+						const _exhaustiveCheck: never = updatedTaskStatus;
+						throw new AppError(`Unsupported task status: ${_exhaustiveCheck}`, 400, true);
+				}	
 
 				await models.Notification.create(
 					{ 
@@ -286,7 +286,7 @@ class TaskService {
 					
 				}
 	
-				if (assignedTo.user.id !== assignedBy.user.id) {
+				if (assignedTo.id !== assignedBy.id) {
 					
 					await models.Notification.create(
 						{
@@ -585,7 +585,7 @@ class TaskService {
 
                 if (!newAssignedUser) throw new AppError("Failed to find the new assignee", 404, true);
 
-               	if (task.assignedByMember.user.id !== task.assignedToMember.user.id) {
+               	if (task.assignedByMember.id !== task.assignedToMember.id) {
 				
 					await models.Notification.create(
 						{
@@ -628,7 +628,7 @@ class TaskService {
 
             } else { 
 
-				if (task.assignedByMember.user.id !== task.assignedToMember.user.id) {
+				if (task.assignedByMember.id !== task.assignedToMember.id) {
 					
 					await models.Notification.create(
 						{ 
