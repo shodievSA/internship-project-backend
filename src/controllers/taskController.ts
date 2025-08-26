@@ -152,7 +152,9 @@ async function updateTask(
 			const filesToDelete: number[] = req.body.filesToDelete ? JSON.parse(req.body.filesToDelete) : [];
 			const sizes: number[] = filesToAdd.map(file => file.size);
 			const fileNames: string[] = filesToAdd.map((file) => file.originalname);
-			const updatedTaskProps: Partial<TaskAttributes> = req.body.updatedTaskProps ? JSON.parse(req.body.updatedTaskProps) : {};
+			const updatedTaskProps: Partial<
+            Pick<TaskAttributes, "title" | "description" | "assignedTo" | "priority" | "deadline">
+            > = req.body.updatedTaskProps ? JSON.parse(req.body.updatedTaskProps) : {};
 
 			if (!projectId || !taskId) {
 				throw new AppError("Project id or task id is missing", 400, true);
