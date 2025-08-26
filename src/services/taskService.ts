@@ -115,64 +115,68 @@ class TaskService {
 				history: task.history
 			};
 
-			let message, email, emailTitle, role, position, tasksType: string;
-			let notificationReceiverId: number;
+			if (task.assignedByMember.id !== task.assignedToMember.id) {
 
-			switch (updatedTaskStatus) {
-				case 'under review': 
-					message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
-					email = task.assignedByMember.user.email;
-					emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
-					notificationReceiverId = task.assignedByMember.user.id;
-					role =
-						task.assignedToMember.roleId === 2 ? 'manager' :
-						task.assignedToMember.roleId === 3 ? 'member' :
-						'admin';
-					position = task.assignedToMember.position;
-					tasksType = 'review-tasks';
-					break;
+				let message, email, emailTitle, role, position, tasksType: string;
+				let notificationReceiverId: number;
+
+				switch (updatedTaskStatus) {
+					case 'under review': 
+						message = `${fullname} has submitted the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}" for your review.`;
+						email = task.assignedByMember.user.email;
+						emailTitle = `${task.assignedToMember.user.fullName} has submitted the task for review!`;
+						notificationReceiverId = task.assignedByMember.user.id;
+						role =
+							task.assignedToMember.roleId === 2 ? 'manager' :
+							task.assignedToMember.roleId === 3 ? 'member' :
+							'admin';
+						position = task.assignedToMember.position;
+						tasksType = 'review-tasks';
+						break;
+					
+					case 'rejected':
+						message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+						email = task.assignedToMember.user.email;
+						emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
+						notificationReceiverId = task.assignedToMember.user.id;
+						role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+						position = task.assignedByMember.position;
+						tasksType = 'my-tasks';
+						break;
+
+					case 'closed':
+						message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
+						email = task.assignedToMember.user.email;
+						emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
+						notificationReceiverId = task.assignedToMember.user.id;
+						role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
+						position = task.assignedByMember.position;
+						tasksType = 'my-tasks';
+						break;
 				
-				case 'rejected':
-					message = `${fullname} has rejected the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
-					email = task.assignedToMember.user.email;
-					emailTitle = `${task.assignedByMember.user.fullName} has rejected your submission!`;
-					notificationReceiverId = task.assignedToMember.user.id;
-					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
-					position = task.assignedByMember.position;
-					tasksType = 'my-tasks';
-					break;
+					default:
+						const _exhaustiveCheck: never = updatedTaskStatus;
+						throw new AppError(`Unsupported task status: ${_exhaustiveCheck}`, 400, true);
+				}	
 
-				case 'closed':
-					message = `${fullname} has closed the task "${task.title || 'Task title is not specified'}" in the project "${task.project.title}".`;
-					email = task.assignedToMember.user.email;
-					emailTitle = `${task.assignedByMember.user.fullName} has approved your submission!`;
-					notificationReceiverId = task.assignedToMember.user.id;
-					role = task.assignedByMember.roleId === 2 ? 'manager' : 'admin'
-					position = task.assignedByMember.position;
-					tasksType = 'my-tasks';
-					break;
-			
-				default:
-					const _exhaustiveCheck: never = updatedTaskStatus;
-					throw new AppError(`Unsupported task status: ${_exhaustiveCheck}`, 400, true);
+				await models.Notification.create(
+					{ 
+						title: emailTitle,
+						message: message,
+						userId: notificationReceiverId
+					}, 
+					{ transaction }
+				);
+
+				await sendEmailToQueue({
+					type: GmailType.CHANGE_TASK_STATUS,
+					receiverEmail: email,
+					params: [task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
+				});
+
 			}
 
-			await models.Notification.create(
-				{ 
-					title: emailTitle,
-					message: message,
-					userId: notificationReceiverId
-				}, 
-				{ transaction }
-			);
-
-			await transaction.commit();	
-
-			await sendEmailToQueue({
-				type: GmailType.CHANGE_TASK_STATUS,
-				receiverEmail: email,
-				params: [task.project.title, emailTitle, updatedTask.title, role, position, projectId, tasksType]
-			});
+			await transaction.commit();
 
 			return updatedTask;
 			
@@ -292,14 +296,18 @@ class TaskService {
 					
 				}
 	
-				await models.Notification.create(
-					{
-						userId: assignedTo.user.id,
-						title: "New Task",
-						message: "You've been assigned new task"
-					},
-					{ transaction }
-				);
+				if (assignedTo.id !== assignedBy.id) {
+					
+					await models.Notification.create(
+						{
+							userId: assignedTo.user.id,
+							title: "New Task",
+							message: "You have been assigned a new task"
+						},
+						{ transaction }
+					);
+
+				}
 	
 				await transaction.commit();
 
@@ -574,56 +582,68 @@ class TaskService {
 
                 if (!newAssignedUser) throw new AppError("Failed to find the new assignee", 404, true);
 
-                await models.Notification.create(
-					{
-						title: "Task reassigned",
-						message: `Your task: ${task.title} was removed from your tasks by authority`,
-						userId: task.assignedToMember.user.id,
-                	},
-                    { transaction }
-                );
+               	if (task.assignedByMember.id !== task.assignedToMember.id) {
+				
+					await models.Notification.create(
+						{
+							title: "Task reassigned",
+							message: `Your task: ${task.title} was removed from your tasks by authority`,
+							userId: task.assignedToMember.user.id,
+						},
+						{ transaction }
+					);
 
-				await sendEmailToQueue({
-					type: GmailType.REASSIGN_TASK,
-					receiverEmail: task.assignedToMember.user.email,
-					params: [task.project.title, task.title, projectId]
-				});
+					await sendEmailToQueue({
+						type: GmailType.REASSIGN_TASK,
+						receiverEmail: task.assignedToMember.user.email,
+						params: [task.project.title, task.title, projectId]
+					});
+
+			   	}
 
                 task.assignedToMember.user = newAssignedUser.user;
 
-                await models.Notification.create(
-					{
-						title: "New Task",
-						userId: task.assignedToMember.user.id,
-						message: `Project: ${task.project.title}.
-						Assigned new task: "${task.title}"`,
-                    },
-                    { transaction }
-                );
+                if (task.assignedByMember.user.id !== task.assignedToMember.user.id) {
+					
+					await models.Notification.create(
+						{
+							title: "New Task",
+							userId: task.assignedToMember.user.id,
+							message: `Project: ${task.project.title}.
+							Assigned new task: "${task.title}"`,
+						},
+						{ transaction }
+                	);
 
-				await sendEmailToQueue({
-					type: GmailType.NEW_TASK,
-					receiverEmail: task.assignedToMember.user.email,
-					params: [task.project.title, task.title, projectId]
-				});
+					await sendEmailToQueue({
+						type: GmailType.NEW_TASK,
+						receiverEmail: task.assignedToMember.user.email,
+						params: [task.project.title, task.title, projectId]
+					});
+
+				}
 
             } else { 
 
-                await models.Notification.create(
-					{ 
-						title: "Task updated",
-						userId: task.assignedToMember.user.id,
-						message:`Project: ${task.project.title}.
-						Your task: ${task.title} was updated by authority`
-                    },
-                    { transaction }
-                );
+				if (task.assignedByMember.id !== task.assignedToMember.id) {
+					
+					await models.Notification.create(
+						{ 
+							title: "Task updated",
+							userId: task.assignedToMember.user.id,
+							message:`Project: ${task.project.title}.
+							Your task: ${task.title} was updated by authority`
+						},
+						{ transaction }
+                	);
 
-				await sendEmailToQueue({
-					type: GmailType.UPDATED_TASK,
-					receiverEmail: task.assignedToMember.user.email,
-					params: [task.project.title, task.title, projectId]
-				});
+					await sendEmailToQueue({
+						type: GmailType.UPDATED_TASK,
+						receiverEmail: task.assignedToMember.user.email,
+						params: [task.project.title, task.title, projectId]
+					});
+
+				}
 
             }
 
