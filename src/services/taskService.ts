@@ -1,6 +1,6 @@
 import sequelize from '../clients/sequelize';
 import { models } from '../models';
-import { Transaction, UpdateOptions } from 'sequelize';
+import { InstanceUpdateOptions, Transaction, UpdateOptions } from 'sequelize';
 import { 
 	ProjectTask, 
 	AppError, 
@@ -18,6 +18,16 @@ import { sendEmailToQueue, sendFileToQueue } from '@/queues';
 import { randomUUID } from 'crypto';
 import fileHandler from './fileService';
 import TaskFiles from '@/models/taskFiles';
+import 'sequelize';
+
+declare module "sequelize" {
+
+  interface InstanceUpdateOptions {
+    context?: {
+      comment?: string;
+    };
+  }
+}
 
 class TaskService {
 
@@ -402,6 +412,8 @@ class TaskService {
     async updateTask(taskUpdatePayload: TaskUpdatePayload): Promise<ProjectTask> {
 
         const transaction: Transaction = await sequelize.transaction();
+
+        let comment: string | null = null
         
         try {
 
@@ -452,7 +464,7 @@ class TaskService {
                         separate: true,
                         order: [['created_at', 'DESC']]
                     }
-				], 
+				],
                 transaction,
             });
                     
@@ -462,13 +474,16 @@ class TaskService {
                         
                 const newDeadline = new Date(updatedTaskProps.deadline);
                         
-				if (new Date(Date.now()) > newDeadline) {
-
-					throw new AppError("Deadline can't be in the past", 400, true);
-
-				}
+				if (new Date(Date.now()) > newDeadline) throw new AppError("Deadline can't be in the past", 400, true)
 
 				task.deadline = newDeadline;
+
+                if (task.status === 'overdue') { 
+
+                    updatedTaskProps.status = task.history?.[0].status || 'ongoing' // in case task was only created and overdued                  
+                    
+                    comment = 'Task deadline extended'
+                }
 
             }
 
@@ -534,24 +549,6 @@ class TaskService {
 				await Promise.all([...edit, ...taskFiles]);
 				
 			}
-
-            if (
-				updatedTaskProps.assignedBy 
-				&& 
-				task.assignedBy !== updatedTaskProps.assignedBy
-			) { 
-                throw new AppError("Can't change the assigner", 400, true);
-            }
-
-            if (
-				updatedTaskProps.status 
-				&& 
-				(task.status !== updatedTaskProps.status || updatedTaskProps.projectId) 
-				&& 
-				task.projectId !== updatedTaskProps.projectId
-			)  { 
-                throw new AppError("Can't change task status and project id", 400, true);
-            }
 
             let newAssignedUser: ProjectMember | null = null
 
@@ -630,7 +627,12 @@ class TaskService {
 
             }
 
-            await task.update(updatedTaskProps as TaskUpdatePayload, { transaction });
+            await task.update(updatedTaskProps as TaskUpdatePayload, 
+                { 
+                transaction, 
+                context : { comment },
+                } as InstanceUpdateOptions
+            );
 
 			const filesMetaData: FilesMetaData[] = await models.TaskFiles.findAll({
 				where: { taskId: task.id },

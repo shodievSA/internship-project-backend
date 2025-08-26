@@ -286,7 +286,6 @@ class ProjectService {
 					{
 						model: models.Sprint,
 						as: 'sprints',
-						order: [["created_at", "ASC"]],
 						attributes: {
 							include: [ 
 								[
@@ -317,7 +316,14 @@ class ProjectService {
 							}],
 						}]
 					}, 
-                ]
+                ],
+                order: [[
+                    {
+                        model: models.Sprint,
+                        as:'sprints'
+                    }, 
+                    'created_at' , 'DESC'
+                ]]
 			});
             
             if (!project) throw new AppError(`Couldn't find project with id - ${projectId}`);
