@@ -1,11 +1,31 @@
-import {createClient} from "redis";
+import { createClient } from "redis";
+import { logger } from "@/config/logger";
 
-// should be changed for prod
-export const redisClient = createClient({
+const redisClient = createClient({
     socket: { 
         host: process.env.REDIS_HOST || "127.0.0.1",
-        port: parseInt( process.env.REDIS_PORT || "6379"),
-    }, 
-
-    //password: process.env.REDIS_PASSWORD,  // For prod redis server
+        port: parseInt(process.env.REDIS_PORT || "6379"),
+    }
 });
+		
+redisClient.connect().catch((err) => {
+
+	logger.error({
+		message: "Error occured while trying to connect to the redis client",
+		error: err
+	});
+
+});
+
+redisClient.on("error", (err) => {
+
+	logger.error({
+		message: "redis error",
+		error: err
+	});
+
+	redisClient.close();
+
+});
+
+export default redisClient;
