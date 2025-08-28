@@ -1,4 +1,4 @@
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import { models } from '../models';
 import { Transaction } from 'sequelize';
 import { AppError, TeamMember, MemberProductivity } from '@/types';

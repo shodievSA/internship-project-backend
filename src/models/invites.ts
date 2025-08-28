@@ -1,4 +1,4 @@
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import {
   DataTypes,
   Model,

@@ -1,4 +1,4 @@
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import User from './user';
 import { DailyReport } from '@/types/dailyReport';
 import {

@@ -8,7 +8,7 @@ import Task from './task';
 import DailyAiReport from './dailyAiReport';
 import Comment from './comment';
 import Notification from './notification';
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import seedRoles from '../seed/seedRoles';
 import seedRolePermissions from '../seed/seedRolePermissions';
 import seedPermissions from '../seed/seedPermissions';

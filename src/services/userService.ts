@@ -5,7 +5,7 @@ import { Contact, GooglePerson } from '@/types';
 import Project from '@/models/project';
 import User from '@/models/user';
 import { auth, people } from 'googleapis/build/src/apis/people';
-import sequelize from '@/clients/sequelize';
+import sequelize from '@/config/sequelize';
 import { Op, Transaction } from 'sequelize';
 import { DateTime } from 'luxon';
 import DailyAiReport from '@/models/dailyAiReport';
