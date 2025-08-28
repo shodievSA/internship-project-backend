@@ -3,7 +3,7 @@ import ProjectMember from './projectMember';
 import DailyAiReport from './dailyAiReport';
 import Notification from './notification';
 import Invite from './invites';
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import Project from './project';
 
 export interface UserAttributes {

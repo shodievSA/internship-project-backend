@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
-import redisClient from "@/clients/redis";
+import redisClient from "@/config/redis";
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "@/types";
 import AuthenticatedRequest from "@/types/authenticatedRequest";

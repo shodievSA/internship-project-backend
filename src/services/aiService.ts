@@ -1,4 +1,4 @@
-import { openai } from '@/clients/openai';
+import { openai } from '@/config/openai';
 import { AppError } from '@/types';
 import { DailyReport } from '@/types/dailyReport';
 import { FunctionDefinition } from 'openai/resources';

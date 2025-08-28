@@ -14,7 +14,7 @@ import {
 	TeamMember
 } from '@/types';
 import { Op, Sequelize, Transaction } from 'sequelize';
-import sequelize from '../clients/sequelize';
+import sequelize from '../config/sequelize';
 import { models } from '../models';
 import { GmailType } from '../services/gmaiService';
 
