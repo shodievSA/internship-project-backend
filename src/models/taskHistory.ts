@@ -1,4 +1,3 @@
-import { models } from ".";
 import sequelize from "../config/sequelize";
 import Task from "./task";
 import { 
