@@ -3,7 +3,7 @@ import { logger } from "@/config/logger";
 
 const redisClient = createClient({
     socket: { 
-        host: process.env.REDIS_HOST || "127.0.0.1",
+        host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT || "6379"),
     },
 	...(process.env.NODE_ENV === 'production' ? { password: process.env.REDIS_PASSWORD } : {}),
