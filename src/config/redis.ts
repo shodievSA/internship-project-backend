@@ -5,14 +5,14 @@ const redisClient = createClient({
     socket: { 
         host: process.env.REDIS_HOST || "127.0.0.1",
         port: parseInt(process.env.REDIS_PORT || "6379"),
-		...(process.env.NODE_ENV === 'production' ? { password: process.env.REDIS_PASSWORD } : {})
-    }
+    },
+	...(process.env.NODE_ENV === 'production' ? { password: process.env.REDIS_PASSWORD } : {}),
 });
 		
 redisClient.connect().catch((err) => {
 
 	logger.error({
-		message: "Error occured while trying to connect to the redis client",
+		message: "Error occurred while trying to connect to the redis client",
 		error: err
 	});
 
