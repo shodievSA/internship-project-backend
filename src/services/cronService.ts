@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import Task from '@/models/task';
 import User from '@/models/user';
 import Notification from '@/models/notification';
-import { Op } from 'sequelize';
+import { literal, Op, where } from 'sequelize';
 import { AppError } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Project from '@/models/project';
@@ -20,15 +20,20 @@ import aiService from './aiService';
 async function markOverdueTasks() {
 
     try {
-
-        const now = DateTime.now().setZone("Asia/Tashkent").toJSDate();
+        const tz = 'Asia/Tashkent'
 
         const [updatedCount] = await Task.update(
             { status: 'overdue' },
             {
                 where: {
-                    deadline: { [Op.lt]: now },
-                    status: ['ongoing', 'under review', 'rejected'],
+                    [Op.and]: [
+                        where(
+                            literal(`deadline AT TIME ZONE '${tz}'`),
+                            '<',
+                            literal(`(now() AT TIME ZONE '${tz}')`)
+                        ),
+                       { status: ['ongoing', 'under review', 'rejected']},
+                    ],
                 },
             }
         );
