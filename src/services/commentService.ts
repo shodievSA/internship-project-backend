@@ -21,6 +21,16 @@ interface commentToDelete {
 	taskId: number;
 }
 
+function escapeHtml(str: string) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
 export async function saveAndBroadcastComment({ 
 	message, 
 	memberId, 
@@ -56,35 +66,43 @@ export async function saveAndBroadcastComment({
 
     broadcastComment(taskId, payload);
 
-    const [ projectMember, project ] = await Promise.all([
+    const [ senderMember, project ] = await Promise.all([
         models.ProjectMember.findByPk(memberId, {include: [{ model: models.User, as: 'user' }]}),
         models.Project.findByPk(task.projectId)
     ]);
 
     const userRole: 'member' | 'manager' | 'admin' =
-        projectMember!.roleId === 2 ? 'manager' :
-        projectMember!.roleId === 3 ? 'member' :
+        senderMember!.roleId === 2 ? 'manager' :
+        senderMember!.roleId === 3 ? 'member' :
         'admin';
 
     let notifyTarget = null;
+    let page : 'assigned-tasks' | 'my-tasks' = 'my-tasks';
 
-    if (task.assignedToMember.user.id !== projectMember!.user.id) {
+    if (task.assignedToMember.user.id !== senderMember!.user.id) {
         notifyTarget = task.assignedToMember.user;
-    } else if (task.assignedByMember.user.id !== projectMember!.user.id) {
+    } else if (task.assignedByMember.user.id !== senderMember!.user.id) {
         notifyTarget = task.assignedByMember.user;
+        page = 'assigned-tasks'
     }
 
     if (notifyTarget) {
+        
+        const link = `https://smart-desk-pro.xyz/projects/${task.projectId}/${page}/${taskId}/comments`;
+        
+        const notificationMessage = `<p>${escapeHtml(comment.message)} <a href="${link}" target="_blank" rel="noopener noreferrer">Посмотреть комментарий</a></p>`;
+
+        
         await models.Notification.create({
             title: 'New Comment',
-            message: message,
+            message: notificationMessage,
             userId: notifyTarget.id,
         });
 
         await sendEmailToQueue({
             type: GmailType.TASK_COMMENT,
             receiverEmail: notifyTarget.email,
-            params: [project!.title, task.title, projectMember!.projectId, taskId, userRole, projectMember!.position]
+            params: [project!.title, task.title, senderMember!.projectId, taskId, userRole, senderMember!.position]
         });
     }
 
