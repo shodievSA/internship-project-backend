@@ -10,11 +10,15 @@ const incrementAiLimitOnSuccess = (req: AuthenticatedRequest, res: Response, nex
 
     res.on('finish', async (): Promise<void> => {
 
-        if (res.statusCode >= 200 && res.statusCode <= 300) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
             
             try {
                 
-                typedAiRateLimiter.store.increment(typedAiRateLimiter.keyGenerator(req, res));
+                if (typedAiRateLimiter.store && typedAiRateLimiter.keyGenerator) {
+
+                    typedAiRateLimiter.store.increment(typedAiRateLimiter.keyGenerator(req, res));
+
+                }
 
             } catch (err: unknown) {
 
@@ -25,7 +29,7 @@ const incrementAiLimitOnSuccess = (req: AuthenticatedRequest, res: Response, nex
                     stack: err instanceof Error ? err.stack : undefined,
                     url: req.originalUrl,
                     method: req.method,
-                    status: res.statusCode
+                    status: res.statusCode,
 
                 });
                 

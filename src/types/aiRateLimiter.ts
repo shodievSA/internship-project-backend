@@ -5,9 +5,10 @@ interface AiRateLimiter extends RequestHandler {
 
     windowMs: number;
 	limit: number;
+	skip: () => boolean;
+	skipFailedRequests: boolean;
     keyGenerator: (req: Request, res: Response) => string;
 	store: Store;
-	skip: () => boolean;
 	handler: (req: Request, res: Response, next: NextFunction) => void;
 
     (req: Request, res: Response, next: NextFunction): void;

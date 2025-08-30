@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '@/types';
 import AuthenticatedRequest from '@/types/authenticatedRequest';
 
-const DAILY_LIMIT: number = 10; 
+const DAILY_LIMIT: number = 10;
 
 const aiRateLimiter: RateLimitRequestHandler = rateLimit(
 
@@ -14,6 +14,10 @@ const aiRateLimiter: RateLimitRequestHandler = rateLimit(
 		windowMs: 24 * 60 * 60 * 1000,
 
 		limit: DAILY_LIMIT,
+
+		skip: () => false,
+
+		skipFailedRequests: true,	
 
 		keyGenerator: (req: Request, _res: Response): string => {
 
@@ -24,8 +28,6 @@ const aiRateLimiter: RateLimitRequestHandler = rateLimit(
 		},
 
 		store: new RedisStore({ sendCommand: (...args: string[]) => redisClient.sendCommand(args) }),
-
-		skip: () => true,
 
 		handler: (_req: Request, _res: Response, next: NextFunction) => {
 
