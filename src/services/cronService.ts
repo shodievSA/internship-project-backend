@@ -17,7 +17,7 @@ import {
 import DailyAiReport from '@/models/dailyAiReport';
 import aiService from './aiService';
 import { models } from '@/models';
-import sequelize from '@/clients/sequelize';
+import sequelize from '@/config/sequelize';
 
 async function markOverdueTasks() {
 
