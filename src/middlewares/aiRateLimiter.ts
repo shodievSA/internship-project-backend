@@ -15,8 +15,6 @@ const aiRateLimiter: RateLimitRequestHandler = rateLimit(
 
 		limit: DAILY_LIMIT,
 
-		skip: () => false,
-
 		skipFailedRequests: true,	
 
 		keyGenerator: (req: Request, _res: Response): string => {
