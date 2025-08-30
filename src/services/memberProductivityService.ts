@@ -1,6 +1,6 @@
 import { models } from '../models';
 import { AppError } from '@/types';
-import { Op, fn, col, literal } from 'sequelize';
+import { fn, col, literal } from 'sequelize';
 import {
   MemberProductivityData,
   MemberProductivityFilters,
