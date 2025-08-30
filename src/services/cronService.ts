@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import Task from '@/models/task';
 import User from '@/models/user';
 import Notification from '@/models/notification';
-import { literal, Op, where } from 'sequelize';
+import { literal, Op, Transaction, where } from 'sequelize';
 import { AppError } from '@/types';
 import ProjectMember from '@/models/projectMember';
 import Project from '@/models/project';
@@ -16,13 +16,17 @@ import {
 } from '@/types/dailyReport';
 import DailyAiReport from '@/models/dailyAiReport';
 import aiService from './aiService';
+import { models } from '@/models';
+import sequelize from '@/clients/sequelize';
 
 async function markOverdueTasks() {
+
+    const transaction: Transaction = await sequelize.transaction();
 
     try {
         const tz = 'Asia/Tashkent'
 
-        const [updatedCount] = await Task.update(
+        const [updatedCount, updatedTasks] = await Task.update(
             { status: 'overdue' },
             {
                 where: {
@@ -35,14 +39,31 @@ async function markOverdueTasks() {
                        { status: ['ongoing', 'under review', 'rejected']},
                     ],
                 },
-            }
+                returning: true,
+                transaction: transaction,
+            },
+            
         );
 
         if (updatedCount > 0) {
             console.log(`Marked ${updatedCount} tasks as overdue.`);
         }
 
+        for (const task of updatedTasks) { 
+
+            await models.TaskHistory.create({
+                taskId: task.id,
+                status: 'overdue',
+            },
+            {transaction : transaction}
+            )
+        }
+
+        await transaction.commit()
+
     } catch (err) {
+
+        await transaction.rollback()
 
         throw new AppError(`Error marking overdue tasks: ${err}`);
 

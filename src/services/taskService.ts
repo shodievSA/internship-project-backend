@@ -488,9 +488,9 @@ class TaskService {
 
                 if (task.status === 'overdue') { 
 
-                    updatedTaskProps.status = task.history?.[0].status || 'ongoing' // in case task was only created and overdued                  
+                    updatedTaskProps.status = task.history?.[1].status || 'ongoing' // in case task was only created and overdued                  
                     
-                    comment = 'Task deadline extended'
+                    comment = 'Deadline extended'
                 }
 
             }

@@ -149,9 +149,7 @@ Task.init(
                 
                 if ( task.previous("status") !== task.status) {
                     const comment = (options as UpdateOptions & { context: {comment?: string} })?.context.comment;
-                    if ( comment === 'Task deadline extended') { 
-                        return ;
-                    }
+
                     await models.TaskHistory.create(
                         { 
                         taskId: task.id,
