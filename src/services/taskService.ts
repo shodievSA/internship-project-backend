@@ -112,7 +112,8 @@ class TaskService {
 					email: task.assignedToMember.user.email
 				},
 				status: task.status,
-				history: task.history
+				history: task.history,
+				sprintId: task.sprintId
 			};
 
 			if (task.assignedByMember.id !== task.assignedToMember.id) {
