@@ -89,6 +89,7 @@ export interface SprintMetaData {
     };
     totalTasks: number, 
     totalTasksCompleted: number,
+	sprintNumber?: number,
     startDate: Date;
     endDate: Date;
 }

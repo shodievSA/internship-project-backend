@@ -86,6 +86,17 @@ class SprintService {
 							)`),
 							'closedTaskCount'
 						],
+						[
+							Sequelize.literal(`
+								(
+									SELECT COUNT(*) + 1
+									FROM sprints AS s2
+									WHERE s2."project_id" = "Sprint"."project_id"
+									AND s2."created_at" < "Sprint"."created_at"
+								)
+							`),
+							"sprintNumber"
+						]
 					]
 				},
 				include: [
@@ -116,6 +127,7 @@ class SprintService {
 				},
 				totalTasksCompleted: Number(sprint.get('closedTaskCount')),
 				totalTasks: Number(sprint.get('taskCount')),
+				sprintNumber: Number(sprint.get('sprintNumber')),
 				startDate: sprint.startDate,
 				endDate: sprint.endDate,
 			};
