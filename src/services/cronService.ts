@@ -26,7 +26,7 @@ async function markOverdueTasks() {
     try {
         const tz = 'Asia/Tashkent'
 
-        const [updatedCount, updatedTasks] = await Task.update(
+        const [updatedCount] = await Task.update(
             { status: 'overdue' },
             {
                 where: {
@@ -39,7 +39,6 @@ async function markOverdueTasks() {
                        { status: ['ongoing', 'under review', 'rejected']},
                     ],
                 },
-                returning: true,
                 transaction: transaction,
             },
             
@@ -47,16 +46,6 @@ async function markOverdueTasks() {
 
         if (updatedCount > 0) {
             console.log(`Marked ${updatedCount} tasks as overdue.`);
-        }
-
-        for (const task of updatedTasks) { 
-
-            await models.TaskHistory.create({
-                taskId: task.id,
-                status: 'overdue',
-            },
-            {transaction : transaction}
-            )
         }
 
         await transaction.commit()
