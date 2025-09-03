@@ -372,7 +372,7 @@ class TaskService {
         try {
 
 			const assignedBy = await models.ProjectMember.findOne({
-				where: { userId: userId },
+				where: { userId, projectId },
 				attributes: ['id'],
 				transaction
 			});
