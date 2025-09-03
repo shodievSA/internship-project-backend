@@ -38,6 +38,7 @@ const rolePermissionPairs = [
       'createSprints',
       'editSprints',
       'deleteSprints',
+      'viewMemberProductivity',
     ],
   },
 

@@ -369,6 +369,40 @@ class MemberProductivityService {
       throw error;
     }
   }
+
+  async canViewMemberProductivity(
+    currentUserId: number,
+    projectId: number,
+    targetMemberId: number
+  ): Promise<boolean> {
+    try {
+      // Get current user's role in the project
+      const currentUserMember = await models.ProjectMember.findOne({
+        where: {
+          userId: currentUserId,
+          projectId: projectId
+        }
+      });
+
+      if (!currentUserMember) {
+        return false;
+      }
+
+      // Admin and manager can view any member's productivity
+      if (currentUserMember.role === 'admin' || currentUserMember.role === 'manager') {
+        return true;
+      }
+
+      // Regular members can only view their own productivity
+      if (currentUserMember.role === 'member') {
+        return currentUserId === targetMemberId;
+      }
+
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
 }
 
 export default new MemberProductivityService(); 
