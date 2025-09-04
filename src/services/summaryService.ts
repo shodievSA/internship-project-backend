@@ -253,7 +253,6 @@ class SummaryService {
                 return {
                     id: sprint.id,
                     title: sprint.title,
-                    description: sprint.description,
                     progress: {
                         completed: completedTasks,
                         active: activeTasks,

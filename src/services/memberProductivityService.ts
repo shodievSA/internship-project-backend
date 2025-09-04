@@ -287,7 +287,6 @@ class MemberProductivityService {
   getDefaultSprint = async (projectId: number): Promise<{
     id: number;
     title: string;
-    description: string | null;
     status: 'planned' | 'active' | 'completed' | 'overdue';
     startDate: Date;
     endDate: Date;
@@ -299,7 +298,7 @@ class MemberProductivityService {
           projectId: projectId,
           status: 'active'
         },
-        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
         order: [['created_at', 'DESC']] // If multiple active sprints, get the most recently created one
       });
 
@@ -307,7 +306,6 @@ class MemberProductivityService {
         return {
           id: activeSprint.id,
           title: activeSprint.title,
-          description: activeSprint.description,
           status: activeSprint.status,
           startDate: activeSprint.startDate,
           endDate: activeSprint.endDate
@@ -318,7 +316,7 @@ class MemberProductivityService {
         where: { 
           projectId: projectId
         },
-        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
         order: [['endDate', 'DESC']]
       });
 
@@ -326,7 +324,6 @@ class MemberProductivityService {
         return {
           id: latestSprint.id,
           title: latestSprint.title,
-          description: latestSprint.description,
           status: latestSprint.status,
           startDate: latestSprint.startDate,
           endDate: latestSprint.endDate
@@ -342,7 +339,6 @@ class MemberProductivityService {
   getAllSprints = async (projectId: number): Promise<Array<{
     id: number;
     title: string;
-    description: string | null;
     status: 'planned' | 'active' | 'completed' | 'overdue';
     startDate: Date;
     endDate: Date;
@@ -352,14 +348,13 @@ class MemberProductivityService {
         where: { 
           projectId: projectId
         },
-        attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+        attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
         order: [['created_at', 'ASC']]
       });
 
       return sprints.map(sprint => ({
         id: sprint.id,
         title: sprint.title,
-        description: sprint.description,
         status: sprint.status,
         startDate: sprint.startDate,
         endDate: sprint.endDate

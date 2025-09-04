@@ -27,7 +27,6 @@ export interface SprintProgressResponse {
     sprints: Array<{
         id: number;
         title: string;
-        description?: string;
         progress: {
             completed: number;    
             active: number;       

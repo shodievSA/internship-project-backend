@@ -36,7 +36,7 @@ async function markOverdueTasks() {
                             '<',
                             literal(`(now() AT TIME ZONE '${tz}')`)
                         ),
-                       { status: ['ongoing', 'under review', 'rejected']},
+                       { status: ['ongoing', 'rejected']},
                     ],
                 },
                 transaction: transaction,
