@@ -3,6 +3,7 @@ import { taskConnectionsMap } from '../upgradeHandler';
 import type { WebSocket as WSWebSocket } from 'ws';
 import { GmailType } from './gmaiService';
 import { sendEmailToQueue } from '@/queues';
+import { AppError } from '@/types';
 
 interface NewComment {
     message: string;
@@ -172,15 +173,100 @@ function broadcastComment(taskId: number, payload: string) {
 
 }
 
-// REST API service functions
 export const commentService = {
 
-    async getAll(taskId: number) {
+    async getAll(taskId: number, projectId: number, userId: number) {
 
-        return models.Comment.findAll({
+		const currentMember = await models.ProjectMember.findOne({
+			where: { userId, projectId }
+		});
+
+		if (!currentMember) throw new AppError("Failed to find the current member", 404, true);
+
+		const task = await models.Task.findByPk(taskId, {
+			include: [
+				{
+					model: models.ProjectMember,
+					as: "assignedByMember",
+					include: [
+						{
+							model: models.User,
+							as: "user"
+						}
+					]
+				},
+				{
+					model: models.ProjectMember,
+					as: "assignedToMember",
+					include: [
+						{
+							model: models.User,
+							as: "user"
+						}
+					]
+				}
+			]
+		});
+		
+		if (!task) throw new AppError("Failed to find the task", 404, true);
+
+		let chatPartner, currentUser;
+
+		if (task.assignedByMember.id !== currentMember.id) {
+
+			chatPartner = {
+				name: task.assignedByMember.user.fullName,
+				avatarUrl: task.assignedByMember.user.avatarUrl,
+				position: task.assignedByMember.position
+			};
+
+			currentUser = {
+				name: task.assignedToMember.user.fullName,
+				avatarUrl: task.assignedToMember.user.avatarUrl,
+				position: task.assignedToMember.position
+			}
+
+		} else if (task.assignedToMember.id !== currentMember.id) {
+
+			chatPartner = {
+				name: task.assignedToMember.user.fullName,
+				avatarUrl: task.assignedToMember.user.avatarUrl,
+				position: task.assignedToMember.position
+			};
+
+			currentUser = {
+				name: task.assignedByMember.user.fullName,
+				avatarUrl: task.assignedByMember.user.avatarUrl,
+				position: task.assignedByMember.position
+			}
+
+		} else {
+
+			chatPartner = {
+				name: task.assignedByMember.user.fullName,
+				avatarUrl: task.assignedByMember.user.avatarUrl,
+				position: task.assignedByMember.position
+			};
+
+			currentUser = {
+				name: task.assignedByMember.user.fullName,
+				avatarUrl: task.assignedByMember.user.avatarUrl,
+				position: task.assignedByMember.position
+			}
+
+		}
+
+        const comments = await models.Comment.findAll({
             where: { taskId },
             order: [['createdAt', 'ASC']],
         });
+
+		return {
+			comments: comments,
+			taskInfo: { title: task.title },
+			chatPartner: chatPartner,
+			currentUser: currentUser
+		}
 
     },
 

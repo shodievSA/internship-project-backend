@@ -3,6 +3,7 @@ import { commentService, deleteAndBroadcastComment, updateAndBroadcastComment } 
 import { taskConnectionsMap } from "../upgradeHandler";
 import type { WebSocket as WSWebSocket } from "ws";
 import { saveAndBroadcastComment } from "../services/commentService";
+import AuthenticatedRequest from "@/types/authenticatedRequest";
 
 interface JoinCommentSectionMsg {
 	type: "join-comment-section";
@@ -43,7 +44,6 @@ export function handleCommentWSConnection(ws: WSWebSocket): void {
 
 			if (msg.type === "join-comment-section") {
 
-				// Add ws to the set for this taskId
 				joinedTaskId = msg.taskId;
 
 				if (!taskConnectionsMap.has(msg.taskId)) {
@@ -81,19 +81,17 @@ export function handleCommentWSConnection(ws: WSWebSocket): void {
 
 		} catch (err) {
 
-			ws.send(
-				JSON.stringify({
-					type: "error",
-					message: "Invalid message or server error.",
-				})
-			);
+			ws.send(JSON.stringify({
+				type: "error",
+				message: "Invalid message or server error.",
+			}));
 
 		}
 
 	});
 
 	ws.on("close", () => {
-		// Remove ws from the set for the joined taskId
+		
 		if (joinedTaskId !== null) {
 
 			const set = taskConnectionsMap.get(joinedTaskId);
@@ -103,7 +101,9 @@ export function handleCommentWSConnection(ws: WSWebSocket): void {
 				set.delete(ws);
 
 				if (set.size === 0) {
+
 					taskConnectionsMap.delete(joinedTaskId);
+					
 				}
 
 			}
@@ -116,14 +116,20 @@ export function handleCommentWSConnection(ws: WSWebSocket): void {
 
 export const commentController = {
 
-	async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+	async getAll(
+		req: AuthenticatedRequest, 
+		res: Response, 
+		next: NextFunction
+	): Promise<void> {
 
 		try {
 
-			const { taskId } = req.params;
-			const comments = await commentService.getAll(Number(taskId));
+			const taskId = Number(req.params.taskId);
+			const projectId = Number(req.params.projectId);
 
-			res.json({ comments });
+			const taskCommentsData = await commentService.getAll(taskId, projectId, req.user.id);
+
+			res.status(200).json({ taskCommentsData });
 
 		} catch (err) {
 
