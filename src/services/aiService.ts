@@ -28,6 +28,7 @@ const generateTaskTitleFunction: FunctionDefinition = {
 			title: {
 				type: 'string',
 				description: 'The generated task title.',
+                maxLength: 90,
 			},
 		},
 		required: ['title'],
@@ -73,7 +74,7 @@ const sysPromptForTaskTitleGeneration: string = `
 	-Use verbs when appropriate (e.g., “Fix login bug” or “Design homepage layout”)
 	-Do not copy long phrases directly from the description
 	-Ensure the title stands alone without needing extra explanation
-	Return only the title. Do not include explanations.
+	Return only the title. Do not include explanations and without exceeding 90 characters.
 	**Do not add any markdown into your response such as asterisk!. Return plain text only!**
 `;
 
