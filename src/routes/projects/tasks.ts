@@ -9,7 +9,7 @@ router.post('/', upload.array('fileAttachments'), taskController.createTask as R
 router.patch('/:taskId/status', taskController.changeTaskStatus as RequestHandler);
 router.patch('/:taskId', upload.fields([{ name: 'filesToAdd', maxCount: 10 }]), taskController.updateTask as RequestHandler);
 router.delete('/:taskId', taskController.deleteTask as RequestHandler);
-router.get('/:taskId/files', taskController.getTaskFiles as RequestHandler);
+router.get('/:taskId', taskController.getTaskDetails as RequestHandler);
 
 // Comment endpoints
 router.get('/:taskId/comments', commentController.getAll as RequestHandler);

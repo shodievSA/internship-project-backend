@@ -188,7 +188,7 @@ async function updateTask(
 
 }
 
-async function getTaskFiles(
+async function getTaskDetails(
 	req : AuthenticatedRequest,
     res : Response,
     next: NextFunction
@@ -200,9 +200,9 @@ async function getTaskFiles(
 
 		if (!taskId) throw new AppError("Task id is missing", 400, true);
 
-		const fileAttachments = await taskService.getTaskFiles(taskId);
+		const task = await taskService.getTaskDetails(taskId);
 
-		res.status(200).json({ fileUrls: fileAttachments });
+		res.status(200).json({ task });
         
         return;
 	
@@ -219,7 +219,7 @@ const taskController = {
 	createTask,
 	deleteTask,
 	updateTask,
-	getTaskFiles,
+	getTaskDetails
 };
 
 export default taskController;

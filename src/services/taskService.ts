@@ -700,33 +700,94 @@ class TaskService {
         
     }
 
-	async getTaskFiles(taskId: number): Promise<Array<object>> {
+	async getTaskDetails(taskId: number): Promise<object> {
 
 		try {
 
-			const taskFiles = await models.TaskFiles.findAll({
-				where: { taskId: taskId },
-				attributes: ['id', 'key', 'fileName', 'size']
+			const rawTask = await models.Task.findByPk(taskId, {
+				include: [
+					{
+						model: models.ProjectMember,
+						as: 'assignedByMember',
+						attributes: ['id', 'position'],
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					},
+					{
+						model: models.ProjectMember,
+						as: 'assignedToMember',
+						attributes: ['id', 'position'],
+						include: [{ 
+							model: models.User, 
+							as: 'user',
+							attributes: ['fullName', 'avatarUrl', 'email'] 
+						}],
+					},
+					{
+						model: models.TaskHistory,
+						as: 'history',
+						separate: true,
+						order: [['created_at', 'DESC']]
+					},
+					{
+						model: models.TaskFiles,
+						as: 'taskFiles'
+					}
+				],
+				order: [['created_at', 'DESC']]
 			});
 
-			const urls = await Promise.all(taskFiles.map(file => fileHandler.retrieveFile(file.key)));
+			if (!rawTask) throw new AppError("Failed to find the task", 404, true);
+
+			const urls = await Promise.all(rawTask.taskFiles.map(file => fileHandler.retrieveFile(file.key)));
 
 			const fileAttachments: object[] = [];
 
-			for (let i = 0; i < taskFiles.length; i++) {
+			for (let i = 0; i < rawTask.taskFiles.length; i++) {
 
 				const taskFile: object = {
-					fileName: taskFiles[i].fileName,
-					id: taskFiles[i].id,
+					fileName: rawTask.taskFiles[i].fileName,
+					id: rawTask.taskFiles[i].id,
 					url: urls[i],
-					size: Math.round((taskFiles[i].size / (1024 * 1024)) * 100) / 100,
+					size: Math.round((rawTask.taskFiles[i].size / (1024 * 1024)) * 100) / 100,
 				};
 
 				fileAttachments.push(taskFile);
 
 			}
 
-			return fileAttachments;
+			const task = {
+				id: rawTask.id as number,
+				title: rawTask.title,
+				description: rawTask.description as string,
+				priority: rawTask.priority,
+				deadline: rawTask.deadline,
+				sprintId: rawTask.sprintId,
+				assignedBy: {
+					name: rawTask.assignedByMember.user.fullName as string,
+					avatarUrl: rawTask.assignedByMember.user.avatarUrl,
+					id: rawTask.assignedByMember.id,
+					position: rawTask.assignedByMember.position,
+					email: rawTask.assignedByMember.user.email
+				},
+				assignedTo: {
+					name: rawTask.assignedToMember.user.fullName as string,
+					avatarUrl: rawTask.assignedToMember.user.avatarUrl,
+					id: rawTask.assignedToMember.id,
+					position: rawTask.assignedToMember.position,
+					email: rawTask.assignedToMember.user.email
+				},
+				status: rawTask.status,
+				history : rawTask.history,
+				fileUrls: fileAttachments,
+				createdAt: rawTask.createdAt,
+				updatedAt: rawTask.updatedAt
+			}
+
+			return task;
 			
 		} catch (err) {
 
