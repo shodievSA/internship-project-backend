@@ -361,7 +361,6 @@ class ProjectService {
                 sprints.push({
                     id: sprint.id,
                     title: sprint.title,
-                    description: sprint.description,
                     status: sprint.status,
                     projectId: sprint.projectId,
                     createdBy: {

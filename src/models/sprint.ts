@@ -21,7 +21,6 @@ export interface SprintAssociations {
 
 export interface SprintAttributes { 
 	title: string;
-	description: string;
 	status: 'planned' |'active' | 'completed' | 'overdue';
 	projectId: number;
 	createdBy: number;
@@ -37,7 +36,6 @@ class Sprint extends Model<
 > {
 	declare id: CreationOptional<number>;
 	declare title: string;
-	declare description: CreationOptional<string>;
 	declare status: CreationOptional<'planned' | 'active' | 'completed' | 'overdue'>;
 	declare projectId: number;
 	declare createdBy: number; // projectMemberId
@@ -63,10 +61,6 @@ Sprint.init(
 		title: {
 			type: DataTypes.STRING(50),
 			allowNull: false
-		},
-		description: {
-			type: DataTypes.TEXT,
-			allowNull: true
 		},
 		createdBy: {
 			type: DataTypes.INTEGER,

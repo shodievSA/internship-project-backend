@@ -41,7 +41,6 @@ class SprintService {
 			return {
 				id: sprint.id,
 				title: sprint.title,
-				description: sprint.description,
 				status: sprint.status,
 				projectId: sprint.projectId,
 				createdBy: {
@@ -117,7 +116,6 @@ class SprintService {
 			const sprintMetaData: SprintMetaData = {
 				id: sprint.id,
 				title: sprint.title,
-				description: sprint.description,
 				status: sprint.status,
 				projectId: sprint.projectId,
 				createdBy: {
@@ -222,7 +220,6 @@ class SprintService {
 		sprintId: number, 
 		updatedFields: Partial<{ 
 			title: string;
-			description: string;
 			status: 'planned' | 'active' | 'completed' | 'overdue';
 			startDate: Date;
 			endDate: Date; 
@@ -325,7 +322,6 @@ class SprintService {
 			return {
 				id: updatedSprint.id,
 				title: updatedSprint.title,
-				description: updatedSprint.description,
 				status: updatedSprint.status,
 				projectId: updatedSprint.projectId,
 				createdBy: {
@@ -407,7 +403,6 @@ class SprintService {
     async getAllSprints(projectId: number): Promise<Array<{
         id: number;
         title: string;
-        description: string | null;
         status: 'planned' | 'active' | 'completed' | 'overdue';
         startDate: Date;
         endDate: Date;
@@ -419,14 +414,13 @@ class SprintService {
                 where: { 
                     projectId: projectId
                 },
-                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
                 order: [['created_at', 'ASC']]
             });
 
             return sprints.map(sprint => ({
                 id: sprint.id,
                 title: sprint.title,
-                description: sprint.description,
                 status: sprint.status,
                 startDate: sprint.startDate,
                 endDate: sprint.endDate
@@ -443,7 +437,6 @@ class SprintService {
     async getDefaultSprint(projectId: number): Promise<{
         id: number;
         title: string;
-        description: string | null;
         status: 'planned' | 'active' | 'completed' | 'overdue';
         startDate: Date;
         endDate: Date;
@@ -456,7 +449,7 @@ class SprintService {
                     projectId: projectId,
                     status: 'active'
                 },
-                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
                 order: [['created_at', 'DESC']] 
             });
 
@@ -465,7 +458,6 @@ class SprintService {
                 return {
                     id: activeSprint.id,
                     title: activeSprint.title,
-                    description: activeSprint.description,
                     status: activeSprint.status,
                     startDate: activeSprint.startDate,
                     endDate: activeSprint.endDate
@@ -477,7 +469,7 @@ class SprintService {
                 where: { 
                     projectId: projectId
                 },
-                attributes: ['id', 'title', 'description', 'status', 'startDate', 'endDate'],
+                attributes: ['id', 'title', 'status', 'startDate', 'endDate'],
                 order: [['endDate', 'DESC']]
             });
 
@@ -486,7 +478,6 @@ class SprintService {
                 return {
                     id: latestSprint.id,
                     title: latestSprint.title,
-                    description: latestSprint.description,
                     status: latestSprint.status,
                     startDate: latestSprint.startDate,
                     endDate: latestSprint.endDate

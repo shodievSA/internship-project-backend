@@ -104,7 +104,6 @@ async function updateSprint(
 			type Status = typeof allowedStatuses[number];
 
 			const title = updatedSprintProps.title;
-			const description = updatedSprintProps.description
 			const status = updatedSprintProps.status;
 
 			let startDate: Date | undefined = undefined;
@@ -120,11 +119,10 @@ async function updateSprint(
 
 			const updatedFields: Partial<{ 
 			    title: string;
-			    description:string;
 			    status: Status;
 			    startDate: Date | undefined;
 			    endDate: Date | undefined;
-			}> = { title, description, status, startDate, endDate };
+			}> = { title, status, startDate, endDate };
 
 			if (Object.keys(updatedFields).length === 0) {
 
